@@ -1,0 +1,84 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  clerkId   String   @unique // Clerk user ID
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clients           Client[]
+  generationBatches GenerationBatch[]
+
+  @@map("users")
+}
+
+model Client {
+  id               String   @id @default(cuid())
+  userId           String
+  clientName       String
+  clientWebsite    String
+  wordpressUrl     String
+  wpUsername       String
+  wpAppPassword    String // Will be encrypted
+  seoPlugin        String // "Yoast" or "RankMath"
+  templatePageId   String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generationBatches GenerationBatch[]
+
+  @@index([userId])
+  @@map("clients")
+}
+
+model GenerationBatch {
+  id               String   @id @default(cuid())
+  clientId         String
+  userId           String
+  csvFilename      String
+  totalPages       Int
+  successfulPages  Int      @default(0)
+  failedPages      Int      @default(0)
+  timeTakenSeconds Int      @default(0)
+  status           String   @default("in_progress") // "in_progress", "completed", "failed"
+  createdAt        DateTime @default(now())
+
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generatedPages GeneratedPage[]
+
+  @@index([clientId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("generation_batches")
+}
+
+model GeneratedPage {
+  id               String   @id @default(cuid())
+  batchId          String
+  pageName         String
+  pageType         String // "Primary Service", "Nested Broad Stroke", "Broad Stroke", "Location Service"
+  publishedUrl     String?
+  status           String   @default("pending") // "pending", "generating", "validating", "publishing", "success", "failed"
+  errorMessage     String?
+  timeTakenSeconds Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  batch GenerationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@index([status])
+  @@map("generated_pages")
+}
