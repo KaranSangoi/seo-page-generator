@@ -10,15 +10,19 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  clerkId   String   @unique // Clerk user ID
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   // INTERNAL: bcrypt hash | SCALE: Remove when using Clerk
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // SCALE: Add when moving to Clerk
+  // clerkId   String?  @unique
 
   clients           Client[]
   generationBatches GenerationBatch[]
+  errorLogs         ErrorLog[]
 
   @@map("users")
 }
@@ -38,6 +42,7 @@ model Client {
 
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   generationBatches GenerationBatch[]
+  errorLogs         ErrorLog[]
 
   @@index([userId])
   @@map("clients")
@@ -70,10 +75,16 @@ model GeneratedPage {
   batchId          String
   pageName         String
   pageType         String // "Primary Service", "Nested Broad Stroke", "Broad Stroke", "Location Service"
+  service          String?  // Service keyword from CSV
+  location         String?  // Location from CSV
+  parentSlug       String?  // Parent page slug for WordPress hierarchy
+  rowNumber        Int?     // Row number from CSV
   publishedUrl     String?
   status           String   @default("pending") // "pending", "generating", "validating", "publishing", "success", "failed"
   errorMessage     String?
-  timeTakenSeconds Int      @default(0)
+  primaryKeyword   String?
+  generatedContent String?  @db.Text // JSON string of generated content
+  timeElapsed      Int      @default(0) // milliseconds
   createdAt        DateTime @default(now())
 
   batch GenerationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
@@ -81,4 +92,24 @@ model GeneratedPage {
   @@index([batchId])
   @@index([status])
   @@map("generated_pages")
+}
+
+model ErrorLog {
+  id           String   @id @default(cuid())
+  userId       String
+  clientId     String?
+  errorType    String // "generation", "validation", "wordpress", "api", "queue", "user_input"
+  errorMessage String   @db.Text
+  stackTrace   String?  @db.Text
+  context      String?  @db.Text // JSON string with additional context
+  createdAt    DateTime @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([clientId])
+  @@index([errorType])
+  @@index([createdAt])
+  @@map("error_logs")
 }
