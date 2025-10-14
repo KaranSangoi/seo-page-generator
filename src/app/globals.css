@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Light mode (default) */
+  :root {
+    --color-bg: 255 255 255;
+    --color-surface: 249 250 251;
+    --color-text: 17 24 39;
+    --color-text-secondary: 107 114 128;
+    --color-border: 229 231 235;
+  }
+
+  /* Dark mode (system preference) */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: 17 24 39;
+      --color-surface: 31 41 55;
+      --color-text: 249 250 251;
+      --color-text-secondary: 156 163 175;
+      --color-border: 55 65 81;
+    }
+  }
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-50;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
