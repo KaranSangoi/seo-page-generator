@@ -257,7 +257,7 @@ Return as JSON array: ["Expert", "Professional", ...]
 **Checks:**
 
 - Meta description ≤155 chars
-- Bullet points ≥35 words
+- Bullet points ≥30 words
 - Hero description 50-60 words
 - Map description 50-60 words (if included)
 - FAQs use primary keyword

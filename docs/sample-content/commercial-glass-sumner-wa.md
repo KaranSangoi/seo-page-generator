@@ -117,7 +117,7 @@ Protection. Appeal. Durability.
 ## Validation Results
 
 ✅ Meta description: 127 / 155 characters
-✅ All bullet points ≥35 words
+✅ All bullet points ≥30 words
 ✅ Hero description: 45 words (within 50-60 range)
 ✅ Primary keyword used throughout
 ✅ FAQs are SEO-relevant (not company promotional)

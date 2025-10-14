@@ -136,8 +136,8 @@ Each metadata field has (ⓘ) icon with instructions:
 - Meta Description (≤155 chars, include "Call now!")
 - H1 (primary keyword)
 - Hero Description (50-60 words)
-- Benefits Section (H2 + subheading + 3 bullets ≥35 words each)
-- Why Section (H2 + subheading + 3 bullets ≥35 words each)
+- Benefits Section (H2 + subheading + 3 bullets ≥30 words each)
+- Why Section (H2 + subheading + 3 bullets ≥30 words each)
 - FAQ Section (3 Q&As, SEO-relevant, company name in 2nd half of answer)
 - Map Section (H2 + 50-60 word description)
 

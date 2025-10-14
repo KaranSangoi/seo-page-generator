@@ -203,28 +203,51 @@ contaminants from entering
 **Placement:**
 
 - Rotates among: Benefits-1, Benefits-2, Benefits-3, Why-1, Why-2, Why-3
-- Specified in CSV for each page
-- If section omitted, skip to next position
+- Can be specified in CSV "External Link Section" column for each page
+- **If CSV column is empty:** Uses default rotation based on row number
+  - Row 0: benefits-1
+  - Row 1: benefits-2
+  - Row 2: benefits-3
+  - Row 3: why-1
+  - Row 4: why-2
+  - Row 5: why-3
+  - Pattern repeats every 6 pages (row number % 6)
 
 ---
 
 ### Internal Linking
 
-**Purpose:** Enhance SEO and user navigation
+**Purpose:** Enhance SEO and user navigation with intelligent contextual linking
 
 **Rules:**
 
 - **Only 1 internal link per page** (mandatory)
-- Link to company homepage
+- **Intelligent Link Distribution:**
+  - **40% links → Homepage** (company website root)
+  - **60% links → Contextual pages** (relevant service pages from sitemap)
 - Embedded on company name
 - Use `<a>` tag with `style="text-decoration: underline; display: inline;"`
+
+**Link Selection Algorithm:**
+
+1. **Sitemap Fetch:** System automatically fetches website sitemap.xml at batch start
+2. **Contextual Matching:** For each page, finds most relevant service page based on:
+   - Service keyword matching in URL
+   - Relevance scoring (keyword matches = higher score)
+3. **Rotation Pattern (5-page batch):**
+   - Page 1 (row 0): Homepage
+   - Page 2 (row 1): Contextual page (highest relevance score)
+   - Page 3 (row 2): Contextual page
+   - Page 4 (row 3): Contextual page
+   - Page 5 (row 4): Homepage
+4. **Fallback:** If no relevant contextual page found, defaults to homepage
 
 **Anchor Text:**
 
 - Company name occurring naturally in text
 - Do NOT create artificial link phrases like "click here" or "learn more"
 
-**Example:**
+**Example (Homepage Link):**
 
 ```html
 Trust
@@ -233,9 +256,18 @@ Trust
   style="text-decoration: underline; display: inline;"
   >Cleaner Streets</a
 >
-to deliver reliable street sweeping services in Ojai, CA. We ensure your city
-remains clean, safe, and inviting with eco-friendly solutions tailored to your
-needs.
+to deliver reliable street sweeping services in Ojai, CA.
+```
+
+**Example (Contextual Page Link):**
+
+```html
+<a
+  href="https://www.cleanerstreets.com/services/parking-lot-sweeping/"
+  style="text-decoration: underline; display: inline;"
+  >Cleaner Streets</a
+>
+provides professional street sweeping services tailored to your needs.
 ```
 
 **Placement (Rotation):**
@@ -244,7 +276,7 @@ needs.
 - For 5-page batch: [hero, faq-a1, faq-a2, faq-a3, map]
 - For 10-page batch: repeat 5-page pattern twice
 - If map omitted: use faq-a3 instead
-- Specified by batch position, not in CSV
+- Automatically determined by batch position (row number % 5)
 
 ---
 
@@ -274,7 +306,7 @@ Expert, Professional, Trusted, Reliable, Top-Rated, Affordable, Quality, Premier
 **Strictly Enforced:**
 
 1. Meta description ≤155 characters
-2. Bullet points ≥35 words each
+2. Bullet points ≥30 words each
 3. Hero description 50-60 words
 4. Map description 50-60 words
 5. FAQs must be SEO-relevant (not promotional)
