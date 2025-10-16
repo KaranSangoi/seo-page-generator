@@ -42,18 +42,22 @@ hero-description → Hero description text (50-60 words)
 ### Element IDs Required:
 
 ```
-benefits-heading    → Section heading (H2)
-benefits-subheading → Section subheading (4-5 words) [OPTIONAL - skip if not in template]
+benefits-heading    → Section heading (H2) - Use Heading widget
+benefits-subheading → Section subheading (4-5 words) - Can be Heading OR Text Editor widget [OPTIONAL]
 benefits-bullets    → Icon List widget with 3 items (each ≥30 words, starts with <b>)
 ```
 
 **Example Format:**
 
-- Heading: "Why Choose [Company] as Your [Primary Keyword]?"
-- Subheading: "Quality. Precision. Reliable."
+- Heading: "Why Choose [Company Name] as Your [Primary Keyword]?"
+  - Example: "Why Choose ABC Glass as Your Professional Commercial Glass Installer in Sumner, WA?"
+- Subheading: "Quality. Precision. Reliable." (can use Heading widget OR Text Editor widget)
 - Icon List Items: `<b>Topic Name:</b> Description text...`
 
-**Note:** Use Elementor's Icon List widget, not separate text editors. Add 3 items to the list.
+**Important Notes:**
+- Use Elementor's **Icon List widget** for bullets (one widget with 3 items), NOT 3 separate text editors
+- Subheading can be either a Heading widget or Text Editor widget - code handles both
+- Each bullet must start with `<b>Topic Name:</b>`
 
 ---
 
@@ -62,38 +66,100 @@ benefits-bullets    → Icon List widget with 3 items (each ≥30 words, starts 
 ### Element IDs Required:
 
 ```
-why-heading    → Section heading (H2)
-why-subheading → Section subheading (4-5 words) [OPTIONAL - skip if not in template]
+why-heading    → Section heading (H2) - Use Heading widget
+why-subheading → Section subheading (4-5 words) - Can be Heading OR Text Editor widget [OPTIONAL]
 why-bullets    → Icon List widget with 3 items (each ≥30 words, starts with <b>)
 ```
 
 **Example Format:**
 
-- Heading: "Why Hire a [Primary Keyword]?"
-- Subheading: "Protection. Appeal. Durability."
-- Icon List Items: Focus on why the service is important (NOT about company)
+- Heading: "Why Is [Service] Important in [Location]?" (NO adjective, just service name)
+  - Example: "Why Is Commercial Glass Installation Important in Sumner, WA?"
+- Subheading: "Protection. Appeal. Durability." (can use Heading widget OR Text Editor widget)
+- Icon List Items: Focus on why the service is important (NOT about the company)
 
-**Note:** Use Elementor's Icon List widget, not separate text editors. Add 3 items to the list.
+**Important Notes:**
+- Use Elementor's **Icon List widget** for bullets (one widget with 3 items), NOT 3 separate text editors
+- Subheading can be either a Heading widget or Text Editor widget - code handles both
+- Bullets should explain WHY the service matters, not why to choose your company
+- Each bullet must start with `<b>Topic Name:</b>`
 
 ---
 
 ## FAQ Section
 
-### Element IDs Required:
+### Two Supported Structures:
+
+The system supports **TWO different FAQ template structures**. Choose the one that fits your design:
+
+---
+
+### Structure 1: All-in-One Toggle/Accordion (Simpler)
 
 ```
-faq-questions → Accordion widget with 3 items (the 3 questions)
-faq-answer-1  → First answer (separate text editor)
-faq-answer-2  → Second answer (separate text editor)
-faq-answer-3  → Third answer (separate text editor)
+faq-questions → Toggle OR Accordion widget with 3 items (contains both questions AND answers)
 ```
 
-**Example Format:**
+**Required IDs:**
+- `faq-questions` (must contain both "faq" AND "questions")
 
-- Questions: Added as items in the Accordion widget
-- Answers: "What services does a professional [service] in [location] provide?" → 2-3 sentences, company name in 2nd half only
+**Valid ID Examples:**
+- ✅ `faq-questions` (recommended)
+- ✅ `faq-questions-toggle`
+- ✅ `questions-faq`
+- ✅ `faq-accordion-questions`
 
-**Note:** Use Elementor's Accordion widget for questions. Answers are separate text editor widgets.
+**Invalid ID Examples:**
+- ❌ `faqs` (missing "questions")
+- ❌ `questions` (missing "faq")
+- ❌ `faq-section` (missing "questions")
+
+**Widget Types:**
+- **Toggle Widget**: Single widget with 3 toggle items
+- **Accordion Widget**: Single widget with 3 accordion items
+
+**Structure:**
+- Each item has:
+  - **Tab Title** = Question
+  - **Tab Content** = Answer
+
+---
+
+### Structure 2: Separate Answer Widgets (More Flexible)
+
+```
+faq-questions  → Toggle/Accordion widget with 3 question titles
+faq-answer-1   → Text editor widget for answer 1
+faq-answer-2   → Text editor widget for answer 2
+faq-answer-3   → Text editor widget for answer 3
+```
+
+**Required IDs:**
+- `faq-questions` (accordion/toggle with questions)
+- `faq-answer-1`, `faq-answer-2`, `faq-answer-3` (text editor widgets)
+
+**How it works:**
+- Questions container displays clickable FAQ titles
+- Each text editor widget shows the corresponding answer
+- System updates both questions AND answers
+
+**Use case:** When you want to style each answer independently or place them in different locations on the page.
+
+---
+
+### Content Format (Both Structures):
+
+- Questions: "What services does a professional [service] in [location] provide?"
+- Answers: 2-3 sentences (50-75 words), company name in 2nd half only
+
+### Important Notes:
+- **Enable FAQ Schema**: In accordion/toggle widget settings → Style tab → Turn ON "FAQ Schema" toggle
+- This automatically adds proper FAQ schema markup for Google's People Also Ask boxes
+- Questions should use the primary keyword naturally
+- Answers should be SEO-relevant (not promotional)
+- Company name should appear in 2nd half of each answer
+
+**📖 Detailed Guide:** See [FAQ_TOGGLE_SETUP.md](FAQ_TOGGLE_SETUP.md) for complete setup instructions for both structures
 
 ---
 
@@ -154,25 +220,31 @@ Links are inserted dynamically into existing content. The generator will:
 
 Use this checklist to ensure your Elementor template has all required IDs:
 
-### Core Elements (Recommended):
+### Core Elements (Required):
 
-- [ ] `hero-h1`
-- [ ] `hero-description`
-- [ ] `benefits-heading`
-- [ ] `benefits-bullets` (Icon List with 3 items)
-- [ ] `why-heading`
-- [ ] `why-bullets` (Icon List with 3 items)
-- [ ] `faq-questions` (Accordion with 3 items)
-- [ ] `faq-answer-1`
-- [ ] `faq-answer-2`
-- [ ] `faq-answer-3`
+- [ ] `hero-h1` (Heading widget)
+- [ ] `hero-description` (Text Editor widget)
+- [ ] `benefits-heading` (Heading widget)
+- [ ] `benefits-bullets` (Icon List widget with 3 items)
+- [ ] `why-heading` (Heading widget)
+- [ ] `why-bullets` (Icon List widget with 3 items)
+- [ ] `faq-questions` (Toggle OR Accordion widget with 3 items + FAQ Schema enabled)
+- [ ] **OR** `faq-questions` + `faq-answer-1`, `faq-answer-2`, `faq-answer-3` (Separate widget structure)
 
-### Optional Elements (Skip if not in template or not in content):
+### Optional Elements (Skip if not needed):
 
-- [ ] `benefits-subheading`
-- [ ] `why-subheading`
-- [ ] `map-description`
+- [ ] `benefits-subheading` (Heading OR Text Editor widget)
+- [ ] `why-subheading` (Heading OR Text Editor widget)
+- [ ] `map-description` (Text Editor widget)
 - [ ] `map-iframe` (HTML widget - only for broad strokes & nested broad strokes)
+
+### Widget Type Reference:
+
+- **Heading Widget** = For H1, H2 headings (and optionally subheadings)
+- **Text Editor Widget** = For descriptions and optionally subheadings
+- **Icon List Widget** = For bullet point lists (3 items per list)
+- **Toggle Widget** = For FAQs (3 items, each with question+answer) - Most common
+- **Accordion Widget** = For FAQs (3 items, each with question+answer) - Alternative to Toggle
 
 ---
 

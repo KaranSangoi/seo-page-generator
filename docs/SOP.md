@@ -85,8 +85,20 @@
 
 **Heading (H2):**
 
-- Include location + service + company name + primary keyword
-- Example: "Why Choose [Company] as Your [Primary Keyword]?"
+- **MUST include BOTH:** Company name + Primary keyword (EXACT phrase)
+- **Be creative and contextual!** Avoid monotonous, repetitive formats
+- Make it unique to the page and engaging
+
+**Good Examples (Primary keyword: "Professional Plumber in Carlsbad, CA"):**
+- "Experience Excellence with [Company Name] - Your Professional Plumber in Carlsbad, CA"
+- "[Company Name]: Leading Professional Plumber in Carlsbad, CA"
+- "Why Choose [Company Name] for Professional Plumber in Carlsbad, CA"
+- "Trust [Company Name] as Your Professional Plumber in Carlsbad, CA"
+
+**Bad Examples (Avoid):**
+- "Why Choose [Company Name]?" (missing primary keyword)
+- "Our Services" (missing primary keyword)
+- Using the same format for every page
 
 **Subheading:**
 
@@ -95,7 +107,7 @@
 
 **3 Bullet Points:**
 
-- Each bullet: **minimum 35+ words** (strictly enforced)
+- Each bullet: **minimum 30+ words** (strictly enforced)
 - Each starts with `<b>Topic Name:</b>` tag
 - Focus on company's unique selling propositions
 - Optimized with primary keyword
@@ -107,9 +119,25 @@
 
 **Heading (H2):**
 
-- Include location + service + primary keyword
-- Example: "Why Hire a [Primary Keyword]?"
-- For Primary Service pages (no location): "Why Choose [Service]?"
+- **MUST include:** Primary keyword (EXACT phrase) ONLY
+- **DO NOT include company name** - this section is about service importance, not the company
+- **Be creative and contextual!** Avoid monotonous, repetitive formats
+- Make it relevant to why this service matters in this specific location
+
+**Good Examples (Primary keyword: "Professional Plumber in Carlsbad, CA"):**
+- "Why Professional Plumber in Carlsbad, CA Matters for Your Property"
+- "The Importance of Professional Plumber in Carlsbad, CA"
+- "Why Carlsbad Needs Professional Plumber in Carlsbad, CA"
+- "The Critical Role of Professional Plumber in Carlsbad, CA"
+
+**Bad Examples (Avoid):**
+- "Why Choose Us?" (missing primary keyword, company-focused)
+- "Our Benefits" (not contextual, missing primary keyword)
+- "Why [Company Name] is the Best..." (includes company name - NOT allowed)
+
+**For Primary Service Pages (no location):**
+- Focus on the importance of the service generally
+- Example: "Why Quality [Service] Matters for Your Business"
 
 **Subheading:**
 
@@ -118,7 +146,7 @@
 
 **3 Bullet Points:**
 
-- Each bullet: **minimum 35+ words** (strictly enforced)
+- Each bullet: **minimum 30+ words** (strictly enforced)
 - Each starts with `<b>Topic Name:</b>` tag
 - **CRITICAL:** Focus on **why [service] is important in [location]**
 - **NOT about the company** - about the service itself
@@ -140,18 +168,69 @@
 
 ### FAQ Section
 
-**Requirements:**
+**Template Setup (Elementor):**
 
-- Provide 3 SEO-optimized questions and answers
+- Use Elementor **Accordion widget** for FAQ section
+- **Enable "FAQ Schema" toggle** in accordion settings (Style tab)
+- This automatically adds proper FAQ schema markup for SERP features
+- Set CSS IDs: `faq-1-question`, `faq-1-answer`, `faq-2-question`, `faq-2-answer`, `faq-3-question`, `faq-3-answer`
+
+**Content Requirements:**
+
+- Provide **exactly 3 SEO-optimized questions and answers**
 - Specific to [service] in [location]
 - **Must be unique** across pages for same company
 - **Must be SEO-relevant** (not company promotional)
 - **Must use primary keyword** in question or answer
 - **Company name mentioned in 2nd half of answer only**
+- **CRITICAL: Use company name instead of "we", "our", "us" in answers**
+  - ✅ Say: "[Company Name] provides..."
+  - ❌ Don't say: "We provide..."
+  - Better for SEO visibility and brand recognition
 
-**Example:**
-Q: "What services does a professional commercial glass installer in Sumner, WA provide?"
-A: "A professional commercial glass installer in Sumner, WA offers storefront installation, office glass partitions, entrance door systems, display windows, and glass replacement. [Company Name] delivers full-service commercial glazing with attention to safety codes and aesthetic requirements."
+**SERP Optimization (Critical for Featured Snippets & PAA):**
+
+1. **Question Format:**
+   - Natural language (how people search)
+   - Start with: "How much", "How long", "Do you", "What", "When", "Can I"
+   - Include service + location in question
+   - Target common customer concerns: cost, time, availability, process
+
+2. **Answer Format:**
+   - **First sentence:** Direct answer (1-2 sentences, 15-25 words)
+   - **Second part:** Supporting details with specifics (25-35 words)
+   - **Total length:** 50-75 words per answer
+   - Include location name 2-3 times naturally
+   - End with benefit or call-to-action element
+
+3. **Topic Coverage (Choose 3 from these common patterns):**
+   - **Cost/Pricing:** "How much does [service] cost in [location]?"
+   - **Timeframe:** "How long does [service] take in [location]?"
+   - **Availability:** "Do you offer emergency/24-7 [service] in [location]?"
+   - **Process:** "What does the [service] process involve in [location]?"
+   - **Coverage Area:** "Do you serve [location] and surrounding areas?"
+   - **Materials/Methods:** "What materials/methods do you use for [service]?"
+
+**Examples (Commercial Glass Repair in Seattle, WA):**
+
+**Q1:** "How much does commercial glass repair cost in Seattle?"
+**A1:** "Commercial glass repair in Seattle typically costs between $200-$800, depending on the size and type of damage. [Company Name] provides free quotes and same-day service for most repairs, offering competitive pricing with high-quality materials to ensure glass is restored to perfect condition, minimizing business disruption."
+
+**Q2:** "How long does commercial glass repair take in Seattle?"
+**A2:** "Most commercial glass repairs in Seattle are completed within 2-4 hours. For emergency situations, [Company Name] can often complete repairs the same day. The experienced technicians work efficiently while maintaining the highest quality standards, getting businesses back to normal quickly and safely."
+
+**Q3:** "Do you offer emergency glass repair services in Seattle?"
+**A3:** "Yes, [Company Name] provides 24/7 emergency commercial glass repair services throughout Seattle and surrounding areas. The rapid response team can be on-site within 1-2 hours for urgent situations. Broken glass poses security and safety risks, so [Company Name] prioritizes emergency calls to protect businesses and property."
+
+**Bad Example (Too promotional):**
+❌ Q: "Why choose [Company Name] for glass repair?"
+❌ A: "Because we have 20 years of experience and the best team!" (Not SERP-optimized)
+
+**Good Example (SERP-optimized):**
+✅ Q: "What types of commercial glass can be repaired in Seattle?"
+✅ A: "Most commercial glass types can be repaired in Seattle, including storefront windows, office partitions, entrance doors, and display glass. Small cracks, chips, and minor damage are typically repairable, while severely shattered glass requires replacement. [Company Name] assesses each situation and recommends the most cost-effective solution for specific business needs."
+
+**Note:** All examples use "[Company Name]" instead of "we/our" for better SEO visibility and brand recognition.
 
 ---
 
@@ -282,41 +361,97 @@ provides professional street sweeping services tailored to your needs.
 
 ## Primary Keyword Generation
 
-**Format:** [Unique Adjective] + [Service] + "in" + [Location, State]
+**Format:** [Deterministic Adjective] + [Service] + "in" + [Location, State]
 
 **Examples:**
 
-- "Expert Roof Repair in Gilbert, AZ"
-- "Professional Painting Services in Newberry, FL"
-- "Trusted Commercial Glass Installer in Sumner, WA"
+- Row 1: "Professional Roof Repair in Gilbert, AZ"
+- Row 2: "Expert Painting Services in Newberry, FL"
+- Row 3: "Trusted Commercial Glass Installer in Sumner, WA"
 
-**Requirements:**
+**How Adjectives are Determined:**
 
-- Adjective must be unique per page in batch
-- Adjectives generated by AI at start of batch
-- Used throughout: meta title, meta description, H1, content
+- **Deterministic Selection:** Each CSV row is assigned a specific adjective based on its row number
+- **Consistency Guaranteed:** Preview shows exact adjective that will be used in generation
+- **No AI Randomness:** Adjectives are pre-selected from a curated list, not AI-generated
+- **Row-Based Formula:** `adjective = ADJECTIVES[(row_number - 1) % 50]`
 
-**Adjective Pool:**
-Expert, Professional, Trusted, Reliable, Top-Rated, Affordable, Quality, Premier, Leading, Certified, Licensed, Experienced, Skilled, Proven, Dependable
+**Complete Adjective List (50 total):**
+
+```
+Row 1-10:   Professional, Expert, Trusted, Reliable, Certified,
+            Licensed, Experienced, Quality, Top-Rated, Premier
+
+Row 11-20:  Leading, Specialized, Skilled, Qualified, Affordable,
+            Local, Reputable, Proven, Dependable, Elite
+
+Row 21-30:  Superior, Outstanding, Exceptional, First-Class, High-Quality,
+            Accredited, Vetted, Recommended, Award-Winning, Industry-Leading
+
+Row 31-40:  Full-Service, Comprehensive, Custom, Tailored, Personalized,
+            Fast, Quick, Same-Day, Emergency, 24/7
+
+Row 41-50:  Responsive, Timely, Prompt, Efficient, Effective,
+            Guaranteed, Insured, Bonded, Background-Checked, Verified
+```
+
+**Usage in Content:**
+
+- **CRITICAL:** AI is provided with the complete primary keyword and must use it EXACTLY as given
+- **NO modifications allowed:** AI cannot change the adjective, reorder words, or create variations
+- **Example:** If given "Professional Plumber in Carlsbad, CA", AI must use that exact phrase
+- ❌ WRONG: "Expert Plumber in Carlsbad, CA" (changed adjective)
+- ❌ WRONG: "Plumber Professional in Carlsbad, CA" (changed order)
+- ✅ CORRECT: "Professional Plumber in Carlsbad, CA" (exact match)
+
+**Benefits:**
+
+- **100% Consistency:** Preview → Generation → Regeneration all use same adjective
+- **Predictable:** Same row = same adjective every time
+- **No Surprises:** Users see exactly what they'll get before generation
+- **Faster:** No API calls needed for adjective generation
+
+**Technical Details:**
+
+See: `docs/ADJECTIVE_SYSTEM.md` for complete implementation details
 
 ---
 
 ## Validation Rules
 
-**Strictly Enforced:**
+### Auto-Fixed (No Retry):
+These are automatically corrected without AI regeneration:
 
-1. Meta description ≤155 characters
-2. Bullet points ≥30 words each
-3. Hero description 50-60 words
-4. Map description 50-60 words
-5. FAQs must be SEO-relevant (not promotional)
-6. Company name in 2nd half of FAQ answers only
-7. Primary keyword used throughout content
-8. Exactly 1 internal link per page
-9. Exactly 1 external link per page
-10. All bullets start with `<b>` tag
+1. **Meta description** - Ensures primary keyword, company name, "Call now!", under 155 chars
+2. **Meta title** - Format: `{primary keyword} | {company name}`, under 80 chars
+3. **H1** - Forces to be exactly the primary keyword (no company name)
+4. **Benefits heading** - Warns if missing company name or primary keyword (does not enforce format)
+5. **Why heading** - Warns if missing service or location (does not enforce format)
 
-**If validation fails:** Regenerate content (max 3 attempts)
+### Selective Retry (AI Regeneration, max 2 attempts):
+These trigger AI regeneration if they don't meet criteria:
+
+1. **FAQs** - Retries if:
+   - Missing primary keyword in questions
+   - Missing company name in answers
+   - Too promotional ("why choose us")
+   - Answer length not 50-75 words
+
+2. **Map description** - Retries if not 50-60 words
+
+### Non-Blocking Warnings:
+These log warnings but don't stop publishing:
+
+1. Hero description word count (should be 50-60)
+2. Bullet points word count (should be ≥30)
+3. Heading keyword presence (benefits/why)
+
+### Always Enforced:
+1. Primary keyword used throughout content
+2. Exactly 1 internal link per page
+3. Exactly 1 external link per page
+4. All bullets start with `<b>` tag
+5. Company name in 2nd half of FAQ answers
 
 ---
 

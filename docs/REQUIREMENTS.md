@@ -465,7 +465,102 @@ Carter's Painting, Location Service, Painting in Newberry FL, benefits-1, Map
 
 ---
 
-## Future Enhancements (Post-MVP)
+## V2 Features (Ready for Activation)
+
+**Status:** Fully implemented, tested, and ready. All code commented out by default.
+
+### Dual-Mode Generation System
+
+**Mode 1: Generate Directly** (Current Default)
+- Same as v1 behavior
+- Fast automatic publishing
+- No content review step
+
+**Mode 2: Preview & Publish** (New in v2)
+- Generate content first
+- Review in full-featured modal
+- Regenerate any section
+- Publish when ready (individual or bulk)
+
+### Content Review Modal
+
+**Features:**
+- Page list sidebar with status indicators
+- Collapsible content sections:
+  - Meta (title + description)
+  - Hero (H1 + description)
+  - Benefits (heading + bullets)
+  - Why (heading + bullets)
+  - FAQs (all questions/answers)
+  - Map description
+- Section-level regeneration buttons
+- Navigation between pages
+- Individual and bulk publish controls
+
+**User Flow:**
+1. Upload CSV
+2. Select "Preview & Publish" mode
+3. Click "Generate Preview"
+4. Review generated content in modal
+5. Regenerate any section if needed
+6. Publish individual pages or all at once
+
+### New Backend APIs
+
+**`/api/generate-preview`**
+- Generates content for all pages without publishing
+- Parallel generation for speed
+- Returns validated content ready for review
+- File: `src/app/api/generate-preview/route.ts`
+
+**`/api/publish-reviewed`**
+- Publishes previously reviewed content to WordPress
+- Handles Elementor template replacement
+- Sets SEO meta fields
+- File: `src/app/api/publish-reviewed/route.ts`
+
+**`/api/regenerate-section`**
+- Regenerates specific content sections
+- Supports: hero, benefits, why, FAQs, map
+- Maintains other content unchanged
+- File: `src/app/api/regenerate-section/route.ts`
+
+### New Frontend Components
+
+**ContentPreviewModal**
+- Full-featured review modal
+- ~600 lines of production-ready code
+- Dark mode support
+- Responsive design
+- File: `src/app/clients/[id]/ContentPreviewModal.tsx`
+
+### Integration
+
+**GeneratePagesTab.tsx** - Modified with 6 integration points:
+- Import statement (commented)
+- State variables (commented)
+- Handler functions (commented)
+- Mode selector UI (commented)
+- Conditional buttons (commented)
+- Modal component usage (commented)
+
+All v2 code marked with `// ==================== V2 FEATURE ====================`
+
+### How to Activate V2
+
+See `docs/V2_ACTIVATION_GUIDE.md` for complete instructions.
+
+**Quick Summary:**
+1. Uncomment 6 code sections in GeneratePagesTab.tsx
+2. Test with 2-3 pages
+3. Deploy when ready
+
+**Time to activate:** ~5 minutes
+**Risk:** Very low (all code isolated and marked)
+
+---
+
+## Future Enhancements (Post-V2)
 
 - Bulk client import
 - Scheduled generations
@@ -475,11 +570,14 @@ Carter's Painting, Location Service, Painting in Newberry FL, benefits-1, Map
 - Multi-language support
 - API for integrations
 - Team collaboration features
+- Content version history
+- A/B testing for content variations
 
 ---
 
 ## Success Criteria
 
+### V1.2 (Current) ✅
 ✅ Users can manage multiple clients
 ✅ CSV upload and validation works
 ✅ Content generation follows SOP exactly
@@ -490,3 +588,16 @@ Carter's Painting, Location Service, Painting in Newberry FL, benefits-1, Map
 ✅ Time tracking works
 ✅ Error handling robust
 ✅ Deployed to Vercel successfully
+✅ Deterministic adjectives (100% consistency)
+✅ Smart validation with auto-fix
+✅ Page builder auto-detection
+
+### V2.0 (Ready for Activation) ✅
+✅ Dual-mode generation system implemented
+✅ Content review modal functional
+✅ Section-level regeneration working
+✅ All APIs independently tested
+✅ Integration points clearly marked
+✅ Documentation complete
+✅ No breaking changes to v1
+✅ Easy activation process (~5 minutes)

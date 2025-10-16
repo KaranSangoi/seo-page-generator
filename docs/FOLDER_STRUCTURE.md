@@ -20,47 +20,83 @@ seo-page-generator/
 │   └── schema.prisma               ← Download and place here
 │
 ├── docs/
-│   ├── CONVERSATION_CONTEXT.md     ← Download and place here
-│   ├── REQUIREMENTS.md             ← Download and place here
-│   ├── SOP.md                      ← Download and place here
-│   ├── TIMELINE.md                 ← You'll create with Claude Code
-│   ├── CLAUDE_CODE_GUIDE.md        ← You'll create with Claude Code
+│   ├── REQUIREMENTS.md                 ← Complete requirements (includes v2)
+│   ├── SOP.md                          ← Content structure and guidelines
+│   ├── TEMPLATE_ELEMENTS.md            ← Elementor element IDs
+│   ├── FOLDER_STRUCTURE.md             ← This file
+│   ├── CHANGELOG.md                    ← Version history (includes v2.0)
+│   ├── ADJECTIVE_SYSTEM.md             ← Deterministic adjectives explained
+│   ├── SMART_VALIDATION.md             ← Auto-fix and retry system
+│   ├── BUILDER_AUTO_DETECTION.md       ← Page builder detection logic
+│   ├── MULTI_BUILDER_FEASIBILITY.md    ← Multi-builder analysis
+│   ├── SEO_INDEXING_EXPLAINED.md       ← SEO plugin details
+│   ├── SEO_UI_LIMITATION.md            ← SEO plugin UI limitations
+│   ├── ELEMENTOR_TEMPLATE_SETUP.md     ← Template setup guide
+│   ├── TEMPLATE_SEO_SETUP.md           ← SEO meta setup guide
+│   ├── V2_ACTIVATION_GUIDE.md          🚀 V2: How to enable preview mode
+│   ├── PROJECT_STATUS.md               📊 Complete project state
+│   ├── QUICK_REFERENCE.md              ⚡ Fast context for new sessions
+│   ├── SESSION_SUMMARY.md              📝 Latest session summary
 │   └── sample-content/
-│       └── commercial-glass-sumner-wa.md  ← Download and place here
+│       └── commercial-glass-sumner-wa.md  ← Sample content example
 │
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx              ← You'll create with Claude Code
-│   │   ├── page.tsx                ← You'll create with Claude Code
-│   │   ├── globals.css             ← You'll create with Claude Code
+│   │   ├── layout.tsx              ← Main app layout
+│   │   ├── page.tsx                ← Dashboard/home page
+│   │   ├── globals.css             ← Global styles
 │   │   ├── login/
 │   │   │   └── page.tsx
 │   │   ├── signup/
 │   │   │   └── page.tsx
+│   │   ├── admin/
+│   │   │   └── page.tsx            ← Admin dashboard
+│   │   ├── api/
+│   │   │   ├── generate/route.ts           ← Main generation API
+│   │   │   ├── regenerate/route.ts         ← Page regeneration
+│   │   │   ├── sample-page/route.ts        ← Sample page generation
+│   │   │   ├── admin/
+│   │   │   │   └── stats/route.ts          ← Admin stats
+│   │   │   ├── generate-preview/           🚀 V2: Generate without publishing
+│   │   │   │   └── route.ts
+│   │   │   ├── publish-reviewed/           🚀 V2: Publish reviewed content
+│   │   │   │   └── route.ts
+│   │   │   └── regenerate-section/         🚀 V2: Regenerate sections
+│   │   │       └── route.ts
 │   │   └── clients/
 │   │       ├── page.tsx
 │   │       ├── [id]/
-│   │       │   └── page.tsx
+│   │       │   ├── page.tsx                ← Client detail page
+│   │       │   ├── ClientTabs.tsx          ← Tab navigation
+│   │       │   ├── MetadataTab.tsx         ← Client metadata
+│   │       │   ├── GeneratePagesTab.tsx    ← Page generation (has v2 code commented)
+│   │       │   ├── HistoryTab.tsx          ← Generation history
+│   │       │   ├── BatchDetailModal.tsx    ← Batch details modal
+│   │       │   ├── ContentPreviewModal.tsx 🚀 V2: Content review modal
+│   │       │   └── actions.ts              ← Server actions
 │   │       └── new/
 │   │           └── page.tsx
 │   │
 │   ├── lib/
-│   │   ├── db.ts                   ← Database client
-│   │   ├── claude.ts               ← Claude Code integration
-│   │   ├── wordpress.ts            ← WordPress API
-│   │   ├── elementor.ts            ← Elementor JSON builder
-│   │   ├── validation.ts           ← Content validation
+│   │   ├── prisma.ts               ← Prisma database client
+│   │   ├── auth.ts                 ← Clerk authentication
+│   │   ├── claude-api.ts           ← Claude AI integration
+│   │   ├── simple-queue.ts         ← Batch processing queue
+│   │   ├── adjectives.ts           ← Deterministic adjective system
+│   │   ├── elementor-replacer.ts   🚀 V2: Reusable content replacement
+│   │   ├── builders/               ← Page builder detection
+│   │   │   ├── base.ts
+│   │   │   ├── elementor.ts
+│   │   │   ├── divi.ts
+│   │   │   ├── wpbakery.ts
+│   │   │   └── detector.ts
 │   │   └── utils.ts                ← Utility functions
 │   │
 │   ├── components/
-│   │   ├── InfoIcon.tsx            ← (ⓘ) icon with tooltip
-│   │   ├── ClientCard.tsx          ← Client display card
-│   │   ├── ProgressBar.tsx         ← Generation progress
-│   │   ├── FileUpload.tsx          ← CSV upload component
-│   │   └── ...
+│   │   └── (UI components)
 │   │
 │   ├── prompts/
-│   │   └── sop-prompt.ts           ← SOP as prompt template
+│   │   └── (AI prompt templates)
 │   │
 │   └── types/
 │       └── index.ts                ← TypeScript types
