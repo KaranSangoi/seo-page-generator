@@ -3,6 +3,17 @@
  * Extracted from simple-queue.ts for reuse in publish-reviewed API
  */
 
+export interface ElementorReplacementLog {
+  sectionsFound: string[];
+  sectionsUpdated: string[];
+  elementDetails: Array<{
+    cssId: string;
+    widgetType: string;
+    section: string;
+    action: string;
+  }>;
+}
+
 export function replaceElementorContent(
   elementorData: any,
   generatedContent: any,
@@ -12,10 +23,26 @@ export function replaceElementorContent(
   service?: string,
   internalLinkPlacement?: string,
   externalLinkPlacement?: string
-): any {
-  if (!elementorData || !Array.isArray(elementorData)) return elementorData;
+): { data: any; log: ElementorReplacementLog } {
+  if (!elementorData || !Array.isArray(elementorData)) {
+    return {
+      data: elementorData,
+      log: {
+        sectionsFound: [],
+        sectionsUpdated: [],
+        elementDetails: [],
+      },
+    };
+  }
 
   const clonedData = JSON.parse(JSON.stringify(elementorData));
+
+  // Tracking what we find and update
+  const replacementLog: ElementorReplacementLog = {
+    sectionsFound: [],
+    sectionsUpdated: [],
+    elementDetails: [],
+  };
 
   // Generate city website URL for external link
   const generateCityWebsiteUrl = (loc: string): string => {
@@ -56,6 +83,23 @@ export function replaceElementorContent(
     return text;
   };
 
+  // Logging helper
+  const logUpdate = (cssId: string, widgetType: string, section: string, action: string) => {
+    const sectionKey = section.split(' ')[0]; // e.g., "hero", "benefits", "faq"
+    if (!replacementLog.sectionsFound.includes(sectionKey)) {
+      replacementLog.sectionsFound.push(sectionKey);
+    }
+    if (!replacementLog.sectionsUpdated.includes(section)) {
+      replacementLog.sectionsUpdated.push(section);
+    }
+    replacementLog.elementDetails.push({
+      cssId,
+      widgetType,
+      section,
+      action,
+    });
+  };
+
   // Recursive function to find and replace content in widgets
   function replaceInElement(element: any): void {
     if (!element || typeof element !== 'object') return;
@@ -70,6 +114,9 @@ export function replaceElementorContent(
           let content = generatedContent.heroDescription;
           if (internalLinkPlacement === 'hero' && internalLinkUrl && companyName) {
             content = insertInternalLink(content, internalLinkUrl, companyName);
+            logUpdate(cssId, element.widgetType, 'hero description (text-editor)', 'Updated with internal link');
+          } else {
+            logUpdate(cssId, element.widgetType, 'hero description (text-editor)', 'Updated without link');
           }
           element.settings.editor = content;
         }
@@ -78,8 +125,14 @@ export function replaceElementorContent(
           let content = generatedContent.heroDescription;
           if (internalLinkPlacement === 'hero' && internalLinkUrl && companyName) {
             content = insertInternalLink(content, internalLinkUrl, companyName);
+            logUpdate(cssId, element.widgetType, 'hero description (heading)', 'Updated with internal link');
+          } else {
+            logUpdate(cssId, element.widgetType, 'hero description (heading)', 'Updated without link');
           }
           element.settings.title = content;
+        }
+        else {
+          logUpdate(cssId, element.widgetType, 'hero description', 'FAILED - no editor or title setting');
         }
       }
 
@@ -87,8 +140,12 @@ export function replaceElementorContent(
       else if (cssId.includes('h1')) {
         if (element.settings.title) {
           element.settings.title = generatedContent.h1;
+          logUpdate(cssId, element.widgetType, 'h1 (title)', 'Updated H1');
         } else if (element.settings.editor) {
           element.settings.editor = generatedContent.h1;
+          logUpdate(cssId, element.widgetType, 'h1 (editor)', 'Updated H1');
+        } else {
+          logUpdate(cssId, element.widgetType, 'h1', 'FAILED - no title or editor setting');
         }
       }
 
@@ -97,25 +154,37 @@ export function replaceElementorContent(
         if (element.widgetType === 'heading' && element.settings.title) {
           if (cssId.includes('subheading')) {
             element.settings.title = generatedContent.benefitsSubheading;
+            logUpdate(cssId, element.widgetType, 'benefits subheading', 'Updated');
           } else {
             element.settings.title = generatedContent.benefitsHeading;
+            logUpdate(cssId, element.widgetType, 'benefits heading', 'Updated');
           }
         }
         if (element.widgetType === 'text-editor' && element.settings.editor) {
           if (cssId.includes('subheading')) {
             element.settings.editor = generatedContent.benefitsSubheading;
+            logUpdate(cssId, element.widgetType, 'benefits subheading (text-editor)', 'Updated');
           }
         }
         // Icon list widget
         if (element.widgetType === 'icon-list' && cssId.includes('bullets') && element.settings.icon_list) {
+          const bulletCount = element.settings.icon_list.length;
+          const generatedCount = generatedContent.benefitsBullets?.length || 0;
+          logUpdate(cssId, element.widgetType, 'benefits bullets', `Found ${bulletCount} bullets, ${generatedCount} generated`);
+
           element.settings.icon_list.forEach((item: any, index: number) => {
             if (generatedContent.benefitsBullets[index]) {
               let content = generatedContent.benefitsBullets[index];
               const sectionKey = `benefits-${index + 1}`;
               if (externalLinkPlacement === sectionKey && location && cityWebsiteUrl) {
                 content = insertExternalLink(content, location, cityWebsiteUrl);
+                logUpdate(cssId, element.widgetType, `benefits bullet-${index + 1}`, 'Updated with external link');
+              } else {
+                logUpdate(cssId, element.widgetType, `benefits bullet-${index + 1}`, 'Updated without link');
               }
               item.text = content;
+            } else {
+              logUpdate(cssId, element.widgetType, `benefits bullet-${index + 1}`, `SKIPPED - no content at index ${index}`);
             }
           });
         }
@@ -126,25 +195,37 @@ export function replaceElementorContent(
         if (element.widgetType === 'heading' && element.settings.title) {
           if (cssId.includes('subheading')) {
             element.settings.title = generatedContent.whySubheading;
+            logUpdate(cssId, element.widgetType, 'why subheading', 'Updated');
           } else {
             element.settings.title = generatedContent.whyHeading;
+            logUpdate(cssId, element.widgetType, 'why heading', 'Updated');
           }
         }
         if (element.widgetType === 'text-editor' && element.settings.editor) {
           if (cssId.includes('subheading')) {
             element.settings.editor = generatedContent.whySubheading;
+            logUpdate(cssId, element.widgetType, 'why subheading (text-editor)', 'Updated');
           }
         }
         // Icon list widget
         if (element.widgetType === 'icon-list' && cssId.includes('bullets') && element.settings.icon_list) {
+          const bulletCount = element.settings.icon_list.length;
+          const generatedCount = generatedContent.whyBullets?.length || 0;
+          logUpdate(cssId, element.widgetType, 'why bullets', `Found ${bulletCount} bullets, ${generatedCount} generated`);
+
           element.settings.icon_list.forEach((item: any, index: number) => {
             if (generatedContent.whyBullets[index]) {
               let content = generatedContent.whyBullets[index];
               const sectionKey = `why-${index + 1}`;
               if (externalLinkPlacement === sectionKey && location && cityWebsiteUrl) {
                 content = insertExternalLink(content, location, cityWebsiteUrl);
+                logUpdate(cssId, element.widgetType, `why bullet-${index + 1}`, 'Updated with external link');
+              } else {
+                logUpdate(cssId, element.widgetType, `why bullet-${index + 1}`, 'Updated without link');
               }
               item.text = content;
+            } else {
+              logUpdate(cssId, element.widgetType, `why bullet-${index + 1}`, `SKIPPED - no content at index ${index}`);
             }
           });
         }
@@ -155,6 +236,10 @@ export function replaceElementorContent(
         // Handle FAQ questions container (toggle/accordion with tabs structure)
         if (cssId.includes('questions')) {
           if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
+            const tabCount = element.settings.tabs.length;
+            const faqCount = generatedContent.faqs?.length || 0;
+            logUpdate(cssId, element.widgetType, 'faq container', `Found FAQ container with ${tabCount} tabs, ${faqCount} FAQs available`);
+
             element.settings.tabs.forEach((tab: any, index: number) => {
               if (generatedContent.faqs[index]) {
                 tab.tab_title = generatedContent.faqs[index].question;
@@ -163,11 +248,20 @@ export function replaceElementorContent(
                   const faqKey = `faq-${index + 1}`;
                   if (internalLinkPlacement === faqKey) {
                     content = insertInternalLink(content, internalLinkUrl, companyName);
+                    logUpdate(cssId, element.widgetType, `faq container tab-${index + 1}`, `Updated with internal link`);
+                  } else {
+                    logUpdate(cssId, element.widgetType, `faq container tab-${index + 1}`, `Updated without link`);
                   }
+                } else {
+                  logUpdate(cssId, element.widgetType, `faq container tab-${index + 1}`, `Updated without link`);
                 }
                 tab.tab_content = content;
+              } else {
+                logUpdate(cssId, element.widgetType, `faq container tab-${index + 1}`, `SKIPPED - no FAQ data at index ${index}`);
               }
             });
+          } else {
+            logUpdate(cssId, element.widgetType, 'faq container', 'FAILED - no tabs array found');
           }
         }
         // Handle individual FAQ question widgets (separate IDs for each question)
@@ -175,6 +269,11 @@ export function replaceElementorContent(
           const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
           if (generatedContent.faqs[faqIndex] && element.widgetType === 'heading' && element.settings.title) {
             element.settings.title = generatedContent.faqs[faqIndex].question;
+            logUpdate(cssId, element.widgetType, `faq question-${faqIndex + 1}`, 'Updated question heading');
+          } else {
+            const reason = !generatedContent.faqs[faqIndex] ? 'no FAQ data' :
+                          element.widgetType !== 'heading' ? 'not a heading widget' : 'no title setting';
+            logUpdate(cssId, element.widgetType, `faq question-${faqIndex + 1}`, `FAILED - ${reason}`);
           }
         }
         // Handle individual FAQ answer widgets (separate IDs for each answer)
@@ -187,10 +286,22 @@ export function replaceElementorContent(
               const faqKey = `faq-${faqIndex + 1}`;
               if (internalLinkPlacement === faqKey) {
                 content = insertInternalLink(content, internalLinkUrl, companyName);
+                logUpdate(cssId, element.widgetType, `faq answer-${faqIndex + 1}`, 'Updated with internal link');
+              } else {
+                logUpdate(cssId, element.widgetType, `faq answer-${faqIndex + 1}`, 'Updated without link');
               }
+            } else {
+              logUpdate(cssId, element.widgetType, `faq answer-${faqIndex + 1}`, 'Updated without link');
             }
             element.settings.editor = content;
+          } else {
+            const reason = !generatedContent.faqs[faqIndex] ? 'no FAQ data' :
+                          element.widgetType !== 'text-editor' ? 'not a text-editor widget' : 'no editor setting';
+            logUpdate(cssId, element.widgetType, `faq answer-${faqIndex + 1}`, `FAILED - ${reason}`);
           }
+        }
+        else {
+          logUpdate(cssId, element.widgetType, 'faq', 'UNHANDLED - cssId has "faq" but doesn\'t match any handler');
         }
       }
 
@@ -201,6 +312,9 @@ export function replaceElementorContent(
           let content = generatedContent.mapDescription || '';
           if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
             content = insertInternalLink(content, internalLinkUrl, companyName);
+            logUpdate(cssId, element.widgetType, 'map description (text-editor)', 'Updated with internal link');
+          } else {
+            logUpdate(cssId, element.widgetType, 'map description (text-editor)', 'Updated without link');
           }
           element.settings.editor = content;
         }
@@ -209,8 +323,14 @@ export function replaceElementorContent(
           let content = generatedContent.mapDescription || '';
           if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
             content = insertInternalLink(content, internalLinkUrl, companyName);
+            logUpdate(cssId, element.widgetType, 'map description (heading)', 'Updated with internal link');
+          } else {
+            logUpdate(cssId, element.widgetType, 'map description (heading)', 'Updated without link');
           }
           element.settings.title = content;
+        }
+        else {
+          logUpdate(cssId, element.widgetType, 'map description', 'FAILED - no editor or title setting');
         }
       }
 
@@ -231,9 +351,17 @@ export function replaceElementorContent(
           /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
           (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
             const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
+            logUpdate(cssId, element.widgetType, 'map iframe', `Updated with location: ${location}`);
             return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
           }
         );
+      }
+      else if (cssId === 'map-iframe') {
+        if (!element.settings.html) {
+          logUpdate(cssId, element.widgetType, 'map iframe', 'FAILED - no html setting');
+        } else if (!location) {
+          logUpdate(cssId, element.widgetType, 'map iframe', 'FAILED - no location provided');
+        }
       }
     }
 
@@ -244,5 +372,16 @@ export function replaceElementorContent(
   }
 
   clonedData.forEach(replaceInElement);
-  return clonedData;
+
+  // Log summary
+  console.log('[Elementor Replacer] Summary:', {
+    sectionsFound: replacementLog.sectionsFound,
+    sectionsUpdated: replacementLog.sectionsUpdated.length,
+    totalElementsProcessed: replacementLog.elementDetails.length,
+  });
+
+  return {
+    data: clonedData,
+    log: replacementLog,
+  };
 }

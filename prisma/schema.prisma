@@ -89,11 +89,35 @@ model GeneratedPage {
   timeElapsed      Int      @default(0) // milliseconds
   createdAt        DateTime @default(now())
 
-  batch GenerationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batch               GenerationBatch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  pageGenerationLogs  PageGenerationLog[]
 
   @@index([batchId])
   @@index([status])
   @@map("generated_pages")
+}
+
+model PageGenerationLog {
+  id          String   @id @default(cuid())
+  pageId      String
+  batchId     String
+  clientId    String
+  logLevel    String   // "info", "warn", "error", "debug"
+  stage       String   // "generation", "validation", "regeneration", "publishing", "elementor"
+  message     String   @db.Text
+  data        String?  @db.Text // JSON string with detailed context (params, responses, etc.)
+  duration    Int?     // milliseconds (for performance tracking)
+  createdAt   DateTime @default(now())
+
+  page   GeneratedPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([batchId])
+  @@index([clientId])
+  @@index([stage])
+  @@index([logLevel])
+  @@index([createdAt])
+  @@map("page_generation_logs")
 }
 
 model ErrorLog {

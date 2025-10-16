@@ -441,7 +441,7 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
 
   // Parse and replace content
   const parsedElementorData = typeof elementorData === 'string' ? JSON.parse(elementorData) : elementorData;
-  const updatedElementorData = replaceElementorContent(
+  const { data: updatedElementorData, log: elementorLog } = replaceElementorContent(
     parsedElementorData,
     params.generatedContent,
     params.pageData.location,
@@ -451,6 +451,13 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     internalLinkPlacement,
     externalLinkPlacement
   );
+
+  // Log element replacement details
+  console.log('[Publishing] Elementor replacement summary:', {
+    sectionsFound: elementorLog.sectionsFound,
+    sectionsUpdated: elementorLog.sectionsUpdated,
+    totalElements: elementorLog.elementDetails.length,
+  });
 
   // Build new page from template
   const pagePayload: any = {
