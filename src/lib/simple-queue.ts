@@ -3,7 +3,7 @@
  * No Redis required - uses sequential generation with parallel validation/publishing
  */
 
-import { generatePageContent, validateContent, generateAdjectives, clearBatchContext } from './claude-api';
+import { generatePageContent, validateContent, validateAndFixContent, regenerateField, generateAdjectives, clearBatchContext } from './claude-api';
 import { prisma } from './prisma';
 
 interface PageJob {
@@ -18,6 +18,8 @@ interface PageJob {
     externalLinkSection: string;
     omitSections: string[];
     rowNumber: number;
+    customSlug?: string; // User-edited slug from preview modal
+    customPrimaryKeyword?: string; // User-edited primary keyword from preview modal
   };
   clientData: {
     clientName: string;
@@ -33,6 +35,12 @@ interface PageJob {
 
 // In-memory storage for active batches
 const activeBatches = new Map<string, { status: string; totalPages: number }>();
+
+// Track pending validation/publishing promises for each batch
+const pendingPublishPromises = new Map<string, Promise<void>[]>();
+
+// Track FAQs used in each batch to ensure uniqueness across pages
+const batchFAQs = new Map<string, string[]>();
 
 // Rate limiting: Track last API call
 let lastApiCall = 0;
@@ -148,7 +156,7 @@ async function fetchSitemap(websiteUrl: string): Promise<string[]> {
     const xmlText = await response.text();
 
     // Parse XML to extract URLs (simple regex-based parsing)
-    const urlMatches = xmlText.matchAll(/<loc>(.*?)<\/loc>/g);
+    const urlMatches = Array.from(xmlText.matchAll(/<loc>(.*?)<\/loc>/g));
     const urls: string[] = [];
 
     for (const match of urlMatches) {
@@ -237,16 +245,27 @@ function insertExternalLink(text: string, location: string, cityWebsiteUrl: stri
 
 /**
  * Generate city website URL from location
+ * Uses Wikipedia as a reliable fallback since city .gov URLs vary widely
  */
 function generateCityWebsiteUrl(location: string): string {
   if (!location) return '';
 
-  // Extract city name (before comma)
-  const cityName = location.split(',')[0].trim();
-  const citySlug = cityName.toLowerCase().replace(/\s+/g, '');
+  // Extract city name and state (e.g., "Carlsbad, CA" -> "Carlsbad" and "CA")
+  const parts = location.split(',').map(p => p.trim());
+  const cityName = parts[0];
+  const state = parts[1] || '';
 
-  // Common patterns for city websites
-  return `https://www.${citySlug}.gov`;
+  // Format for Wikipedia URL: spaces become underscores
+  const citySlug = cityName.replace(/\s+/g, '_');
+  const stateSlug = state.replace(/\s+/g, '_');
+
+  // Use Wikipedia URL as reliable fallback
+  // Format: https://en.wikipedia.org/wiki/City_Name,_State
+  if (state) {
+    return `https://en.wikipedia.org/wiki/${citySlug},_${stateSlug}`;
+  } else {
+    return `https://en.wikipedia.org/wiki/${citySlug}`;
+  }
 }
 
 /**
@@ -260,26 +279,17 @@ function replaceElementorContent(
   internalLinkUrl?: string,
   companyName?: string,
   service?: string,
-  externalLinkSection?: string,
-  rowNumber?: number
+  internalLinkPlacement?: string,
+  externalLinkPlacement?: string
 ): any {
   if (!elementorData || !Array.isArray(elementorData)) return elementorData;
 
   // Deep clone to avoid modifying original
   const clonedData = JSON.parse(JSON.stringify(elementorData));
 
-  // Determine which section gets the internal link based on batch size rotation
-  // For 3-page batch: [hero=0, faq-a1=1, map=2]
-  // For 5-page batch: [hero=0, faq-a1=1, faq-a2=2, faq-a3=3, map=4]
-  const internalLinkSection = rowNumber ? rowNumber % 5 : 0;
-
-  // Determine external link section - use CSV value or default rotation
-  // Default rotation: benefits-1, benefits-2, benefits-3, why-1, why-2, why-3
-  let finalExternalLinkSection = externalLinkSection;
-  if (!finalExternalLinkSection && rowNumber !== undefined) {
-    const externalRotation = ['benefits-1', 'benefits-2', 'benefits-3', 'why-1', 'why-2', 'why-3'];
-    finalExternalLinkSection = externalRotation[rowNumber % 6];
-  }
+  // Use pre-calculated link placements
+  // Internal: 'hero', 'faq-1', 'faq-2', 'faq-3', 'map'
+  // External: 'benefits-1', 'benefits-2', 'benefits-3', 'why-1', 'why-2', 'why-3'
 
   // Generate city website URL for external link
   const cityWebsiteUrl = location ? generateCityWebsiteUrl(location) : '';
@@ -303,8 +313,8 @@ function replaceElementorContent(
         if (element.widgetType === 'text-editor') {
           if (element.settings.editor) {
             let content = generatedContent.heroDescription;
-            // Add internal link if this is the hero section's turn (rotation 0)
-            if (internalLinkSection === 0 && internalLinkUrl && companyName) {
+            // Add internal link if this section is designated for internal link
+            if (internalLinkPlacement === 'hero' && internalLinkUrl && companyName) {
               content = insertInternalLink(content, internalLinkUrl, companyName);
             }
             element.settings.editor = content;
@@ -313,8 +323,14 @@ function replaceElementorContent(
       } else if (cssId.includes('benefits')) {
         // Replace benefits content
         if (element.widgetType === 'heading' && element.settings.title) {
-          element.settings.title = generatedContent.benefitsHeading;
+          // Check if it's the main heading or subheading
+          if (cssId.includes('subheading')) {
+            element.settings.title = generatedContent.benefitsSubheading;
+          } else {
+            element.settings.title = generatedContent.benefitsHeading;
+          }
         }
+        // Handle text-editor for subheading and individual bullets
         if (element.widgetType === 'text-editor' && element.settings.editor) {
           if (cssId.includes('subheading')) {
             element.settings.editor = generatedContent.benefitsSubheading;
@@ -323,18 +339,40 @@ function replaceElementorContent(
             const bulletIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
             if (generatedContent.benefitsBullets[bulletIndex]) {
               let content = generatedContent.benefitsBullets[bulletIndex];
-              // Add external link if this matches the external link section (CSV or default rotation)
-              if (finalExternalLinkSection && cssId.includes(finalExternalLinkSection) && location && cityWebsiteUrl) {
+              // Add external link if this matches the external link placement
+              const sectionKey = `benefits-${bulletIndex + 1}`;
+              if (externalLinkPlacement === sectionKey && location && cityWebsiteUrl) {
                 content = insertExternalLink(content, location, cityWebsiteUrl);
               }
               element.settings.editor = content;
             }
           }
         }
+        // Handle icon-list widget (single ID for all bullets)
+        if (element.widgetType === 'icon-list' && cssId.includes('bullets')) {
+          if (element.settings.icon_list && Array.isArray(element.settings.icon_list)) {
+            element.settings.icon_list.forEach((item: any, index: number) => {
+              if (generatedContent.benefitsBullets[index]) {
+                let content = generatedContent.benefitsBullets[index];
+                // Add external link if this matches the external link placement
+                const sectionKey = `benefits-${index + 1}`;
+                if (externalLinkPlacement === sectionKey && location && cityWebsiteUrl) {
+                  content = insertExternalLink(content, location, cityWebsiteUrl);
+                }
+                item.text = content;
+              }
+            });
+          }
+        }
       } else if (cssId.includes('why')) {
         // Replace why content
         if (element.widgetType === 'heading' && element.settings.title) {
-          element.settings.title = generatedContent.whyHeading;
+          // Check if it's the main heading or subheading
+          if (cssId.includes('subheading')) {
+            element.settings.title = generatedContent.whySubheading;
+          } else {
+            element.settings.title = generatedContent.whyHeading;
+          }
         }
         if (element.widgetType === 'text-editor' && element.settings.editor) {
           if (cssId.includes('subheading')) {
@@ -343,45 +381,147 @@ function replaceElementorContent(
             const bulletIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
             if (generatedContent.whyBullets[bulletIndex]) {
               let content = generatedContent.whyBullets[bulletIndex];
-              // Add external link if this matches the external link section (CSV or default rotation)
-              if (finalExternalLinkSection && cssId.includes(finalExternalLinkSection) && location && cityWebsiteUrl) {
+              // Add external link if this matches the external link placement
+              const sectionKey = `why-${bulletIndex + 1}`;
+              if (externalLinkPlacement === sectionKey && location && cityWebsiteUrl) {
                 content = insertExternalLink(content, location, cityWebsiteUrl);
               }
               element.settings.editor = content;
             }
           }
         }
-      } else if (cssId.includes('faq')) {
-        // Replace FAQ content
-        const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
-        if (generatedContent.faqs[faqIndex]) {
-          if (element.widgetType === 'heading' && cssId.includes('question')) {
-            element.settings.title = generatedContent.faqs[faqIndex].question;
-          }
-          if (element.widgetType === 'text-editor' && cssId.includes('answer')) {
-            let content = generatedContent.faqs[faqIndex].answer;
-            // Add internal link based on rotation
-            // rotation 1 = faq-a1, rotation 2 = faq-a2, rotation 3 = faq-a3
-            if (internalLinkUrl && companyName) {
-              if ((internalLinkSection === 1 && faqIndex === 0) ||
-                  (internalLinkSection === 2 && faqIndex === 1) ||
-                  (internalLinkSection === 3 && faqIndex === 2)) {
-                content = insertInternalLink(content, internalLinkUrl, companyName);
+        // Handle icon-list widget (single ID for all bullets)
+        if (element.widgetType === 'icon-list' && cssId.includes('bullets')) {
+          if (element.settings.icon_list && Array.isArray(element.settings.icon_list)) {
+            element.settings.icon_list.forEach((item: any, index: number) => {
+              if (generatedContent.whyBullets[index]) {
+                let content = generatedContent.whyBullets[index];
+                // Add external link if this matches the external link placement
+                const sectionKey = `why-${index + 1}`;
+                if (externalLinkPlacement === sectionKey && location && cityWebsiteUrl) {
+                  content = insertExternalLink(content, location, cityWebsiteUrl);
+                }
+                item.text = content;
               }
+            });
+          }
+        }
+      } else if (cssId.includes('faq')) {
+        // Handle FAQ section - check by ID first, then adapt to structure
+
+        // If this is the main FAQ container (ID contains 'questions')
+        if (cssId.includes('questions')) {
+          console.log('[BATCH DEBUG] Found FAQ container:', {
+            cssId: cssId,
+            widgetType: element.widgetType,
+            hasSettings: !!element.settings,
+            settingsKeys: element.settings ? Object.keys(element.settings) : [],
+            hasTabs: !!element.settings.tabs,
+            isArray: Array.isArray(element.settings.tabs),
+            tabsLength: element.settings.tabs ? element.settings.tabs.length : 0,
+            faqsLength: generatedContent.faqs ? generatedContent.faqs.length : 0,
+          });
+
+          // Check if it uses tabs structure (classic accordion/toggle)
+          if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
+            console.log('[BATCH DEBUG] FAQ uses tabs structure (classic accordion), updating tabs...');
+            element.settings.tabs.forEach((tab: any, index: number) => {
+              if (generatedContent.faqs[index]) {
+                console.log(`[BATCH DEBUG] Updating FAQ ${index} question:`, generatedContent.faqs[index].question.substring(0, 60) + '...');
+
+                // Update question (tab title)
+                tab.tab_title = generatedContent.faqs[index].question;
+
+                // Update answer (tab content)
+                let content = generatedContent.faqs[index].answer;
+                // Add internal link if this FAQ is designated for internal link
+                if (internalLinkUrl && companyName) {
+                  const faqKey = `faq-${index + 1}`;
+                  if (internalLinkPlacement === faqKey) {
+                    content = insertInternalLink(content, internalLinkUrl, companyName);
+                  }
+                }
+                tab.tab_content = content;
+
+                console.log(`[BATCH DEBUG] Updated FAQ ${index} successfully`);
+              }
+            });
+            console.log('[BATCH DEBUG] All FAQ tabs updated');
+          }
+          // Check if it uses items structure (nested-accordion might use this)
+          else if (element.settings.items && Array.isArray(element.settings.items)) {
+            console.log('[BATCH DEBUG] FAQ uses items structure, updating items...');
+            element.settings.items.forEach((item: any, index: number) => {
+              if (generatedContent.faqs[index]) {
+                console.log(`[BATCH DEBUG] Item ${index} keys:`, Object.keys(item));
+                // Try different possible field names
+                if (item.item_title !== undefined) item.item_title = generatedContent.faqs[index].question;
+                if (item.item_content !== undefined) {
+                  let content = generatedContent.faqs[index].answer;
+                  // Add internal link if this FAQ is designated for internal link
+                  if (internalLinkUrl && companyName) {
+                    const faqKey = `faq-${index + 1}`;
+                    if (internalLinkPlacement === faqKey) {
+                      content = insertInternalLink(content, internalLinkUrl, companyName);
+                    }
+                  }
+                  item.item_content = content;
+                }
+                if (item.title !== undefined) item.title = generatedContent.faqs[index].question;
+                if (item.content !== undefined) {
+                  let content = generatedContent.faqs[index].answer;
+                  // Add internal link if this FAQ is designated for internal link
+                  if (internalLinkUrl && companyName) {
+                    const faqKey = `faq-${index + 1}`;
+                    if (internalLinkPlacement === faqKey) {
+                      content = insertInternalLink(content, internalLinkUrl, companyName);
+                    }
+                  }
+                  item.content = content;
+                }
+                console.log(`[BATCH DEBUG] Updated FAQ ${index} in items`);
+              }
+            });
+          }
+          // Nested accordion stores FAQs in child elements, not settings
+          else if (element.elements && Array.isArray(element.elements)) {
+            console.log('[BATCH DEBUG] FAQ uses nested elements structure - this is likely nested-accordion');
+            console.log('[BATCH DEBUG] FAQ container has', element.elements.length, 'child elements');
+            console.log('[BATCH DEBUG] Nested accordion questions are in child elements, not settings - skipping container update');
+          } else {
+            console.log('[BATCH DEBUG] FAQ container found but unknown structure');
+            console.log('[BATCH DEBUG] Full settings keys:', element.settings ? Object.keys(element.settings) : 'none');
+          }
+        }
+        // Handle individual FAQ items (separate IDs for each question/answer)
+        else {
+          const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
+          console.log(`[BATCH DEBUG] Found individual FAQ element: cssId="${cssId}", widgetType="${element.widgetType}", faqIndex=${faqIndex}`);
+          if (generatedContent.faqs[faqIndex]) {
+            if (element.widgetType === 'heading' && cssId.includes('question')) {
+              console.log(`[BATCH DEBUG] Updating individual FAQ ${faqIndex} question`);
+              element.settings.title = generatedContent.faqs[faqIndex].question;
             }
-            element.settings.editor = content;
+            if (element.widgetType === 'text-editor' && cssId.includes('answer')) {
+              console.log(`[BATCH DEBUG] Updating individual FAQ ${faqIndex} answer`);
+              let content = generatedContent.faqs[faqIndex].answer;
+              // Add internal link if this FAQ is designated for internal link
+              if (internalLinkUrl && companyName) {
+                const faqKey = `faq-${faqIndex + 1}`;
+                if (internalLinkPlacement === faqKey) {
+                  content = insertInternalLink(content, internalLinkUrl, companyName);
+                }
+              }
+              element.settings.editor = content;
+            }
           }
         }
       } else if (cssId.includes('map')) {
         // Replace map description
         if (element.widgetType === 'text-editor' && element.settings.editor) {
           let content = generatedContent.mapDescription || '';
-          // Add internal link if this is the map section's turn (rotation 4 for 5-page batch, or 2 for 3-page batch)
-          if (internalLinkSection === 4 && internalLinkUrl && companyName) {
-            content = insertInternalLink(content, internalLinkUrl, companyName);
-          }
-          // For 3-page batches, rotation 2 goes to map
-          if (internalLinkSection === 2 && internalLinkUrl && companyName) {
+          // Add internal link if this section is designated for internal link
+          if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
             content = insertInternalLink(content, internalLinkUrl, companyName);
           }
           element.settings.editor = content;
@@ -393,15 +533,22 @@ function replaceElementorContent(
         if (element.settings.html) {
           // Generate new Google Maps embed URL for the location
           const encodedLocation = encodeURIComponent(location);
-          const newIframeSrc = `https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodedLocation}`;
 
-          // Replace iframe src in the HTML
-          const iframeRegex = /(<iframe[^>]*src=")([^"]*)(")/gi;
-          element.settings.html = element.settings.html.replace(iframeRegex, (match: string, prefix: string, oldSrc: string, suffix: string) => {
-            // For now, use the simpler Google Maps URL format (no API key needed)
-            const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
-            return prefix + simpleMapUrl + suffix;
-          });
+          // Create keyword-stuffed iframe closing tag for SEO
+          const keywords = [
+            `${service} in ${location}`,
+            `${service} near me`,
+            service
+          ].filter(Boolean).join(',');
+
+          // Replace iframe src and add keywords before closing tag
+          element.settings.html = element.settings.html.replace(
+            /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
+            (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
+              const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
+              return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
+            }
+          );
         }
       }
     }
@@ -426,8 +573,9 @@ async function duplicateTemplateAndPublish(params: {
   pageData: PageJob['pageData'];
   generatedContent: any;
   primaryKeyword: string;
+  batchSize: number;
 }): Promise<string> {
-  const { clientData, pageData, generatedContent, primaryKeyword } = params;
+  const { clientData, pageData, generatedContent, primaryKeyword, batchSize } = params;
 
   const wpApiUrl = `${clientData.wordpressUrl}/wp-json/wp/v2/pages`;
   const credentials = Buffer.from(`${clientData.wpUsername}:${clientData.wpAppPassword}`).toString('base64');
@@ -438,8 +586,8 @@ async function duplicateTemplateAndPublish(params: {
     parentId = await getParentPageId(clientData.wordpressUrl, pageData.parentSlug, credentials);
   }
 
-  // Generate slug based on page type
-  const slug = generateSlug(pageData.pageType, pageData.service, pageData.location);
+  // Generate slug based on page type (or use custom slug if provided)
+  const slug = pageData.customSlug || generateSlug(pageData.pageType, pageData.service, pageData.location);
 
   // Fetch the full template page (to duplicate it)
   if (!clientData.templatePageId) {
@@ -483,6 +631,15 @@ async function duplicateTemplateAndPublish(params: {
       }
     }
 
+    // Calculate link placements for this page (needed for link insertion in template)
+    // This must match the placements calculated in processPage() for AI prompt
+    const omitMap = pageData.omitSections.includes('Map');
+    const { internalLinkPlacement, externalLinkPlacement } = determineLinkPlacements(
+      pageData.rowNumber,
+      batchSize,
+      omitMap
+    );
+
     // Parse and replace content
     const parsedElementorData = typeof elementorData === 'string' ? JSON.parse(elementorData) : elementorData;
     const updatedElementorData = replaceElementorContent(
@@ -492,8 +649,8 @@ async function duplicateTemplateAndPublish(params: {
       internalLinkUrl,
       clientData.clientName,
       pageData.service,
-      pageData.externalLinkSection,
-      pageData.rowNumber
+      internalLinkPlacement,
+      externalLinkPlacement
     );
 
     // Build new page from template - duplicate all template settings
@@ -601,15 +758,63 @@ async function publishToWordPress(params: {
   pageData: PageJob['pageData'];
   generatedContent: any;
   primaryKeyword: string;
+  batchSize: number;
 }): Promise<string> {
   return duplicateTemplateAndPublish(params);
 }
 
 /**
- * Process a single page (content generation only)
- * Validation + publishing happen in parallel async
+ * Determine internal and external link placements based on batch position
+ * Returns human-readable placement identifiers for AI prompt
  */
-async function processPage(job: PageJob): Promise<void> {
+function determineLinkPlacements(
+  rowNumber: number,
+  batchSize: number,
+  omitMap: boolean
+): { internalLinkPlacement: string; externalLinkPlacement: string } {
+  // Calculate 0-indexed position in batch
+  const position = (rowNumber - 1) % batchSize;
+
+  // Internal link placement (5-page pattern: hero, faq-1, faq-2, faq-3, map)
+  const internalLinkRotation5 = ['hero', 'faq-1', 'faq-2', 'faq-3', 'map'];
+
+  // For 3-page batches: hero, faq-1, map (if not omitted) or faq-2 (if map omitted)
+  const internalLinkRotation3 = omitMap
+    ? ['hero', 'faq-1', 'faq-2']
+    : ['hero', 'faq-1', 'map'];
+
+  // External link placement for 3-page vs 5+ page batches
+  const externalLinkRotation3 = ['benefits-1', 'why-1', 'why-3'];
+  const externalLinkRotation6 = [
+    'benefits-1',
+    'benefits-2',
+    'benefits-3',
+    'why-1',
+    'why-2',
+    'why-3',
+  ];
+
+  const internalLinkPlacement =
+    batchSize <= 3
+      ? internalLinkRotation3[position % 3]
+      : internalLinkRotation5[position % 5];
+
+  const externalLinkPlacement =
+    batchSize <= 3
+      ? externalLinkRotation3[position % 3]
+      : externalLinkRotation6[position % 6];
+
+  return { internalLinkPlacement, externalLinkPlacement };
+}
+
+/**
+ * Process a single page (content generation only)
+ * Returns generated content for sequential FAQ validation
+ */
+async function processPage(
+  job: PageJob,
+  batchSize: number
+): Promise<{ job: PageJob; generatedContent: any; primaryKeyword: string; startTime: number } | null> {
   const startTime = Date.now();
 
   // Get page name based on page type
@@ -619,18 +824,42 @@ async function processPage(job: PageJob): Promise<void> {
   const service = job.pageData.service;
   const location = job.pageData.location;
 
-  // Form primary keyword: adjective + service + in + location (for all page types)
+  // Form primary keyword: use custom if provided, otherwise adjective + service + in + location
   let primaryKeyword: string;
 
-  if (service && location) {
-    primaryKeyword = `${job.adjective} ${service} in ${location}`;
-  } else if (service) {
-    primaryKeyword = `${job.adjective} ${service}`;
-  } else if (location) {
-    primaryKeyword = `${job.adjective} ${location}`;
+  if (job.pageData.customPrimaryKeyword) {
+    // Use user-edited primary keyword
+    primaryKeyword = job.pageData.customPrimaryKeyword;
   } else {
-    primaryKeyword = job.adjective;
+    // Generate default primary keyword
+    if (service && location) {
+      primaryKeyword = `${job.adjective} ${service} in ${location}`;
+    } else if (service) {
+      primaryKeyword = `${job.adjective} ${service}`;
+    } else if (location) {
+      primaryKeyword = `${job.adjective} ${location}`;
+    } else {
+      primaryKeyword = job.adjective;
+    }
   }
+
+  // Determine link placements BEFORE content generation (so AI knows where to place company name and location)
+  const omitMap = job.pageData.omitSections.includes('Map');
+  const { internalLinkPlacement, externalLinkPlacement } = determineLinkPlacements(
+    job.pageData.rowNumber,
+    batchSize,
+    omitMap
+  );
+
+  console.log(`[BATCH] Generating page with:`, {
+    adjective: job.adjective,
+    service: service,
+    location: location,
+    primaryKeyword: primaryKeyword,
+    pageName: pageName,
+    internalLinkPlacement,
+    externalLinkPlacement,
+  });
 
   try {
     // Update status to generating
@@ -652,8 +881,9 @@ async function processPage(job: PageJob): Promise<void> {
     }
     lastApiCall = Date.now();
 
-    // STEP 1: Generate content (WAIT for this - sequential)
+    // STEP 1: Generate content in parallel (no FAQ uniqueness check yet - done during validation)
     // Pass batchId for context caching (saves ~75% on input tokens)
+    // IMPORTANT: Pass link placements so AI knows where to naturally include company name and location
     const generatedContent = await generatePageContent({
       batchId: job.batchId,
       pageType: job.pageData.pageType,
@@ -664,13 +894,25 @@ async function processPage(job: PageJob): Promise<void> {
       primaryKeyword,
       omitSections: job.pageData.omitSections,
       seoPlugin: job.clientData.seoPlugin,
+      internalLinkPlacement,
+      externalLinkPlacement,
     });
 
-    // STEP 2: Validate + Publish (ASYNC - don't wait!)
-    // Fire off validation and publishing in the background
-    validateAndPublish(job, generatedContent, primaryKeyword, startTime).catch(err => {
-      console.error('Validation/Publishing error:', err);
-    });
+    // Check for "undefined" in generated content
+    const contentString = JSON.stringify(generatedContent);
+    if (contentString.includes('undefined')) {
+      console.error(`[BATCH ERROR] "undefined" found in generated content for ${pageName}`);
+      console.error(`Full content:`, generatedContent);
+    }
+
+    // Return the generated content for sequential validation/publishing
+    // This allows parallel content generation while maintaining FAQ uniqueness checks
+    return {
+      job,
+      generatedContent,
+      primaryKeyword,
+      startTime
+    };
 
   } catch (error) {
     // Log generation error
@@ -701,17 +943,21 @@ async function processPage(job: PageJob): Promise<void> {
         timeElapsed: Date.now() - startTime,
       },
     });
+
+    return null; // Failed to generate content
   }
 }
 
 /**
- * Validate and publish (runs async in background)
+ * Validate and publish (with FAQ uniqueness tracking)
  */
 async function validateAndPublish(
   job: PageJob,
   generatedContent: any,
   primaryKeyword: string,
-  startTime: number
+  startTime: number,
+  batchSize: number,
+  previouslyUsedFAQs: string[]
 ): Promise<void> {
   const pageName = getPageName(job.pageData.pageType, job.pageData.service, job.pageData.location);
 
@@ -727,22 +973,37 @@ async function validateAndPublish(
       },
     });
 
-    // Validate content (warnings only - don't block publishing)
-    const validation = validateContent(
-      generatedContent,
-      job.pageData.omitSections,
-      job.clientData.clientName,
-      job.pageData.location
-    );
-    if (!validation.isValid) {
-      console.warn(`⚠️ Validation warnings for ${pageName}:`, validation.errors);
-      // Log warnings but continue publishing
+    // Smart validation with auto-fix and selective retry (pass previously used FAQs for uniqueness check)
+    const smartValidation = await validateAndFixContent(generatedContent, {
+      batchId: job.batchId,
+      pageType: job.pageData.pageType,
+      companyName: job.clientData.clientName,
+      companyWebsite: job.clientData.clientWebsite,
+      service: job.pageData.service,
+      location: job.pageData.location,
+      primaryKeyword,
+      omitSections: job.pageData.omitSections,
+      seoPlugin: job.clientData.seoPlugin,
+      previouslyUsedFAQs,
+    });
+
+    // Use the fixed content
+    let finalContent = smartValidation.content;
+
+    // Log auto-fixes
+    if (smartValidation.autoFixed.length > 0) {
+      console.log(`✅ Auto-fixed fields for ${pageName}:`, smartValidation.autoFixed.join(', '));
+    }
+
+    // Log warnings
+    if (smartValidation.warnings.length > 0) {
+      console.warn(`⚠️ Validation warnings for ${pageName}:`, smartValidation.warnings);
       await prisma.errorLog.create({
         data: {
           userId: job.userId,
           clientId: job.clientId,
           errorType: 'validation_warning',
-          errorMessage: `Validation warnings: ${validation.errors.join(', ')}`,
+          errorMessage: `Validation warnings: ${smartValidation.warnings.join(', ')}`,
           stackTrace: null,
           context: JSON.stringify({
             batchId: job.batchId,
@@ -751,6 +1012,83 @@ async function validateAndPublish(
           }),
         },
       });
+    }
+
+    // Handle retries (FAQs and map section)
+    const MAX_RETRIES = 2;
+    for (const retry of smartValidation.needsRetry) {
+      console.log(`🔄 Retrying ${retry.field} for ${pageName}: ${retry.reason}`);
+
+      let retrySuccess = false;
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const regenerated = await regenerateField(
+            {
+              batchId: job.batchId,
+              pageType: job.pageData.pageType,
+              companyName: job.clientData.clientName,
+              companyWebsite: job.clientData.clientWebsite,
+              service: job.pageData.service,
+              location: job.pageData.location,
+              primaryKeyword,
+              omitSections: job.pageData.omitSections,
+              seoPlugin: job.clientData.seoPlugin,
+            },
+            retry.field as "faqs" | "mapDescription" | "heroDescription" | "bullets",
+            finalContent,
+            retry.reason
+          );
+
+          // Update the content with regenerated field
+          if (retry.field === "faqs" && regenerated.faqs) {
+            finalContent.faqs = regenerated.faqs;
+            console.log(`✅ Successfully regenerated FAQs for ${pageName} (attempt ${attempt})`);
+            retrySuccess = true;
+            break;
+          } else if (retry.field === "mapDescription" && regenerated.mapDescription) {
+            finalContent.mapDescription = regenerated.mapDescription;
+            console.log(`✅ Successfully regenerated map description for ${pageName} (attempt ${attempt})`);
+            retrySuccess = true;
+            break;
+          } else if (retry.field === "heroDescription" && regenerated.heroDescription) {
+            finalContent.heroDescription = regenerated.heroDescription;
+            console.log(`✅ Successfully regenerated hero description for ${pageName} (attempt ${attempt})`);
+            retrySuccess = true;
+            break;
+          } else if (retry.field === "bullets" && (regenerated.benefitsBullets || regenerated.whyBullets)) {
+            if (regenerated.benefitsBullets) {
+              finalContent.benefitsBullets = regenerated.benefitsBullets;
+            }
+            if (regenerated.whyBullets) {
+              finalContent.whyBullets = regenerated.whyBullets;
+            }
+            console.log(`✅ Successfully regenerated bullet points for ${pageName} (attempt ${attempt})`);
+            retrySuccess = true;
+            break;
+          }
+        } catch (error) {
+          console.error(`❌ Retry attempt ${attempt} failed for ${retry.field}:`, error);
+          if (attempt === MAX_RETRIES) {
+            // Log final retry failure but continue with original content
+            await prisma.errorLog.create({
+              data: {
+                userId: job.userId,
+                clientId: job.clientId,
+                errorType: 'retry_failed',
+                errorMessage: `Failed to regenerate ${retry.field} after ${MAX_RETRIES} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                stackTrace: error instanceof Error ? error.stack : null,
+                context: JSON.stringify({
+                  batchId: job.batchId,
+                  pageName,
+                  rowNumber: job.pageData.rowNumber,
+                  field: retry.field,
+                  reason: retry.reason,
+                }),
+              },
+            });
+          }
+        }
+      }
     }
 
     // Update to publishing
@@ -764,12 +1102,13 @@ async function validateAndPublish(
       },
     });
 
-    // Publish to WordPress
+    // Publish to WordPress (use finalContent with all fixes and retries applied)
     const publishedUrl = await publishToWordPress({
       clientData: job.clientData,
       pageData: job.pageData,
-      generatedContent,
+      generatedContent: finalContent,
       primaryKeyword,
+      batchSize,
     });
 
     // Mark as success
@@ -782,7 +1121,7 @@ async function validateAndPublish(
         status: 'success',
         publishedUrl,
         primaryKeyword,
-        generatedContent: JSON.stringify(generatedContent),
+        generatedContent: JSON.stringify(finalContent), // Save the fixed content
         timeElapsed: Date.now() - startTime,
       },
     });
@@ -794,6 +1133,14 @@ async function validateAndPublish(
         successfulPages: { increment: 1 },
       },
     });
+
+    // Store FAQ questions in batch tracker for next pages (AFTER successful validation)
+    if (finalContent.faqs && finalContent.faqs.length > 0) {
+      const currentFAQs = batchFAQs.get(job.batchId) || [];
+      const newQuestions = finalContent.faqs.map((faq: any) => faq.question);
+      batchFAQs.set(job.batchId, [...currentFAQs, ...newQuestions]);
+      console.log(`[FAQ TRACKING] Stored ${newQuestions.length} FAQ questions for batch ${job.batchId}. Total: ${currentFAQs.length + newQuestions.length}`);
+    }
 
   } catch (error) {
     // Log error
@@ -850,6 +1197,8 @@ export async function queueBatchGeneration(params: {
     externalLinkSection: string;
     omitSections: string[];
     rowNumber: number;
+    customSlug?: string;
+    customPrimaryKeyword?: string;
   }>;
   clientData: {
     clientName: string;
@@ -864,8 +1213,11 @@ export async function queueBatchGeneration(params: {
   const { batchId, clientId, userId, pages, clientData } = params;
 
   try {
-    // Generate adjectives for all pages
-    const adjectives = await generateAdjectives(pages.length);
+    // Get adjectives deterministically based on row numbers
+    // This ensures preview and actual generation use the same adjectives
+    const { getAdjectiveForRow } = await import('./adjectives');
+    const adjectives: string[] = pages.map(page => getAdjectiveForRow(page.rowNumber));
+    console.log(`✅ Using deterministic adjectives for batch:`, adjectives);
 
     // Create batch record
     await prisma.generationBatch.create({
@@ -925,7 +1277,8 @@ export async function queueBatchGeneration(params: {
 }
 
 /**
- * Process batch pages sequentially
+ * Process batch pages: parallel content generation, then sequential validation/publishing
+ * This maximizes speed while maintaining FAQ uniqueness checks
  */
 async function processBatchSequentially(
   batchId: string,
@@ -935,17 +1288,47 @@ async function processBatchSequentially(
   clientId: string,
   userId: string
 ) {
-  for (let i = 0; i < pages.length; i++) {
-    const job: PageJob = {
-      batchId,
-      clientId,
-      userId,
-      pageData: pages[i],
-      clientData,
-      adjective: adjectives[i],
-    };
+  const batchSize = pages.length;
+  console.log(`[BATCH] Processing ${batchSize} pages with ${adjectives.length} adjectives`);
+  console.log(`[BATCH] Adjectives array:`, adjectives);
 
-    await processPage(job);
+  // STEP 1: Generate ALL content in PARALLEL (faster!)
+  console.log(`[BATCH] 🚀 Generating content for all ${batchSize} pages in parallel...`);
+  const jobs: PageJob[] = pages.map((page, i) => ({
+    batchId,
+    clientId,
+    userId,
+    pageData: page,
+    clientData,
+    adjective: adjectives[i],
+  }));
+
+  const generationResults = await Promise.all(
+    jobs.map(job => processPage(job, batchSize))
+  );
+
+  console.log(`[BATCH] ✅ All ${batchSize} pages generated! Now validating and publishing sequentially...`);
+
+  // STEP 2: Validate and publish SEQUENTIALLY (to maintain FAQ uniqueness tracking)
+  const previouslyUsedFAQs: string[] = [];
+
+  for (let i = 0; i < generationResults.length; i++) {
+    const result = generationResults[i];
+
+    if (!result) {
+      console.log(`[BATCH] ⚠️ Skipping page ${i + 1} (generation failed)`);
+      continue;
+    }
+
+    const { job, generatedContent, primaryKeyword, startTime } = result;
+
+    console.log(`[BATCH] Validating and publishing page ${i + 1}/${batchSize}: ${job.pageData.service} in ${job.pageData.location}`);
+
+    // Validate and publish with FAQ uniqueness check
+    await validateAndPublish(job, generatedContent, primaryKeyword, startTime, batchSize, previouslyUsedFAQs);
+
+    // Add this page's FAQs to the list for next page's validation
+    // (This is redundant since validateAndPublish also does it, but keeping for clarity)
   }
 
   // Mark batch as completed
@@ -960,6 +1343,9 @@ async function processBatchSequentially(
   // Clear context cache to free memory
   clearBatchContext(batchId);
   activeBatches.delete(batchId);
+  batchFAQs.delete(batchId); // Clean up FAQ tracking
+
+  console.log(`[BATCH] ✅ Batch ${batchId} completed!`);
 }
 
 /**

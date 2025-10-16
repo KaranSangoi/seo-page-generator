@@ -89,6 +89,9 @@ export interface ContentGenerationParams {
   primaryKeyword: string;
   omitSections: string[];
   seoPlugin: string;
+  internalLinkPlacement?: string; // Where internal link will be placed (e.g., "hero", "faq-1", "map")
+  externalLinkPlacement?: string; // Where external link will be placed (e.g., "benefits-2", "why-1")
+  previouslyUsedFAQs?: string[]; // FAQ questions already used in this batch (to ensure uniqueness)
 }
 
 export interface ValidationResult {
@@ -110,17 +113,78 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
 **Standard Operating Procedure (SOP):**
 
 1. **Meta Description:** Must be ≤155 characters
+   - **DO NOT add call-to-action phrases like "Call now!", "Call us today!", "Contact us!" etc.**
+   - These are added programmatically - focus only on describing the service and company
 2. **Hero Description:** Must be 50-60 words (STRICT - count your words!)
    Example (52 words): "Our professional dumpster rental services in Phoenix provide reliable waste management solutions for residential and commercial projects. With same-day delivery, flexible rental periods, and competitive pricing, we make waste disposal easy. Contact us today for a free quote and experience hassle-free service from Phoenix's most trusted waste management company."
-3. **Bullet Points:** Each must be ≥30 words (STRICT - count your words!)
-   Example (38 words): "We offer flexible rental periods from 3 days to 4 weeks, allowing you to complete your project at your own pace without rushing. Need more time? Simply contact us to extend your rental period with no hassle or hidden fees."
+3. **Bullet Points:** Each must be ≥30 words (STRICT - count your words! Aim for 40-50 words)
+   **CRITICAL FORMAT:** Each bullet MUST start with "<b>Topic Name:</b>" tag
+   - Do NOT forget the opening "<b>" and closing "</b>" tags
+   - Do NOT use other formats like bold markdown or asterisks
+   - The format is: "<b>Topic:</b> Description text"
+
+   Example (50 words): "<b>Custom Glass Solutions for All Commercial Needs:</b> As a professional commercial glass installer in Sumner, WA, we provide storefront glass, office partitions, entrance doors, and display windows. Every installation is measured and fitted to exact specifications, ensuring seamless integration with your building's design and long-lasting durability across all commercial applications."
+
+   ❌ WRONG: "Custom Solutions: We provide..."
+   ❌ WRONG: "**Custom Solutions:** We provide..."
+   ✅ CORRECT: "<b>Custom Solutions:</b> We provide..."
 4. **Map Description:** Must be 50-60 words (STRICT - count your words!)
-5. **Primary Keyword Usage:** Use naturally throughout all content
+5. **PRIMARY KEYWORD - ABSOLUTE REQUIREMENT (CRITICAL):**
+   - You will be provided with an EXACT PRIMARY KEYWORD that has already been determined
+   - **DO NOT modify, change, or vary this keyword in ANY way**
+   - **DO NOT generate your own adjectives or alternative phrasings**
+   - **DO NOT rearrange the word order**
+   - Use the PRIMARY KEYWORD exactly as provided throughout ALL content
+   - The keyword must appear verbatim in: H1, meta title, meta description, bullets, FAQs
+   - Example: If given "Professional Plumber in Carlsbad, CA" - use EXACTLY that phrase
+   - ❌ WRONG: "Expert Plumber in Carlsbad, CA" (changed adjective)
+   - ❌ WRONG: "Plumber Professional in Carlsbad, CA" (changed order)
+   - ✅ CORRECT: "Professional Plumber in Carlsbad, CA" (exact match)
 6. **Company Name:** MUST mention company name naturally at least once in hero/FAQ/map sections (for internal linking)
 7. **Location Name:** MUST mention full location naturally in benefits/why sections (for external linking to city websites)
-8. **FAQs:** Must be SEO-relevant questions (not promotional). Mention company name in the 2nd half of answers.
+8. **FAQs:** Generate SEO-relevant questions that potential customers would actually search for.
+   - **CRITICAL: Each FAQ must be UNIQUE across all pages in this batch**
+   - Be smart and creative - vary topics naturally (cost, process, timeline, materials, availability, coverage, etc.)
+   - **DO NOT use promotional questions** (avoid "why choose us", "what makes you special", etc.)
+   - Use primary keyword naturally in questions/answers when relevant (EXACTLY as provided)
+   - CRITICAL: Mention company name (${companyName}) in the **latter half** of each answer for SEO
+   - Use company name instead of "we/our/us" - Example: "${companyName} provides..." not "We provide..."
+   - **DO NOT generate similar FAQs that only differ by location - make each topically distinct**
 9. **Tone:** Professional, helpful, and authoritative
 10. **Quality:** High-quality, unique content that provides value to readers
+
+**CRITICAL HEADING FORMATS:**
+- **H1:** Use the PRIMARY KEYWORD exactly as provided. DO NOT add company name to H1.
+  Example: "Professional Commercial Glass Installer in Sumner, WA"
+
+- **Benefits H2:** Create a compelling, contextual heading that MUST include BOTH:
+  1. Company name
+  2. Primary keyword (the EXACT phrase as provided)
+  Focus: Why choose THIS COMPANY for this service
+  Be creative! Avoid monotonous formats. Make it engaging and unique to the page.
+  ✅ Good examples (assuming primary keyword is "Professional Plumber in Carlsbad, CA"):
+    - "Experience Excellence with Parmley Plumbing - Your Professional Plumber in Carlsbad, CA"
+    - "Parmley Plumbing: Leading Professional Plumber in Carlsbad, CA"
+    - "Why Choose Parmley Plumbing for Professional Plumber in Carlsbad, CA"
+    - "Trust Parmley Plumbing as Your Professional Plumber in Carlsbad, CA"
+  ❌ Bad (too generic/missing primary keyword):
+    - "Why Choose [Company Name]?"
+    - "Our Services"
+
+- **Why H2:** Create a compelling, contextual heading that MUST include primary keyword ONLY:
+  1. Primary keyword (the EXACT phrase as provided)
+  2. DO NOT include company name in Why heading
+  Focus: Why this SERVICE is important in this LOCATION (not about the company)
+  Be creative! Make it relevant to why this service matters in this specific location.
+  ✅ Good examples (assuming primary keyword is "Professional Plumber in Carlsbad, CA"):
+    - "Why Professional Plumber in Carlsbad, CA Matters for Your Property"
+    - "The Importance of Professional Plumber in Carlsbad, CA"
+    - "Why Carlsbad Needs Professional Plumber in Carlsbad, CA"
+    - "The Critical Role of Professional Plumber in Carlsbad, CA"
+  ❌ Bad (too generic/missing primary keyword/includes company name):
+    - "Why Choose Us?" (missing primary keyword, includes company focus)
+    - "Our Benefits" (missing primary keyword, includes company focus)
+    - "Why Parmley Plumbing..." (includes company name - NOT allowed in Why heading)
 
 **CRITICAL:** Count words carefully before responding. Double-check all word counts!
 
@@ -137,35 +201,111 @@ Always return ONLY valid JSON with this exact structure (omit sections as instru
   "heroDescription": "string (50-60 words)",
   "benefitsHeading": "string",
   "benefitsSubheading": "string",
-  "benefitsBullets": ["string (35+ words)", "string (35+ words)", "string (35+ words)"],
+  "benefitsBullets": ["<b>Topic:</b> text (30+ words)", "<b>Topic:</b> text (30+ words)", "<b>Topic:</b> text (30+ words)"],
   "whyHeading": "string",
   "whySubheading": "string",
-  "whyBullets": ["string (35+ words)", "string (35+ words)", "string (35+ words)"],
+  "whyBullets": ["<b>Topic:</b> text (30+ words)", "<b>Topic:</b> text (30+ words)", "<b>Topic:</b> text (30+ words)"],
   "faqs": [{"question": "string", "answer": "string"}, {"question": "string", "answer": "string"}, {"question": "string", "answer": "string"}],
   "mapDescription": "string (50-60 words)"
-}`;
+}
+
+**REMEMBER:** ALL bullet points in benefitsBullets and whyBullets MUST start with "<b>Topic Name:</b>"`;
 }
 
 /**
  * Build page-specific prompt (sent for each page)
  */
 function buildPagePrompt(params: ContentGenerationParams): string {
-  const { service, location, primaryKeyword, omitSections } = params;
+  const { service, location, primaryKeyword, omitSections, companyName, internalLinkPlacement, externalLinkPlacement, previouslyUsedFAQs } = params;
 
   const includeMap = !omitSections.includes("Map");
   const includeFAQ = !omitSections.includes("FAQ");
   const includeBenefits = !omitSections.includes("Benefits");
   const includeWhy = !omitSections.includes("Why");
 
+  // Build link placement instructions
+  let linkInstructions = '';
+  if (internalLinkPlacement || externalLinkPlacement) {
+    linkInstructions = '\n\n**LINK PLACEMENT CONTEXT (CRITICAL FOR NATURAL WRITING):**\n';
+
+    if (internalLinkPlacement) {
+      const sectionMap: Record<string, string> = {
+        'hero': 'Hero Description',
+        'faq-1': 'FAQ Answer 1',
+        'faq-2': 'FAQ Answer 2',
+        'faq-3': 'FAQ Answer 3',
+        'map': 'Map Description'
+      };
+      const sectionName = sectionMap[internalLinkPlacement] || internalLinkPlacement;
+      linkInstructions += `- An internal link will be added to the company name "${companyName}" in the ${sectionName} section.\n`;
+      linkInstructions += `  **ACTION REQUIRED:** Ensure "${companyName}" appears naturally in the ${sectionName} section so the link can be inserted seamlessly.\n`;
+    }
+
+    if (externalLinkPlacement) {
+      const sectionMap: Record<string, string> = {
+        'benefits-1': 'Benefits Bullet 1',
+        'benefits-2': 'Benefits Bullet 2',
+        'benefits-3': 'Benefits Bullet 3',
+        'why-1': 'Why Bullet 1',
+        'why-2': 'Why Bullet 2',
+        'why-3': 'Why Bullet 3'
+      };
+      const sectionName = sectionMap[externalLinkPlacement] || externalLinkPlacement;
+      linkInstructions += `- An external link will be added to the location name "${location}" in the ${sectionName} section.\n`;
+      linkInstructions += `  **ACTION REQUIRED:** Ensure the full location "${location}" appears naturally in the ${sectionName} section so the link can be inserted seamlessly.\n`;
+    }
+  }
+
   return `Generate content for this specific page:
 
+**Company Name:** ${companyName}
 **Service:** ${service}
 **Location:** ${location}
 **Primary Keyword:** ${primaryKeyword}
 
+**CRITICAL - PRIMARY KEYWORD USAGE:**
+The primary keyword "${primaryKeyword}" has been pre-determined by our system.
+- ✅ USE THIS EXACT PHRASE: "${primaryKeyword}"
+- ❌ DO NOT modify it in any way
+- ❌ DO NOT change the adjective (first word)
+- ❌ DO NOT rearrange word order
+- ❌ DO NOT create alternative phrasings
+
+**CRITICAL INSTRUCTIONS:**
+1. H1 must be EXACTLY: "${primaryKeyword}" (no variations, no company name added)
+2. Benefits H2 MUST include BOTH (MANDATORY):
+   - Company name: "${companyName}"
+   - Primary keyword: "${primaryKeyword}" (use the EXACT phrase)
+   - Focus: Why choose THIS COMPANY for this service
+   - Example: "Experience Excellence with ${companyName} - Your ${primaryKeyword}"
+   - Example: "${companyName}: Leading ${primaryKeyword}"
+   - Example: "Why Choose ${companyName} for ${primaryKeyword}"
+3. Why H2 MUST include primary keyword ONLY (MANDATORY - DO NOT SKIP):
+   - Primary keyword: "${primaryKeyword}" (use the EXACT phrase)
+   - DO NOT include company name in Why heading
+   - Focus: Why this SERVICE is important in this LOCATION (not about the company)
+   - Be creative and contextual!
+   - Example: "Why ${primaryKeyword} Matters for Your Property"
+   - Example: "The Importance of ${primaryKeyword}"
+   - Example: "Why ${location} Needs ${primaryKeyword}"
+4. Use the EXACT phrase "${primaryKeyword}" multiple times throughout bullets, FAQs, and BOTH section headings
+5. When referencing in natural text, you may use "${service}" alone, but when stating the full keyword, use "${primaryKeyword}" exactly
+6. Make headings unique and engaging - avoid repetitive formats across pages
+${linkInstructions}
+${previouslyUsedFAQs && previouslyUsedFAQs.length > 0 ? `
+**CRITICAL - FAQ UNIQUENESS REQUIREMENTS:**
+This page is part of a batch. The following FAQ questions have ALREADY been used in previous pages:
+${previouslyUsedFAQs.map((faq, idx) => `${idx + 1}. ${faq}`).join('\n')}
+
+**YOU MUST:**
+- Generate completely DIFFERENT FAQ questions that are NOT similar to the ones above
+- Focus on different aspects: cost, timeline, coverage area, materials, process, availability, licensing, warranty, emergency services, etc.
+- DO NOT just rephrase the above questions - create entirely new topics
+- Ensure your FAQs are topically distinct from ALL the questions listed above
+` : ''}
 **Sections to Include:**
 - Meta Title & Description
-- H1
+- H1 (exactly: "${primaryKeyword}")
 - Hero Description${
     includeBenefits
       ? "\n- Benefits Section (heading, subheading, 3 bullets)"
@@ -329,6 +469,8 @@ export async function generatePageContent(
   }
 
   try {
+    console.log(`[AI] Generating content with primaryKeyword: "${params.primaryKeyword}"`);
+
     let generated: GeneratedContent;
 
     if (PROVIDER === "claude") {
@@ -336,6 +478,14 @@ export async function generatePageContent(
     } else {
       generated = await generateWithOpenAI(params);
     }
+
+    console.log(`[AI] Generated content:`, {
+      h1: generated.h1,
+      metaTitle: generated.metaTitle,
+      benefitsHeading: generated.benefitsHeading?.substring(0, 60) + '...',
+      whyHeading: generated.whyHeading?.substring(0, 60) + '...',
+      faqQuestions: generated.faqs?.map(f => f.question.substring(0, 50) + '...'),
+    });
 
     // Ensure omitted sections return empty defaults
     const { omitSections } = params;
@@ -369,6 +519,7 @@ export async function generatePageContent(
 
 /**
  * Validate generated content against requirements
+ * @deprecated Use validateAndFixContent for smart validation with auto-fix
  */
 export function validateContent(
   content: GeneratedContent,
@@ -420,9 +571,9 @@ export function validateContent(
   if (!omitSections.includes("Benefits")) {
     content.benefitsBullets.forEach((bullet, idx) => {
       const words = bullet.split(/\s+/).length;
-      if (words < 35) {
+      if (words < 30) {
         errors.push(
-          `Benefits bullet ${idx + 1} has ${words} words (minimum 35)`
+          `Benefits bullet ${idx + 1} has ${words} words (minimum 30)`
         );
       }
     });
@@ -432,8 +583,8 @@ export function validateContent(
   if (!omitSections.includes("Why")) {
     content.whyBullets.forEach((bullet, idx) => {
       const words = bullet.split(/\s+/).length;
-      if (words < 35) {
-        errors.push(`Why bullet ${idx + 1} has ${words} words (minimum 35)`);
+      if (words < 30) {
+        errors.push(`Why bullet ${idx + 1} has ${words} words (minimum 30)`);
       }
     });
   }
@@ -453,7 +604,536 @@ export function validateContent(
 }
 
 /**
+ * Smart validation result with auto-fix and retry info
+ */
+export interface SmartValidationResult {
+  content: GeneratedContent; // Fixed content
+  autoFixed: string[]; // List of fields that were auto-fixed
+  needsRetry: { field: string; reason: string }[]; // Fields that need AI retry
+  warnings: string[]; // Non-blocking warnings
+}
+
+/**
+ * Auto-fix meta description
+ * Ensures: primary keyword, company name, "Call Now!", under 155 chars
+ */
+function autoFixMetaDescription(
+  metaDescription: string,
+  primaryKeyword: string,
+  companyName: string
+): string {
+  const required = {
+    keyword: primaryKeyword.toLowerCase(),
+    company: companyName.toLowerCase(),
+    cta: "call now!",
+  };
+
+  let fixed = metaDescription;
+
+  // Ensure "Call Now!" is at the end
+  if (!fixed.toLowerCase().includes(required.cta)) {
+    fixed = fixed.replace(/[.!]?\s*$/, ""); // Remove trailing punctuation
+    fixed += ". Call now!";
+  }
+
+  // Ensure company name is included
+  if (!fixed.toLowerCase().includes(required.company)) {
+    // Try to insert company name at the beginning
+    fixed = `${companyName} ${fixed}`;
+  }
+
+  // Ensure primary keyword is included (at least the service part)
+  const serviceKeyword = primaryKeyword.split(" in ")[0]; // Get service part
+  if (!fixed.toLowerCase().includes(serviceKeyword.toLowerCase())) {
+    // Try to insert keyword early
+    fixed = fixed.replace(
+      companyName,
+      `${companyName} offers ${serviceKeyword.toLowerCase()}`
+    );
+  }
+
+  // Trim to 155 chars if too long
+  if (fixed.length > 155) {
+    // Try to trim intelligently - remove middle content, keep company name and CTA
+    const parts = fixed.split(".");
+    if (parts.length > 2) {
+      // Keep first sentence and "Call now!"
+      fixed = `${parts[0]}. Call now!`;
+    }
+
+    // If still too long, hard trim
+    if (fixed.length > 155) {
+      fixed = fixed.substring(0, 152) + "...";
+    }
+  }
+
+  return fixed;
+}
+
+/**
+ * Auto-fix meta title
+ * Format: {primary keyword} | {company name}, under 80 chars
+ * If too long: remove adjective, then trim company name
+ */
+function autoFixMetaTitle(
+  metaTitle: string,
+  primaryKeyword: string,
+  companyName: string
+): string {
+  const idealFormat = `${primaryKeyword} | ${companyName}`;
+
+  // If already in correct format and under 80 chars, return as-is
+  if (idealFormat.length <= 80) {
+    return idealFormat;
+  }
+
+  // Try removing adjective from primary keyword
+  const words = primaryKeyword.split(" ");
+  if (words.length > 1) {
+    // Remove first word (adjective)
+    const keywordWithoutAdjective = words.slice(1).join(" ");
+    const withoutAdj = `${keywordWithoutAdjective} | ${companyName}`;
+    if (withoutAdj.length <= 80) {
+      return withoutAdj;
+    }
+  }
+
+  // Still too long, trim company name
+  const keywordPart = words.slice(1).join(" ") || primaryKeyword;
+  const availableSpace = 80 - keywordPart.length - 3; // -3 for " | "
+  const trimmedCompany =
+    companyName.length > availableSpace
+      ? companyName.substring(0, availableSpace - 3) + "..."
+      : companyName;
+
+  return `${keywordPart} | ${trimmedCompany}`;
+}
+
+/**
+ * Auto-fix H1
+ * Should be: primary keyword only (no company name)
+ */
+function autoFixH1(h1: string, primaryKeyword: string): string {
+  return primaryKeyword;
+}
+
+/**
+ * Auto-fix Benefits heading
+ * Format: "Why Choose [Company Name] as Your [Primary Keyword]?"
+ */
+function autoFixBenefitsHeading(
+  heading: string,
+  primaryKeyword: string,
+  companyName: string
+): string {
+  return `Why Choose ${companyName} as Your ${primaryKeyword}?`;
+}
+
+/**
+ * Auto-fix Why heading
+ * Format: "Why Is [Service] Important in [Location]?" (no adjective)
+ */
+function autoFixWhyHeading(
+  heading: string,
+  service: string,
+  location: string
+): string {
+  return `Why Is ${service} Important in ${location}?`;
+}
+
+/**
+ * Smart validation with auto-fix and selective retry
+ * Auto-fixes: meta description, meta title, H1, benefits heading, why heading
+ * Retries: FAQs, map section
+ */
+export async function validateAndFixContent(
+  content: GeneratedContent,
+  params: ContentGenerationParams
+): Promise<SmartValidationResult> {
+  const { primaryKeyword, companyName, service, location, omitSections } =
+    params;
+  const autoFixed: string[] = [];
+  const needsRetry: { field: string; reason: string }[] = [];
+  const warnings: string[] = [];
+
+  // Make a copy to modify
+  const fixed = { ...content };
+
+  // 1. AUTO-FIX: Meta Description
+  const originalMetaDesc = fixed.metaDescription;
+  fixed.metaDescription = autoFixMetaDescription(
+    fixed.metaDescription,
+    primaryKeyword,
+    companyName
+  );
+  if (fixed.metaDescription !== originalMetaDesc) {
+    autoFixed.push("metaDescription");
+    console.log("[AUTO-FIX] Meta description fixed");
+  }
+
+  // 2. AUTO-FIX: Meta Title
+  const originalMetaTitle = fixed.metaTitle;
+  fixed.metaTitle = autoFixMetaTitle(
+    fixed.metaTitle,
+    primaryKeyword,
+    companyName
+  );
+  if (fixed.metaTitle !== originalMetaTitle) {
+    autoFixed.push("metaTitle");
+    console.log("[AUTO-FIX] Meta title fixed");
+  }
+
+  // 3. AUTO-FIX: H1
+  const originalH1 = fixed.h1;
+  fixed.h1 = autoFixH1(fixed.h1, primaryKeyword);
+  if (fixed.h1 !== originalH1) {
+    autoFixed.push("h1");
+    console.log("[AUTO-FIX] H1 fixed");
+  }
+
+  // 4. CHECK: Benefits Heading (warn if missing company name or primary keyword)
+  if (!omitSections.includes("Benefits")) {
+    const hasCompany = fixed.benefitsHeading.toLowerCase().includes(companyName.toLowerCase());
+    const hasKeyword = fixed.benefitsHeading.toLowerCase().includes(primaryKeyword.toLowerCase());
+
+    if (!hasCompany) {
+      warnings.push(`Benefits heading missing company name: "${companyName}"`);
+    }
+    if (!hasKeyword) {
+      warnings.push(`Benefits heading missing primary keyword: "${primaryKeyword}"`);
+    }
+  }
+
+  // 5. CHECK: Why Heading (warn if missing primary keyword, or if it includes company name)
+  if (!omitSections.includes("Why")) {
+    const hasCompany = fixed.whyHeading.toLowerCase().includes(companyName.toLowerCase());
+    const hasKeyword = fixed.whyHeading.toLowerCase().includes(primaryKeyword.toLowerCase());
+
+    if (hasCompany) {
+      warnings.push(`Why heading should NOT include company name (it's about service importance, not the company)`);
+    }
+    if (!hasKeyword) {
+      warnings.push(`Why heading missing primary keyword: "${primaryKeyword}"`);
+    }
+  }
+
+  // 6. CHECK FAQs (selective retry if issues)
+  if (!omitSections.includes("FAQ")) {
+    let faqIssues: string[] = [];
+
+    fixed.faqs.forEach((faq, idx) => {
+      // Check if at least ONE FAQ uses primary keyword (not all FAQs need it - be flexible)
+      // We'll check this after the loop
+
+      // Check if answer mentions company name in latter half
+      const hasCompanyName = faq.answer
+        .toLowerCase()
+        .includes(companyName.toLowerCase());
+      if (!hasCompanyName) {
+        faqIssues.push(`FAQ ${idx + 1} answer missing company name`);
+      }
+
+      // Check if answer is too promotional (multiple promotional phrases)
+      const promotionalPhrases = ["why choose", "why select", "what makes us", "what sets us apart"];
+      const isPromotional = promotionalPhrases.some(phrase => faq.question.toLowerCase().includes(phrase));
+      if (isPromotional) {
+        faqIssues.push(`FAQ ${idx + 1} is promotional - use customer-focused questions instead`);
+      }
+
+      // Check answer length (should be 50-75 words)
+      const answerWords = faq.answer.split(/\s+/).length;
+      if (answerWords < 40 || answerWords > 90) {
+        faqIssues.push(
+          `FAQ ${idx + 1} answer has ${answerWords} words (should be 50-75)`
+        );
+      }
+
+      // Check similarity to previously used FAQs (if provided)
+      if (params.previouslyUsedFAQs && params.previouslyUsedFAQs.length > 0) {
+        const currentQuestion = faq.question.toLowerCase();
+
+        for (const previousFaq of params.previouslyUsedFAQs) {
+          const previousQuestion = previousFaq.toLowerCase();
+
+          // Calculate simple similarity: check if questions share significant words
+          const currentWords = currentQuestion.split(/\s+/).filter(w => w.length > 3);
+          const previousWords = previousQuestion.split(/\s+/).filter(w => w.length > 3);
+
+          // Count matching words (excluding common words)
+          const commonWords = new Set(['what', 'when', 'where', 'who', 'why', 'how', 'does', 'can', 'will', 'the', 'is', 'are', 'for', 'in', 'on', 'at', 'to', 'from', 'with', 'your', 'our']);
+          const matchingWords = currentWords.filter(w =>
+            !commonWords.has(w) && previousWords.includes(w)
+          ).length;
+
+          // If more than 50% of significant words match, questions are too similar
+          const similarityThreshold = Math.floor(currentWords.length * 0.5);
+          if (matchingWords >= similarityThreshold && matchingWords >= 2) {
+            faqIssues.push(`FAQ ${idx + 1} is too similar to a previously used FAQ: "${previousFaq.substring(0, 50)}..."`);
+            break; // Only report once per FAQ
+          }
+        }
+      }
+    });
+
+    // Check if at least ONE FAQ uses primary keyword or service (flexible - not all need it)
+    const hasAnyKeyword = fixed.faqs.some(faq => {
+      const q = faq.question.toLowerCase();
+      return q.includes(primaryKeyword.toLowerCase()) || q.includes(service.toLowerCase());
+    });
+    if (!hasAnyKeyword) {
+      faqIssues.push(`At least one FAQ should mention the primary keyword or service`);
+    }
+
+    if (faqIssues.length > 0) {
+      needsRetry.push({
+        field: "faqs",
+        reason: faqIssues.join("; "),
+      });
+    }
+  }
+
+  // 7. CHECK Map Description (selective retry if wrong length)
+  if (!omitSections.includes("Map") && fixed.mapDescription) {
+    const mapWords = fixed.mapDescription.split(/\s+/).length;
+    if (mapWords < 50 || mapWords > 60) {
+      needsRetry.push({
+        field: "mapDescription",
+        reason: `Map description has ${mapWords} words (should be 50-60)`,
+      });
+    }
+  }
+
+  // 8. Hero description word count (target 50-60 words, only retry if critically low)
+  const heroWords = fixed.heroDescription.split(/\s+/).length;
+  if (heroWords < 30 || heroWords > 60) {
+    needsRetry.push({
+      field: "heroDescription",
+      reason: `Hero description has ${heroWords} words (target 50-60 words, minimum 30)`,
+    });
+  }
+
+  // 9. Bullet point lengths (target 30+ words, only retry if critically low)
+  const bulletIssues: string[] = [];
+
+  if (!omitSections.includes("Benefits")) {
+    fixed.benefitsBullets.forEach((bullet, idx) => {
+      const words = bullet.split(/\s+/).length;
+      if (words < 26) {
+        bulletIssues.push(
+          `Benefits bullet ${idx + 1} has ${words} words (target 30+, minimum 26)`
+        );
+      }
+    });
+  }
+
+  if (!omitSections.includes("Why")) {
+    fixed.whyBullets.forEach((bullet, idx) => {
+      const words = bullet.split(/\s+/).length;
+      if (words < 26) {
+        bulletIssues.push(`Why bullet ${idx + 1} has ${words} words (target 30+, minimum 26)`);
+      }
+    });
+  }
+
+  if (bulletIssues.length > 0) {
+    needsRetry.push({
+      field: "bullets",
+      reason: bulletIssues.join("; "),
+    });
+  }
+
+  return {
+    content: fixed,
+    autoFixed,
+    needsRetry,
+    warnings,
+  };
+}
+
+/**
+ * Regenerate specific field only (selective retry)
+ * Used when FAQs, map section, hero description, or bullets don't meet criteria
+ */
+export async function regenerateField(
+  params: ContentGenerationParams,
+  field: "faqs" | "mapDescription" | "heroDescription" | "bullets",
+  previousContent: GeneratedContent,
+  reason: string
+): Promise<any> {
+  if (!PROVIDER) {
+    throw new Error("No AI API key configured");
+  }
+
+  const {primaryKeyword, companyName, service, location } = params;
+
+  let retryPrompt = "";
+
+  if (field === "faqs") {
+    retryPrompt = `The previously generated FAQs have issues: ${reason}
+
+Please regenerate ONLY the 3 FAQs following these STRICT requirements:
+
+**Primary Keyword (USE EXACTLY AS PROVIDED):** ${primaryKeyword}
+**Company Name:** ${companyName}
+**Service:** ${service}
+**Location:** ${location}
+
+**CRITICAL - PRIMARY KEYWORD USAGE:**
+The primary keyword "${primaryKeyword}" is pre-determined. DO NOT modify it.
+- ✅ USE EXACTLY: "${primaryKeyword}"
+- ❌ DO NOT change the adjective
+- ❌ DO NOT rearrange words
+
+**FAQ Requirements:**
+1. Generate SEO-relevant questions that real customers would search for (NOT promotional questions)
+2. Use primary keyword "${primaryKeyword}" or service "${service}" naturally in questions
+3. When using the full keyword, use EXACTLY: "${primaryKeyword}"
+4. Each answer must be 50-75 words
+5. Each answer must mention company name "${companyName}" in the **latter half** (not "we/our/us")
+6. Be smart and creative - vary topics naturally across all 3 FAQs
+7. Focus on what customers actually want to know (cost, process, timeline, materials, coverage, etc.)
+
+**Example Structure:**
+Q: "How much does ${service} cost in ${location}?"
+A: "Service in ${location} typically costs $X-$Y... ${companyName} provides..."
+
+Return ONLY a JSON object with this structure:
+{
+  "faqs": [
+    {"question": "...", "answer": "..."},
+    {"question": "...", "answer": "..."},
+    {"question": "...", "answer": "..."}
+  ]
+}`;
+  } else if (field === "mapDescription") {
+    retryPrompt = `The previously generated map description has an issue: ${reason}
+
+Please regenerate ONLY the map description following these requirements:
+
+**Primary Keyword (USE EXACTLY AS PROVIDED):** ${primaryKeyword}
+**Company Name:** ${companyName}
+**Service:** ${service}
+**Location:** ${location}
+
+**CRITICAL - PRIMARY KEYWORD USAGE:**
+The primary keyword "${primaryKeyword}" is pre-determined. DO NOT modify it.
+- ✅ USE EXACTLY: "${primaryKeyword}"
+- ❌ DO NOT change the adjective
+
+**Map Description Requirements:**
+1. MUST be exactly 50-60 words (STRICT - count carefully!)
+2. Include the exact primary keyword "${primaryKeyword}" naturally in the text
+3. Describe service coverage in the location
+4. Mention company name "${companyName}" at least once
+5. Professional, informative tone
+
+Return ONLY a JSON object with this structure:
+{
+  "mapDescription": "Your 50-60 word description here..."
+}`;
+  } else if (field === "heroDescription") {
+    retryPrompt = `The previously generated hero description has an issue: ${reason}
+
+Please regenerate ONLY the hero description following these requirements:
+
+**Primary Keyword (USE EXACTLY AS PROVIDED):** ${primaryKeyword}
+**Company Name:** ${companyName}
+**Service:** ${service}
+**Location:** ${location}
+
+**CRITICAL - PRIMARY KEYWORD USAGE:**
+The primary keyword "${primaryKeyword}" is pre-determined. DO NOT modify it.
+- ✅ USE EXACTLY: "${primaryKeyword}"
+- ❌ DO NOT change the adjective
+
+**Hero Description Requirements:**
+1. MUST be exactly 50-60 words (STRICT - count carefully!)
+2. Include the exact primary keyword "${primaryKeyword}" naturally in the text
+3. Describe the service and its benefits
+4. Mention company name "${companyName}" at least once
+5. Professional, engaging tone
+6. DO NOT include call-to-action phrases like "Call now!" - these are added programmatically
+
+Return ONLY a JSON object with this structure:
+{
+  "heroDescription": "Your 50-60 word description here..."
+}`;
+  } else if (field === "bullets") {
+    retryPrompt = `The previously generated bullet points have issues: ${reason}
+
+Please regenerate ONLY the bullet points that don't meet the word count requirement.
+
+**Primary Keyword (USE EXACTLY AS PROVIDED):** ${primaryKeyword}
+**Company Name:** ${companyName}
+**Service:** ${service}
+**Location:** ${location}
+
+**CRITICAL - PRIMARY KEYWORD USAGE:**
+The primary keyword "${primaryKeyword}" is pre-determined. DO NOT modify it.
+- ✅ USE EXACTLY: "${primaryKeyword}"
+- ❌ DO NOT change the adjective
+
+**Bullet Point Requirements:**
+1. Each bullet MUST be at least 30 words (aim for 40-50 words for safety)
+2. Each bullet MUST start with "<b>Topic Name:</b>" format (HTML bold tags)
+3. Include the exact primary keyword "${primaryKeyword}" naturally in the text
+4. Provide specific, valuable information about the service
+5. Professional, informative tone
+
+**Example Format:**
+"<b>Custom Glass Solutions for All Commercial Needs:</b> As a professional commercial glass installer in Sumner, WA, we provide storefront glass, office partitions, entrance doors, and display windows. Every installation is measured and fitted to exact specifications, ensuring seamless integration with your building's design and long-lasting durability across all commercial applications."
+
+Return ONLY a JSON object with this structure (regenerate ALL 6 bullets):
+{
+  "benefitsBullets": ["<b>Topic:</b> 30+ words here...", "<b>Topic:</b> 30+ words here...", "<b>Topic:</b> 30+ words here..."],
+  "whyBullets": ["<b>Topic:</b> 30+ words here...", "<b>Topic:</b> 30+ words here...", "<b>Topic:</b> 30+ words here..."]
+}`;
+  }
+
+  try {
+    if (PROVIDER === "claude" && anthropic) {
+      const message = await anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 2048,
+        temperature: 0.7,
+        messages: [
+          {
+            role: "user",
+            content: retryPrompt,
+          },
+        ],
+      });
+
+      return parseAIResponse(message.content[0]);
+    } else if (PROVIDER === "openai" && openai) {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4-turbo-preview",
+        messages: [{ role: "user", content: retryPrompt }],
+        temperature: 0.7,
+        max_tokens: 2048,
+        response_format: { type: "json_object" },
+      });
+
+      const content = completion.choices[0].message.content;
+      if (!content) throw new Error("Empty response");
+      return JSON.parse(content);
+    }
+
+    throw new Error("No provider available");
+  } catch (error) {
+    console.error(`Retry for ${field} failed:`, error);
+    throw new Error(
+      `Failed to regenerate ${field}: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
+}
+
+/**
  * Generate adjectives for batch of pages
+ * @deprecated This function is no longer used. Use deterministic adjectives from @/lib/adjectives instead.
+ * The system now uses a predefined list of adjectives for consistency between preview and generation.
  */
 export async function generateAdjectives(count: number): Promise<string[]> {
   if (!PROVIDER) {
