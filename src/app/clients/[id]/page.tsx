@@ -3,6 +3,9 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import ClientTabs from './ClientTabs';
 
+// Force dynamic rendering (uses cookies for authentication)
+export const dynamic = 'force-dynamic';
+
 interface ClientDetailPageProps {
   params: {
     id: string;

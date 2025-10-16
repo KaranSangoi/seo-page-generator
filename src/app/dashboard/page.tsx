@@ -6,6 +6,9 @@ import { logoutAction } from '@/app/logout/actions';
 import ClientCard from './ClientCard';
 import SearchClients from './SearchClients';
 
+// Force dynamic rendering (uses cookies for authentication)
+export const dynamic = 'force-dynamic';
+
 /**
  * Dashboard - Client Management
  *
