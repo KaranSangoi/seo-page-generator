@@ -27,6 +27,8 @@ export async function updateClientAction(prevState: any, formData: FormData) {
     const wpAppPassword = formData.get('wpAppPassword') as string;
     const seoPlugin = formData.get('seoPlugin') as string;
     const templatePageId = formData.get('templatePageId') as string;
+    const pageBuilder = formData.get('pageBuilder') as string;
+    const builderDetected = formData.get('builderDetected') === 'true';
 
     // Validate required fields
     if (!clientId || !clientName || !clientWebsite || !wpSiteUrl || !wpUsername || !wpAppPassword || !seoPlugin || !templatePageId) {
@@ -81,6 +83,8 @@ export async function updateClientAction(prevState: any, formData: FormData) {
         wpAppPassword,
         seoPlugin,
         templatePageId,
+        pageBuilder: pageBuilder || 'elementor',
+        builderDetected,
       },
     });
 
@@ -95,7 +99,95 @@ export async function updateClientAction(prevState: any, formData: FormData) {
 }
 
 /**
- * Test WordPress Connection
+ * Get Generation Batches for Client
+ */
+export async function getBatchesAction(clientId: string) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { error: 'You must be logged in.' };
+    }
+
+    // Verify client belongs to user
+    const client = await prisma.client.findFirst({
+      where: {
+        id: clientId,
+        userId: user.id,
+      },
+    });
+
+    if (!client) {
+      return { error: 'Client not found or access denied.' };
+    }
+
+    // Fetch all batches for this client
+    const batches = await prisma.generationBatch.findMany({
+      where: {
+        clientId: clientId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        _count: {
+          select: {
+            generatedPages: true,
+          },
+        },
+      },
+    });
+
+    return { success: true, batches };
+  } catch (error) {
+    console.error('Error fetching batches:', error);
+    return { error: 'Failed to fetch generation history.' };
+  }
+}
+
+/**
+ * Get Batch Details with All Pages
+ */
+export async function getBatchDetailsAction(batchId: string) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { error: 'You must be logged in.' };
+    }
+
+    // Fetch batch with all pages
+    const batch = await prisma.generationBatch.findFirst({
+      where: {
+        id: batchId,
+        userId: user.id,
+      },
+      include: {
+        generatedPages: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+        client: {
+          select: {
+            clientName: true,
+            clientWebsite: true,
+          },
+        },
+      },
+    });
+
+    if (!batch) {
+      return { error: 'Batch not found or access denied.' };
+    }
+
+    return { success: true, batch };
+  } catch (error) {
+    console.error('Error fetching batch details:', error);
+    return { error: 'Failed to fetch batch details.' };
+  }
+}
+
+/**
+ * Test WordPress Connection and Detect Page Builder
  */
 export async function testConnectionAction(formData: FormData) {
   try {
@@ -110,6 +202,7 @@ export async function testConnectionAction(formData: FormData) {
     const wpSiteUrl = formData.get('wpSiteUrl') as string;
     const wpUsername = formData.get('wpUsername') as string;
     const wpAppPassword = formData.get('wpAppPassword') as string;
+    const templatePageId = formData.get('templatePageId') as string;
 
     if (!wpSiteUrl || !wpUsername || !wpAppPassword) {
       return {
@@ -140,9 +233,54 @@ export async function testConnectionAction(formData: FormData) {
 
     if (response.ok) {
       const userData = await response.json();
+
+      let successMessage = `✅ Connection successful!\n\nConnected as: ${userData.name || wpUsername}\nRole: ${userData.roles?.[0] || 'Unknown'}`;
+
+      // Try to detect page builder if template ID is provided
+      let detectedBuilder: string | null = null;
+      let builderDetails: string | null = null;
+      let builderSupported = false;
+
+      if (templatePageId) {
+        try {
+          const { detectPageBuilder, getBuilderDisplayName, getBuilderIcon, getBuilderSupportStatus } = await import('@/lib/builders/detector');
+
+          const detection = await detectPageBuilder(
+            templatePageId,
+            cleanWpUrl,
+            wpUsername,
+            wpAppPassword
+          );
+
+          detectedBuilder = detection.builder;
+          builderDetails = detection.details;
+          const builderName = getBuilderDisplayName(detection.builder);
+          const builderIcon = getBuilderIcon(detection.builder);
+          const supportStatus = getBuilderSupportStatus(detection.builder);
+          builderSupported = detection.builder === 'elementor';
+
+          successMessage += `\n\n${builderIcon} Page Builder Detected: ${builderName}\nConfidence: ${detection.confidence}\n${supportStatus}`;
+
+          if (!builderSupported) {
+            successMessage += `\n\n⚠️ Note: Currently only Elementor is fully supported. ${builderName} support is coming soon!`;
+          }
+        } catch (detectionError: any) {
+          // Don't fail the connection test if detection fails
+          console.warn('Builder detection failed:', detectionError);
+          successMessage += `\n\n⚠️ Could not detect page builder automatically.\nError: ${detectionError.message || 'Unknown error'}`;
+        }
+      } else {
+        successMessage += `\n\n💡 Tip: Enter a Template Page ID to automatically detect which page builder you're using.`;
+      }
+
+      successMessage += `\n\nWordPress site is ready to accept page generation requests.`;
+
       return {
         success: true,
-        message: `✅ Connection successful!\n\nConnected as: ${userData.name || wpUsername}\nRole: ${userData.roles?.[0] || 'Unknown'}\nWordPress site is ready to accept page generation requests.`,
+        message: successMessage,
+        detectedBuilder,
+        builderDetails,
+        builderSupported,
       };
     }
 

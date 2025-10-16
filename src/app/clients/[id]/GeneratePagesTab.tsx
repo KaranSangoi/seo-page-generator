@@ -7,6 +7,11 @@
 import { useState, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
 
+// ==================== V2 FEATURE: PREVIEW & PUBLISH MODE ====================
+// Uncomment the line below to enable the Content Preview Modal for v2
+// import ContentPreviewModal from './ContentPreviewModal';
+// ==========================================================================
+
 interface GeneratePagesTabProps {
   clientId: string;
 }
@@ -68,9 +73,19 @@ export default function GeneratePagesTab({ clientId }: GeneratePagesTabProps) {
     slug: string;
     parent: string;
     primaryKeyword: string;
+    rowNumber: number;
   }>>([]);
+  const [editedData, setEditedData] = useState<Map<number, { slug?: string; primaryKeyword?: string }>>(new Map());
   const [isGeneratingSample, setIsGeneratingSample] = useState(false);
   const [samplePageUrl, setSamplePageUrl] = useState<string | null>(null);
+
+  // ==================== V2 FEATURE: PREVIEW & PUBLISH MODE ====================
+  // Uncomment these state variables to enable preview mode
+  // const [generationMode, setGenerationMode] = useState<'direct' | 'preview'>('direct');
+  // const [contentPreviewPages, setContentPreviewPages] = useState<any[]>([]);
+  // const [showContentPreview, setShowContentPreview] = useState(false);
+  // const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  // ==========================================================================
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -309,7 +324,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
     timerRef.current = timer;
 
     try {
-      // Call API to queue batch
+      // Call API to queue batch - include edited values
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -317,15 +332,20 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
         },
         body: JSON.stringify({
           clientId,
-          pages: parsedPages.map((page) => ({
-            pageType: page.pageType,
-            service: page.service,
-            location: page.location,
-            parentSlug: page.parentSlug,
-            externalLinkSection: page.externalLinkSection,
-            omitSections: page.omitSections,
-            rowNumber: page.rowNumber,
-          })),
+          pages: parsedPages.map((page) => {
+            const edits = editedData.get(page.rowNumber);
+            return {
+              pageType: page.pageType,
+              service: page.service,
+              location: page.location,
+              parentSlug: page.parentSlug,
+              externalLinkSection: page.externalLinkSection,
+              omitSections: page.omitSections,
+              rowNumber: page.rowNumber,
+              customSlug: edits?.slug, // Pass custom slug if edited
+              customPrimaryKeyword: edits?.primaryKeyword, // Pass custom primary keyword if edited
+            };
+          }),
         }),
       });
 
@@ -465,6 +485,115 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
     }
   };
 
+  // ==================== V2 FEATURE: PREVIEW MODE HANDLERS ====================
+  // Uncomment these functions to enable preview mode functionality
+
+  // const startPreviewGeneration = async () => {
+  //   setIsGeneratingPreview(true);
+  //   try {
+  //     const response = await fetch('/api/generate-preview', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         clientId,
+  //         pages: parsedPages.map((page) => {
+  //           const edits = editedData.get(page.rowNumber);
+  //           return {
+  //             pageType: page.pageType,
+  //             service: page.service,
+  //             location: page.location,
+  //             parentSlug: page.parentSlug,
+  //             externalLinkSection: page.externalLinkSection,
+  //             omitSections: page.omitSections,
+  //             rowNumber: page.rowNumber,
+  //             customSlug: edits?.slug,
+  //             customPrimaryKeyword: edits?.primaryKeyword,
+  //           };
+  //         }),
+  //       }),
+  //     });
+  //     if (!response.ok) throw new Error('Failed to generate preview');
+  //     const data = await response.json();
+  //     if (data.success) {
+  //       setContentPreviewPages(data.pages);
+  //       setShowContentPreview(true);
+  //     }
+  //   } catch (error) {
+  //     console.error('Preview generation error:', error);
+  //     alert(error instanceof Error ? error.message : 'Failed to generate preview');
+  //   } finally {
+  //     setIsGeneratingPreview(false);
+  //   }
+  // };
+
+  // const handleRegenerateSection = async (pageId: string, section: string) => {
+  //   const page = contentPreviewPages.find(p => p.pageId === pageId);
+  //   if (!page) return;
+  //   try {
+  //     const response = await fetch('/api/regenerate-section', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         clientId,
+  //         pageData: page.rawData,
+  //         currentContent: page.content,
+  //         sectionToRegenerate: section,
+  //         primaryKeyword: page.primaryKeyword,
+  //       }),
+  //     });
+  //     if (!response.ok) throw new Error('Failed to regenerate section');
+  //     const data = await response.json();
+  //     if (data.success) {
+  //       setContentPreviewPages(prev => prev.map(p =>
+  //         p.pageId === pageId ? { ...p, content: data.content } : p
+  //       ));
+  //     }
+  //   } catch (error) {
+  //     console.error('Section regeneration error:', error);
+  //     alert(error instanceof Error ? error.message : 'Failed to regenerate section');
+  //   }
+  // };
+
+  // const handlePublishPage = async (pageId: string) => {
+  //   const page = contentPreviewPages.find(p => p.pageId === pageId);
+  //   if (!page) return;
+  //   setContentPreviewPages(prev => prev.map(p =>
+  //     p.pageId === pageId ? { ...p, status: 'publishing' } : p
+  //   ));
+  //   try {
+  //     const response = await fetch('/api/publish-reviewed', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         clientId,
+  //         pageData: page.rawData,
+  //         generatedContent: page.content,
+  //         primaryKeyword: page.primaryKeyword,
+  //       }),
+  //     });
+  //     if (!response.ok) throw new Error('Failed to publish page');
+  //     const data = await response.json();
+  //     if (data.success) {
+  //       setContentPreviewPages(prev => prev.map(p =>
+  //         p.pageId === pageId ? { ...p, status: 'published', publishedUrl: data.pageUrl } : p
+  //       ));
+  //     }
+  //   } catch (error) {
+  //     console.error('Publish error:', error);
+  //     setContentPreviewPages(prev => prev.map(p =>
+  //       p.pageId === pageId ? { ...p, status: 'failed', error: error instanceof Error ? error.message : 'Failed' } : p
+  //     ));
+  //   }
+  // };
+
+  // const handlePublishAll = async () => {
+  //   const readyPages = contentPreviewPages.filter(p => p.status === 'ready');
+  //   for (const page of readyPages) {
+  //     await handlePublishPage(page.pageId);
+  //   }
+  // };
+  // ==========================================================================
+
   const generateSamplePage = async () => {
     setIsGeneratingSample(true);
     setSamplePageUrl(null);
@@ -581,29 +710,57 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
 
   // Show preview modal with all page details
   const showGenerationPreview = () => {
-    // Preview adjectives (actual adjectives will be generated server-side)
-    const previewAdjectives = [
-      'Professional', 'Expert', 'Trusted', 'Reliable', 'Certified',
-      'Licensed', 'Experienced', 'Quality', 'Top-Rated', 'Premier',
-      'Skilled', 'Qualified', 'Reputable', 'Dependable', 'Affordable'
-    ];
+    // Import adjective utility dynamically
+    import('@/lib/adjectives').then(({ getAdjectiveForRow }) => {
+      // Generate preview data using deterministic adjectives
+      // This ensures preview shows the EXACT adjectives that will be used in generation
+      const preview = parsedPages.map((page) => {
+        const pageName = getPageDisplayName(page);
+        const slug = generateSlug(page);
+        const adjective = getAdjectiveForRow(page.rowNumber);
 
-    // Generate preview data
-    const preview = parsedPages.map((page, index) => {
-      const pageName = getPageDisplayName(page);
-      const slug = generateSlug(page);
-      const adjective = previewAdjectives[index % previewAdjectives.length];
+        return {
+          pageName,
+          slug,
+          parent: page.parentSlug || 'None',
+          primaryKeyword: generatePrimaryKeyword(page, adjective),
+          rowNumber: page.rowNumber,
+        };
+      });
 
-      return {
-        pageName,
-        slug,
-        parent: page.parentSlug || 'None',
-        primaryKeyword: generatePrimaryKeyword(page, adjective),
-      };
+      setPreviewData(preview);
+      setEditedData(new Map()); // Reset edited data
+      setShowPreviewModal(true);
     });
+  };
 
-    setPreviewData(preview);
-    setShowPreviewModal(true);
+  // Handle editing slug
+  const handleSlugEdit = (rowNumber: number, newSlug: string) => {
+    setEditedData((prev) => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(rowNumber) || {};
+      newMap.set(rowNumber, { ...existing, slug: newSlug });
+      return newMap;
+    });
+  };
+
+  // Handle editing primary keyword
+  const handlePrimaryKeywordEdit = (rowNumber: number, newKeyword: string) => {
+    setEditedData((prev) => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(rowNumber) || {};
+      newMap.set(rowNumber, { ...existing, primaryKeyword: newKeyword });
+      return newMap;
+    });
+  };
+
+  // Get current value (edited or original)
+  const getCurrentSlug = (rowNumber: number, originalSlug: string) => {
+    return editedData.get(rowNumber)?.slug ?? originalSlug;
+  };
+
+  const getCurrentPrimaryKeyword = (rowNumber: number, originalKeyword: string) => {
+    return editedData.get(rowNumber)?.primaryKeyword ?? originalKeyword;
   };
 
   return (
@@ -805,6 +962,53 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           {/* Generation Controls */}
           {parsedPages.length > 0 && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              {/* ==================== V2 FEATURE: MODE SELECTOR ====================
+              Uncomment this section to enable mode selection UI
+              <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                <label className="text-sm font-medium text-gray-900 dark:text-white mb-3 block">
+                  Generation Mode
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="generationMode"
+                      value="direct"
+                      checked={generationMode === 'direct'}
+                      onChange={(e) => setGenerationMode(e.target.value as 'direct')}
+                      className="w-4 h-4 text-primary-600"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        Generate Directly
+                      </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Fast publishing without review
+                      </p>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="generationMode"
+                      value="preview"
+                      checked={generationMode === 'preview'}
+                      onChange={(e) => setGenerationMode(e.target.value as 'preview')}
+                      className="w-4 h-4 text-primary-600"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        Preview & Publish
+                      </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Review content before publishing
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+              ========================================================================== */}
+
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
@@ -814,6 +1018,30 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
                     Estimated time: ~{estimatedMinutes} {estimatedMinutes === 1 ? 'minute' : 'minutes'}
                   </p>
                 </div>
+
+                {/* ==================== V2 FEATURE: CONDITIONAL BUTTONS ====================
+                Replace the button below with this commented section to enable mode-based buttons
+
+                {generationMode === 'direct' ? (
+                  <button
+                    onClick={showGenerationPreview}
+                    disabled={!isValid}
+                    className="px-6 py-3 bg-accent-600 text-white rounded-lg hover:bg-accent-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium"
+                  >
+                    Preview & Start Generation
+                  </button>
+                ) : (
+                  <button
+                    onClick={startPreviewGeneration}
+                    disabled={!isValid || isGeneratingPreview}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium"
+                  >
+                    {isGeneratingPreview ? 'Generating Preview...' : 'Generate Preview'}
+                  </button>
+                )}
+                ========================================================================== */}
+
+                {/* DEFAULT: Direct generation (V1) */}
                 <button
                   onClick={showGenerationPreview}
                   disabled={!isValid}
@@ -936,6 +1164,20 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
         </div>
       )}
 
+      {/* ==================== V2 FEATURE: CONTENT PREVIEW MODAL ====================
+      Uncomment this section to enable the content review modal
+
+      {showContentPreview && (
+        <ContentPreviewModal
+          pages={contentPreviewPages}
+          onClose={() => setShowContentPreview(false)}
+          onRegenerateSection={handleRegenerateSection}
+          onPublishPage={handlePublishPage}
+          onPublishAll={handlePublishAll}
+        />
+      )}
+      ========================================================================== */}
+
       {/* Preview Modal */}
       {showPreviewModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -952,15 +1194,26 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
 
             {/* Modal Body */}
             <div className="flex-1 overflow-y-auto p-6">
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  <strong>Tip:</strong> Click on any slug or primary keyword to edit it before generation
+                </p>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-gray-50 dark:bg-gray-900">
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">#</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Page Name</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Slug</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">
+                        Slug
+                        <span className="ml-1 text-xs text-blue-600 dark:text-blue-400">(editable)</span>
+                      </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Parent</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Primary Keyword</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">
+                        Primary Keyword
+                        <span className="ml-1 text-xs text-blue-600 dark:text-blue-400">(editable)</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -968,10 +1221,14 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
                       <tr key={index} className="border-b border-gray-100 dark:border-gray-700/50">
                         <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{index + 1}</td>
                         <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{item.pageName}</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
-                          <code className="text-xs bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded">
-                            {item.slug}
-                          </code>
+                        <td className="py-3 px-4">
+                          <input
+                            type="text"
+                            value={getCurrentSlug(item.rowNumber, item.slug)}
+                            onChange={(e) => handleSlugEdit(item.rowNumber, e.target.value)}
+                            className="w-full px-2 py-1 text-xs bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-gray-900 dark:text-white font-mono"
+                            placeholder="slug"
+                          />
                         </td>
                         <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
                           {item.parent === 'None' ? (
@@ -982,10 +1239,14 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
                             </code>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-gray-900 dark:text-white">
-                          <span className="text-sm font-medium text-accent-600 dark:text-accent-400">
-                            {item.primaryKeyword}
-                          </span>
+                        <td className="py-3 px-4">
+                          <input
+                            type="text"
+                            value={getCurrentPrimaryKeyword(item.rowNumber, item.primaryKeyword)}
+                            onChange={(e) => handlePrimaryKeywordEdit(item.rowNumber, e.target.value)}
+                            className="w-full px-2 py-1 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-accent-600 dark:text-accent-400 font-medium"
+                            placeholder="Primary Keyword"
+                          />
                         </td>
                       </tr>
                     ))}

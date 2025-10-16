@@ -20,6 +20,8 @@ interface Client {
   wpAppPassword: string;
   seoPlugin: string;
   templatePageId: string;
+  pageBuilder: string;
+  builderDetected: boolean;
 }
 
 interface ClientTabsProps {
