@@ -14,7 +14,7 @@
  * 7. Keep getUserFromSession but adapt to use Clerk's auth()
  */
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { prisma } from './prisma';

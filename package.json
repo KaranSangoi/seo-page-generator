@@ -16,7 +16,7 @@
     "@clerk/nextjs": "^5.0.0",
     "@prisma/client": "^5.14.0",
     "axios": "^1.7.2",
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
     "jose": "^6.1.0",
     "next": "14.2.5",
     "openai": "^6.3.0",
@@ -26,7 +26,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/bcrypt": "^6.0.0",
     "@types/node": "^20.14.2",
     "@types/papaparse": "^5.3.16",
     "@types/react": "^18.3.3",
