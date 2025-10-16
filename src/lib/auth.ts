@@ -28,10 +28,13 @@ const SESSION_COOKIE_NAME = 'session';
 const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 // JWT secret key (from environment variable)
-const getJwtSecretKey = (): Uint8Array => {
+const getJwtSecretKey = (): Uint8Array | null => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    throw new Error('JWT_SECRET environment variable is not set');
+    // Return null instead of throwing - allows app to run in read-only mode
+    // This enables public pages (login/signup) to work even without JWT_SECRET
+    console.warn('JWT_SECRET environment variable is not set - authentication will not work');
+    return null;
   }
   return new TextEncoder().encode(secret);
 };
@@ -84,13 +87,18 @@ async function createSessionToken(
   userId: string,
   email: string
 ): Promise<string> {
+  const secretKey = getJwtSecretKey();
+  if (!secretKey) {
+    throw new Error('Cannot create session: JWT_SECRET not configured');
+  }
+
   const expiresAt = Date.now() + SESSION_DURATION;
 
   const token = await new SignJWT({ userId, email, expiresAt })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(new Date(expiresAt))
-    .sign(getJwtSecretKey());
+    .sign(secretKey);
 
   return token;
 }
@@ -104,7 +112,13 @@ async function verifySessionToken(
   token: string
 ): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, getJwtSecretKey());
+    const secretKey = getJwtSecretKey();
+    if (!secretKey) {
+      // JWT_SECRET not configured - cannot verify tokens
+      return null;
+    }
+
+    const { payload } = await jwtVerify(token, secretKey);
 
     // Validate payload has required fields
     if (
