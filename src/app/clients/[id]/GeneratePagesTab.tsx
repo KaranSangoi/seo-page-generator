@@ -8,8 +8,8 @@ import { useState, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
 
 // ==================== V2 FEATURE: PREVIEW & PUBLISH MODE ====================
-// Uncomment the line below to enable the Content Preview Modal for v2
-// import ContentPreviewModal from './ContentPreviewModal';
+// V2 ACTIVATED: Content Preview Modal enabled
+import ContentPreviewModal from './ContentPreviewModal';
 // ==========================================================================
 
 interface GeneratePagesTabProps {
@@ -80,11 +80,11 @@ export default function GeneratePagesTab({ clientId }: GeneratePagesTabProps) {
   const [samplePageUrl, setSamplePageUrl] = useState<string | null>(null);
 
   // ==================== V2 FEATURE: PREVIEW & PUBLISH MODE ====================
-  // Uncomment these state variables to enable preview mode
-  // const [generationMode, setGenerationMode] = useState<'direct' | 'preview'>('direct');
-  // const [contentPreviewPages, setContentPreviewPages] = useState<any[]>([]);
-  // const [showContentPreview, setShowContentPreview] = useState(false);
-  // const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  // V2 ACTIVATED: Preview mode state variables enabled
+  const [generationMode, setGenerationMode] = useState<'direct' | 'preview'>('direct');
+  const [contentPreviewPages, setContentPreviewPages] = useState<any[]>([]);
+  const [showContentPreview, setShowContentPreview] = useState(false);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   // ==========================================================================
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -486,112 +486,112 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
   };
 
   // ==================== V2 FEATURE: PREVIEW MODE HANDLERS ====================
-  // Uncomment these functions to enable preview mode functionality
+  // V2 ACTIVATED: Preview mode handler functions enabled
 
-  // const startPreviewGeneration = async () => {
-  //   setIsGeneratingPreview(true);
-  //   try {
-  //     const response = await fetch('/api/generate-preview', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({
-  //         clientId,
-  //         pages: parsedPages.map((page) => {
-  //           const edits = editedData.get(page.rowNumber);
-  //           return {
-  //             pageType: page.pageType,
-  //             service: page.service,
-  //             location: page.location,
-  //             parentSlug: page.parentSlug,
-  //             externalLinkSection: page.externalLinkSection,
-  //             omitSections: page.omitSections,
-  //             rowNumber: page.rowNumber,
-  //             customSlug: edits?.slug,
-  //             customPrimaryKeyword: edits?.primaryKeyword,
-  //           };
-  //         }),
-  //       }),
-  //     });
-  //     if (!response.ok) throw new Error('Failed to generate preview');
-  //     const data = await response.json();
-  //     if (data.success) {
-  //       setContentPreviewPages(data.pages);
-  //       setShowContentPreview(true);
-  //     }
-  //   } catch (error) {
-  //     console.error('Preview generation error:', error);
-  //     alert(error instanceof Error ? error.message : 'Failed to generate preview');
-  //   } finally {
-  //     setIsGeneratingPreview(false);
-  //   }
-  // };
+  const startPreviewGeneration = async () => {
+    setIsGeneratingPreview(true);
+    try {
+      const response = await fetch('/api/generate-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId,
+          pages: parsedPages.map((page) => {
+            const edits = editedData.get(page.rowNumber);
+            return {
+              pageType: page.pageType,
+              service: page.service,
+              location: page.location,
+              parentSlug: page.parentSlug,
+              externalLinkSection: page.externalLinkSection,
+              omitSections: page.omitSections,
+              rowNumber: page.rowNumber,
+              customSlug: edits?.slug,
+              customPrimaryKeyword: edits?.primaryKeyword,
+            };
+          }),
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to generate preview');
+      const data = await response.json();
+      if (data.success) {
+        setContentPreviewPages(data.pages);
+        setShowContentPreview(true);
+      }
+    } catch (error) {
+      console.error('Preview generation error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to generate preview');
+    } finally {
+      setIsGeneratingPreview(false);
+    }
+  };
 
-  // const handleRegenerateSection = async (pageId: string, section: string) => {
-  //   const page = contentPreviewPages.find(p => p.pageId === pageId);
-  //   if (!page) return;
-  //   try {
-  //     const response = await fetch('/api/regenerate-section', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({
-  //         clientId,
-  //         pageData: page.rawData,
-  //         currentContent: page.content,
-  //         sectionToRegenerate: section,
-  //         primaryKeyword: page.primaryKeyword,
-  //       }),
-  //     });
-  //     if (!response.ok) throw new Error('Failed to regenerate section');
-  //     const data = await response.json();
-  //     if (data.success) {
-  //       setContentPreviewPages(prev => prev.map(p =>
-  //         p.pageId === pageId ? { ...p, content: data.content } : p
-  //       ));
-  //     }
-  //   } catch (error) {
-  //     console.error('Section regeneration error:', error);
-  //     alert(error instanceof Error ? error.message : 'Failed to regenerate section');
-  //   }
-  // };
+  const handleRegenerateSection = async (pageId: string, section: string) => {
+    const page = contentPreviewPages.find(p => p.pageId === pageId);
+    if (!page) return;
+    try {
+      const response = await fetch('/api/regenerate-section', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId,
+          pageData: page.rawData,
+          currentContent: page.content,
+          sectionToRegenerate: section,
+          primaryKeyword: page.primaryKeyword,
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to regenerate section');
+      const data = await response.json();
+      if (data.success) {
+        setContentPreviewPages(prev => prev.map(p =>
+          p.pageId === pageId ? { ...p, content: data.content } : p
+        ));
+      }
+    } catch (error) {
+      console.error('Section regeneration error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to regenerate section');
+    }
+  };
 
-  // const handlePublishPage = async (pageId: string) => {
-  //   const page = contentPreviewPages.find(p => p.pageId === pageId);
-  //   if (!page) return;
-  //   setContentPreviewPages(prev => prev.map(p =>
-  //     p.pageId === pageId ? { ...p, status: 'publishing' } : p
-  //   ));
-  //   try {
-  //     const response = await fetch('/api/publish-reviewed', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({
-  //         clientId,
-  //         pageData: page.rawData,
-  //         generatedContent: page.content,
-  //         primaryKeyword: page.primaryKeyword,
-  //       }),
-  //     });
-  //     if (!response.ok) throw new Error('Failed to publish page');
-  //     const data = await response.json();
-  //     if (data.success) {
-  //       setContentPreviewPages(prev => prev.map(p =>
-  //         p.pageId === pageId ? { ...p, status: 'published', publishedUrl: data.pageUrl } : p
-  //       ));
-  //     }
-  //   } catch (error) {
-  //     console.error('Publish error:', error);
-  //     setContentPreviewPages(prev => prev.map(p =>
-  //       p.pageId === pageId ? { ...p, status: 'failed', error: error instanceof Error ? error.message : 'Failed' } : p
-  //     ));
-  //   }
-  // };
+  const handlePublishPage = async (pageId: string) => {
+    const page = contentPreviewPages.find(p => p.pageId === pageId);
+    if (!page) return;
+    setContentPreviewPages(prev => prev.map(p =>
+      p.pageId === pageId ? { ...p, status: 'publishing' } : p
+    ));
+    try {
+      const response = await fetch('/api/publish-reviewed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId,
+          pageData: page.rawData,
+          generatedContent: page.content,
+          primaryKeyword: page.primaryKeyword,
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to publish page');
+      const data = await response.json();
+      if (data.success) {
+        setContentPreviewPages(prev => prev.map(p =>
+          p.pageId === pageId ? { ...p, status: 'published', publishedUrl: data.pageUrl } : p
+        ));
+      }
+    } catch (error) {
+      console.error('Publish error:', error);
+      setContentPreviewPages(prev => prev.map(p =>
+        p.pageId === pageId ? { ...p, status: 'failed', error: error instanceof Error ? error.message : 'Failed' } : p
+      ));
+    }
+  };
 
-  // const handlePublishAll = async () => {
-  //   const readyPages = contentPreviewPages.filter(p => p.status === 'ready');
-  //   for (const page of readyPages) {
-  //     await handlePublishPage(page.pageId);
-  //   }
-  // };
+  const handlePublishAll = async () => {
+    const readyPages = contentPreviewPages.filter(p => p.status === 'ready');
+    for (const page of readyPages) {
+      await handlePublishPage(page.pageId);
+    }
+  };
   // ==========================================================================
 
   const generateSamplePage = async () => {
@@ -963,7 +963,8 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           {parsedPages.length > 0 && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
               {/* ==================== V2 FEATURE: MODE SELECTOR ====================
-              Uncomment this section to enable mode selection UI
+              V2 ACTIVATED: Mode selection UI enabled
+              ========================================================================== */}
               <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
                 <label className="text-sm font-medium text-gray-900 dark:text-white mb-3 block">
                   Generation Mode
@@ -1007,7 +1008,6 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
                   </label>
                 </div>
               </div>
-              ========================================================================== */}
 
               <div className="flex items-center justify-between">
                 <div>
@@ -1020,34 +1020,14 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
                 </div>
 
                 {/* ==================== V2 FEATURE: CONDITIONAL BUTTONS ====================
-                Replace the button below with this commented section to enable mode-based buttons
-
-                {generationMode === 'direct' ? (
-                  <button
-                    onClick={showGenerationPreview}
-                    disabled={!isValid}
-                    className="px-6 py-3 bg-accent-600 text-white rounded-lg hover:bg-accent-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium"
-                  >
-                    Preview & Start Generation
-                  </button>
-                ) : (
-                  <button
-                    onClick={startPreviewGeneration}
-                    disabled={!isValid || isGeneratingPreview}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium"
-                  >
-                    {isGeneratingPreview ? 'Generating Preview...' : 'Generate Preview'}
-                  </button>
-                )}
+                V2 ACTIVATED: Mode-based conditional buttons enabled
                 ========================================================================== */}
-
-                {/* DEFAULT: Direct generation (V1) */}
                 <button
                   onClick={showGenerationPreview}
                   disabled={!isValid}
                   className="px-6 py-3 bg-accent-600 text-white rounded-lg hover:bg-accent-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium"
                 >
-                  Preview & Start Generation
+                  {generationMode === 'direct' ? 'Preview & Start Generation' : 'Review Pages & Generate Preview'}
                 </button>
               </div>
             </div>
@@ -1165,8 +1145,8 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
       )}
 
       {/* ==================== V2 FEATURE: CONTENT PREVIEW MODAL ====================
-      Uncomment this section to enable the content review modal
-
+      V2 ACTIVATED: Content review modal enabled
+      ========================================================================== */}
       {showContentPreview && (
         <ContentPreviewModal
           pages={contentPreviewPages}
@@ -1176,7 +1156,32 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           onPublishAll={handlePublishAll}
         />
       )}
-      ========================================================================== */}
+
+      {/* Loading Overlay for Preview Generation */}
+      {isGeneratingPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+            <div className="text-center">
+              <svg className="animate-spin h-12 w-12 text-blue-600 dark:text-blue-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Generating Content...
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Creating content for {parsedPages.length} {parsedPages.length === 1 ? 'page' : 'pages'}
+              </p>
+              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 justify-center">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>This may take a few moments. Please wait...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Preview Modal */}
       {showPreviewModal && (
@@ -1272,11 +1277,15 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
                 <button
                   onClick={() => {
                     setShowPreviewModal(false);
-                    startGeneration();
+                    if (generationMode === 'direct') {
+                      startGeneration(); // Direct mode: generate and publish immediately
+                    } else {
+                      startPreviewGeneration(); // Preview mode: generate for review
+                    }
                   }}
                   className="px-6 py-2 bg-accent-600 text-white rounded-lg hover:bg-accent-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 transition-all text-sm font-medium"
                 >
-                  Confirm & Start Generation
+                  {generationMode === 'direct' ? 'Confirm & Start Generation' : 'Confirm & Generate Preview'}
                 </button>
               </div>
             </div>

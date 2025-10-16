@@ -314,12 +314,31 @@ function replaceElementorContent(
           }
         }
       } else if (cssId.includes('map')) {
+        console.log('[DEBUG] Found map element:', {
+          cssId: cssId,
+          widgetType: element.widgetType,
+          elType: element.elType,
+          hasEditor: !!element.settings.editor,
+          hasTitle: !!element.settings.title,
+          settingsKeys: Object.keys(element.settings),
+        });
+
         if (element.widgetType === 'text-editor' && element.settings.editor) {
           let content = generatedContent.mapDescription || '';
           if (internalLinkSection === 2 && parentPageUrl && service) {
             content = insertInternalLink(content, parentPageUrl, service);
           }
           element.settings.editor = content;
+          console.log('[DEBUG] Updated map description in text-editor widget');
+        } else if (element.widgetType === 'heading' && element.settings.title) {
+          let content = generatedContent.mapDescription || '';
+          if (internalLinkSection === 2 && parentPageUrl && service) {
+            content = insertInternalLink(content, parentPageUrl, service);
+          }
+          element.settings.title = content;
+          console.log('[DEBUG] Updated map description in heading widget');
+        } else {
+          console.log('[DEBUG] Map element found but widget type not handled:', element.widgetType);
         }
       }
 

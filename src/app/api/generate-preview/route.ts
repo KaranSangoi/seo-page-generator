@@ -15,6 +15,9 @@ import {
   validateContent,
   getPageName,
   determineLinkPlacements,
+  fetchSitemap,
+  findRelevantPage,
+  generateCityWebsiteUrl,
   type PageGenerationParams,
   type ContentValidationParams
 } from '@/lib/page-generation';
@@ -44,6 +47,9 @@ export async function POST(request: NextRequest) {
     if (!client) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
+
+    // Fetch sitemap once for all pages (for intelligent internal linking)
+    const sitemap = await fetchSitemap(client.clientWebsite);
 
     // Generate content for all pages (parallel for speed)
     const generatedPages = await Promise.all(
@@ -104,6 +110,21 @@ export async function POST(request: NextRequest) {
           // Get page name using shared function
           const pageName = getPageName(page.pageType, page.service, page.location);
 
+          // Determine internal link URL (40% homepage, 60% contextual pages)
+          let internalLinkUrl = client.clientWebsite; // default to homepage
+          const rotation = page.rowNumber % 5;
+
+          if (rotation >= 1 && rotation <= 3 && sitemap.length > 0) {
+            // Use contextual page for rotations 1, 2, 3
+            const relevantPage = findRelevantPage(sitemap, page.service, page.location);
+            if (relevantPage) {
+              internalLinkUrl = relevantPage;
+            }
+          }
+
+          // Determine external link URL (city website)
+          const externalLinkUrl = generateCityWebsiteUrl(page.location);
+
           return {
             pageId: `preview_${page.rowNumber}`,
             pageName,
@@ -111,6 +132,10 @@ export async function POST(request: NextRequest) {
             location: page.location,
             primaryKeyword,
             content: validated.content,
+            internalLinkPlacement,
+            internalLinkUrl,
+            externalLinkPlacement,
+            externalLinkUrl,
             rawData: page, // Store original page data for later publishing
             status: 'ready', // Ready for review
             warnings: validated.warnings,

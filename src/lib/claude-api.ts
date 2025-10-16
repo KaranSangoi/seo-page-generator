@@ -112,9 +112,11 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
 
 **Standard Operating Procedure (SOP):**
 
-1. **Meta Description:** Must be ≤155 characters
-   - **DO NOT add call-to-action phrases like "Call now!", "Call us today!", "Contact us!" etc.**
-   - These are added programmatically - focus only on describing the service and company
+1. **Meta Description:** Must be 120-155 characters INCLUDING "Call now!" at the end (STRICT - count carefully!)
+   - Focus on describing the service, company value proposition, and benefits
+   - MUST naturally include BOTH company name and primary keyword
+   - **MUST end with "Call now!" within the 120-155 character limit**
+   - Format: "{CompanyName} provides {service} in {location}. [Brief benefit]. Call now!"
 2. **Hero Description:** Must be 50-60 words (STRICT - count your words!)
    Example (52 words): "Our professional dumpster rental services in Phoenix provide reliable waste management solutions for residential and commercial projects. With same-day delivery, flexible rental periods, and competitive pricing, we make waste disposal easy. Contact us today for a free quote and experience hassle-free service from Phoenix's most trusted waste management company."
 3. **Bullet Points:** Each must be ≥30 words (STRICT - count your words! Aim for 40-50 words)
@@ -146,7 +148,10 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
    - **CRITICAL: Each FAQ must be UNIQUE across all pages in this batch**
    - Be smart and creative - vary topics naturally (cost, process, timeline, materials, availability, coverage, etc.)
    - **DO NOT use promotional questions** (avoid "why choose us", "what makes you special", etc.)
-   - Use primary keyword naturally in questions/answers when relevant (EXACTLY as provided)
+   - **FAQ Questions:** Use the service and location WITHOUT the adjective from the primary keyword
+     - Example: If primary keyword is "Professional Plumber in Carlsbad, CA", FAQ questions should use "plumber in Carlsbad, CA"
+     - Remove adjectives like "Professional", "Expert", "Trusted", etc. from FAQ questions
+   - **FAQ Answers:** Can use the full primary keyword naturally when relevant
    - CRITICAL: Mention company name (${companyName}) in the **latter half** of each answer for SEO
    - Use company name instead of "we/our/us" - Example: "${companyName} provides..." not "We provide..."
    - **DO NOT generate similar FAQs that only differ by location - make each topically distinct**
@@ -196,7 +201,7 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
 Always return ONLY valid JSON with this exact structure (omit sections as instructed):
 {
   "metaTitle": "string",
-  "metaDescription": "string (max 155 chars)",
+  "metaDescription": "string (120-155 chars, must include company name, primary keyword, and end with 'Call now!')",
   "h1": "string",
   "heroDescription": "string (50-60 words)",
   "benefitsHeading": "string",
@@ -529,10 +534,15 @@ export function validateContent(
 ): ValidationResult {
   const errors: string[] = [];
 
-  // Meta description length
+  // Meta description length (120-155 chars)
+  if (content.metaDescription.length < 120) {
+    errors.push(
+      `Meta description too short (${content.metaDescription.length} chars, minimum 120)`
+    );
+  }
   if (content.metaDescription.length > 155) {
     errors.push(
-      `Meta description too long (${content.metaDescription.length} chars, max 155)`
+      `Meta description too long (${content.metaDescription.length} chars, maximum 155)`
     );
   }
 
@@ -615,56 +625,98 @@ export interface SmartValidationResult {
 
 /**
  * Auto-fix meta description
- * Ensures: primary keyword, company name, "Call Now!", under 155 chars
+ * Ensures: primary keyword, company name, "Call now!" at end, 120-155 chars total
+ * The AI should already include "Call now!" - this just validates and fixes if needed
+ * Format: "{CompanyName} provides {service} in {location}. [Brief benefit]. Call now!"
  */
 function autoFixMetaDescription(
   metaDescription: string,
   primaryKeyword: string,
   companyName: string
 ): string {
-  const required = {
-    keyword: primaryKeyword.toLowerCase(),
-    company: companyName.toLowerCase(),
-    cta: "call now!",
-  };
+  const targetMinLength = 120;
+  const targetMaxLength = 155;
 
-  let fixed = metaDescription;
+  // Check if description already has company name, keyword, and "Call now!"
+  const hasCompany = metaDescription.toLowerCase().includes(companyName.toLowerCase());
+  const hasKeyword = metaDescription.toLowerCase().includes(primaryKeyword.toLowerCase());
+  const hasCTA = /call\s+(now|us|today)!?$/i.test(metaDescription);
 
-  // Ensure "Call Now!" is at the end
-  if (!fixed.toLowerCase().includes(required.cta)) {
-    fixed = fixed.replace(/[.!]?\s*$/, ""); // Remove trailing punctuation
-    fixed += ". Call now!";
-  }
-
-  // Ensure company name is included
-  if (!fixed.toLowerCase().includes(required.company)) {
-    // Try to insert company name at the beginning
-    fixed = `${companyName} ${fixed}`;
-  }
-
-  // Ensure primary keyword is included (at least the service part)
-  const serviceKeyword = primaryKeyword.split(" in ")[0]; // Get service part
-  if (!fixed.toLowerCase().includes(serviceKeyword.toLowerCase())) {
-    // Try to insert keyword early
-    fixed = fixed.replace(
-      companyName,
-      `${companyName} offers ${serviceKeyword.toLowerCase()}`
-    );
-  }
-
-  // Trim to 155 chars if too long
-  if (fixed.length > 155) {
-    // Try to trim intelligently - remove middle content, keep company name and CTA
-    const parts = fixed.split(".");
-    if (parts.length > 2) {
-      // Keep first sentence and "Call now!"
-      fixed = `${parts[0]}. Call now!`;
+  // If everything is present and length is good, return as-is
+  if (hasCompany && hasKeyword && hasCTA) {
+    if (metaDescription.length >= targetMinLength && metaDescription.length <= targetMaxLength) {
+      return metaDescription;
     }
+  }
 
-    // If still too long, hard trim
-    if (fixed.length > 155) {
-      fixed = fixed.substring(0, 152) + "...";
+  // Otherwise, reconstruct from scratch
+  // Extract service and location from primary keyword
+  const keywordParts = primaryKeyword.split(' in ');
+  const service = keywordParts[0] || primaryKeyword;
+  const location = keywordParts[1] || '';
+
+  // Build base description
+  let fixed: string;
+  if (location) {
+    // Format: "{CompanyName} provides {service} in {location}"
+    fixed = `${companyName} provides ${service.toLowerCase()} in ${location}`;
+  } else {
+    // Format: "{CompanyName} offers {service}"
+    fixed = `${companyName} offers ${service.toLowerCase()}`;
+  }
+
+  // Add period if not present
+  if (!fixed.endsWith('.')) {
+    fixed += '.';
+  }
+
+  // Calculate space for benefits (we need to reserve space for " Call now!" = 11 chars)
+  const ctaLength = 11; // " Call now!"
+  const currentLength = fixed.length;
+  const maxContentLength = targetMaxLength - ctaLength;
+  const minContentLength = targetMinLength - ctaLength;
+
+  // Try to extract benefits from original description if we have room
+  if (currentLength < maxContentLength - 20) {
+    // Clean the original description to extract useful benefit text
+    let cleanDesc = metaDescription
+      .replace(/call\s+(now|us|today)!?\.?$/i, '')
+      .replace(/contact\s+us!?\.?$/i, '')
+      .trim();
+
+    // Extract benefit phrases
+    const benefitMatch = cleanDesc.match(/(?:with|offering|featuring|providing)\s+([^.]+)/i);
+    if (benefitMatch && benefitMatch[1]) {
+      const benefit = benefitMatch[1].trim();
+      const additionalText = ` ${benefit}`;
+
+      if ((fixed.length + additionalText.length + ctaLength) <= targetMaxLength) {
+        fixed = fixed.replace(/\.$/, '') + additionalText + '.';
+      }
     }
+  }
+
+  // Ensure we meet minimum length before adding CTA
+  if (fixed.length < minContentLength) {
+    // Add generic benefit to reach minimum
+    const genericBenefit = " Professional service with quality results";
+    if ((fixed.length + genericBenefit.length + ctaLength) <= targetMaxLength) {
+      fixed = fixed.replace(/\.$/, '') + genericBenefit + '.';
+    }
+  }
+
+  // Add CTA
+  fixed += " Call now!";
+
+  // Final length check - trim if too long (keep CTA intact)
+  if (fixed.length > targetMaxLength) {
+    // Calculate how much to trim
+    const excessLength = fixed.length - targetMaxLength;
+    // Remove from before the CTA
+    const contentWithoutCTA = fixed.substring(0, fixed.length - 11); // Remove " Call now!"
+    const trimmedContent = contentWithoutCTA.substring(0, contentWithoutCTA.length - excessLength);
+    // Ensure it ends with a period before CTA
+    fixed = trimmedContent.replace(/\.*$/, '.') + " Call now!";
   }
 
   return fixed;
@@ -952,11 +1004,17 @@ export async function validateAndFixContent(
 
 /**
  * Regenerate specific field only (selective retry)
- * Used when FAQs, map section, hero description, or bullets don't meet criteria
+ * Supports granular field regeneration:
+ * - Individual meta fields: metaTitle, metaDescription
+ * - Individual hero fields: h1, heroDescription
+ * - Individual section headings: benefitsHeading, benefitsSubheading, whyHeading, whySubheading
+ * - Individual bullets: benefitsBullet-1, benefitsBullet-2, benefitsBullet-3, whyBullet-1, whyBullet-2, whyBullet-3
+ * - Individual FAQs: faq-1, faq-2, faq-3
+ * - Whole sections: faqs, mapDescription, bullets
  */
 export async function regenerateField(
   params: ContentGenerationParams,
-  field: "faqs" | "mapDescription" | "heroDescription" | "bullets",
+  field: string, // Changed to string for flexibility
   previousContent: GeneratedContent,
   reason: string
 ): Promise<any> {
@@ -969,33 +1027,37 @@ export async function regenerateField(
   let retryPrompt = "";
 
   if (field === "faqs") {
+    // Extract service without adjective for FAQ questions
+    const serviceWithoutAdjective = primaryKeyword.split(' ').slice(1).join(' ') || service;
+
     retryPrompt = `The previously generated FAQs have issues: ${reason}
 
 Please regenerate ONLY the 3 FAQs following these STRICT requirements:
 
-**Primary Keyword (USE EXACTLY AS PROVIDED):** ${primaryKeyword}
+**Primary Keyword (for reference):** ${primaryKeyword}
+**Service (without adjective):** ${serviceWithoutAdjective}
 **Company Name:** ${companyName}
-**Service:** ${service}
 **Location:** ${location}
 
-**CRITICAL - PRIMARY KEYWORD USAGE:**
-The primary keyword "${primaryKeyword}" is pre-determined. DO NOT modify it.
-- ✅ USE EXACTLY: "${primaryKeyword}"
-- ❌ DO NOT change the adjective
-- ❌ DO NOT rearrange words
+**CRITICAL - FAQ QUESTION FORMAT:**
+- FAQ questions should use "${serviceWithoutAdjective}" (WITHOUT the adjective)
+- Example: If primary keyword is "Professional Plumber in Carlsbad, CA", questions should use "plumber in Carlsbad, CA"
+- Remove adjectives like "Professional", "Expert", "Trusted", etc. from questions
+- ✅ CORRECT: "How much does plumber in ${location} cost?"
+- ❌ WRONG: "How much does ${primaryKeyword} cost?"
 
 **FAQ Requirements:**
 1. Generate SEO-relevant questions that real customers would search for (NOT promotional questions)
-2. Use primary keyword "${primaryKeyword}" or service "${service}" naturally in questions
-3. When using the full keyword, use EXACTLY: "${primaryKeyword}"
-4. Each answer must be 50-75 words
+2. Use "${serviceWithoutAdjective}" in questions (service without adjective)
+3. Each answer must be 50-75 words
+4. Each answer can use the full primary keyword "${primaryKeyword}" naturally when relevant
 5. Each answer must mention company name "${companyName}" in the **latter half** (not "we/our/us")
 6. Be smart and creative - vary topics naturally across all 3 FAQs
 7. Focus on what customers actually want to know (cost, process, timeline, materials, coverage, etc.)
 
 **Example Structure:**
-Q: "How much does ${service} cost in ${location}?"
-A: "Service in ${location} typically costs $X-$Y... ${companyName} provides..."
+Q: "How much does ${serviceWithoutAdjective} cost?"
+A: "The cost varies based on project scope and materials. ${companyName} provides competitive pricing..."
 
 Return ONLY a JSON object with this structure:
 {
@@ -1088,6 +1150,195 @@ Return ONLY a JSON object with this structure (regenerate ALL 6 bullets):
   "benefitsBullets": ["<b>Topic:</b> 30+ words here...", "<b>Topic:</b> 30+ words here...", "<b>Topic:</b> 30+ words here..."],
   "whyBullets": ["<b>Topic:</b> 30+ words here...", "<b>Topic:</b> 30+ words here...", "<b>Topic:</b> 30+ words here..."]
 }`;
+  }
+  // Individual field regeneration
+  else if (field === "metaTitle") {
+    retryPrompt = `Regenerate ONLY the meta title.
+
+**Primary Keyword:** ${primaryKeyword}
+**Company Name:** ${companyName}
+
+**Requirements:**
+- Format: "${primaryKeyword} | ${companyName}"
+- Must be under 80 characters
+- Use the exact primary keyword as provided
+
+Return ONLY a JSON object:
+{"metaTitle": "..."}`;
+  }
+  else if (field === "metaDescription") {
+    retryPrompt = `Regenerate ONLY the meta description.
+
+**Primary Keyword:** ${primaryKeyword}
+**Company Name:** ${companyName}
+**Service:** ${service}
+**Location:** ${location}
+
+**CRITICAL Requirements:**
+- MUST be 120-155 characters INCLUDING "Call now!" at the end (STRICT - count carefully!)
+- MUST naturally include BOTH the company name "${companyName}" AND the primary keyword "${primaryKeyword}"
+- MUST end with "Call now!" within the 120-155 character limit
+- Focus on benefits and value proposition
+- Format: "${companyName} provides ${primaryKeyword.toLowerCase()}. [Brief benefit]. Call now!"
+
+**Example (good - 145 characters):**
+"ABC Roofing provides expert roof repair in Phoenix, AZ with 25+ years of experience, licensed contractors, and same-day service. Call now!"
+
+Return ONLY a JSON object:
+{"metaDescription": "..."}`;
+  }
+  else if (field === "h1") {
+    retryPrompt = `Regenerate ONLY the H1 heading.
+
+**Primary Keyword:** ${primaryKeyword}
+
+**Requirements:**
+- H1 must be EXACTLY the primary keyword: "${primaryKeyword}"
+- No company name, no variations
+
+Return ONLY a JSON object:
+{"h1": "${primaryKeyword}"}`;
+  }
+  else if (field === "benefitsHeading") {
+    retryPrompt = `Regenerate ONLY the Benefits section heading.
+
+**Primary Keyword:** ${primaryKeyword}
+**Company Name:** ${companyName}
+
+**Requirements:**
+- MUST include BOTH company name and exact primary keyword
+- Focus: Why choose THIS COMPANY for this service
+- Be creative and engaging
+- Example: "Experience Excellence with ${companyName} - Your ${primaryKeyword}"
+
+Return ONLY a JSON object:
+{"benefitsHeading": "..."}`;
+  }
+  else if (field === "benefitsSubheading") {
+    retryPrompt = `Regenerate ONLY the Benefits section subheading.
+
+**Primary Keyword:** ${primaryKeyword}
+**Company Name:** ${companyName}
+**Service:** ${service}
+
+**Requirements:**
+- Brief, engaging subtitle for the benefits section
+- Should complement the main heading
+
+Return ONLY a JSON object:
+{"benefitsSubheading": "..."}`;
+  }
+  else if (field === "whyHeading") {
+    retryPrompt = `Regenerate ONLY the Why section heading.
+
+**Primary Keyword:** ${primaryKeyword}
+**Location:** ${location}
+
+**Requirements:**
+- MUST include the exact primary keyword
+- DO NOT include company name (this is about service importance, not the company)
+- Focus: Why this SERVICE matters in this LOCATION
+- Example: "Why ${primaryKeyword} Matters for Your Property"
+
+Return ONLY a JSON object:
+{"whyHeading": "..."}`;
+  }
+  else if (field === "whySubheading") {
+    retryPrompt = `Regenerate ONLY the Why section subheading.
+
+**Primary Keyword:** ${primaryKeyword}
+**Service:** ${service}
+**Location:** ${location}
+
+**Requirements:**
+- Brief, engaging subtitle for the why section
+- Should complement the main heading
+
+Return ONLY a JSON object:
+{"whySubheading": "..."}`;
+  }
+  else if (field.startsWith("benefitsBullet-")) {
+    const bulletIndex = parseInt(field.split("-")[1]) - 1;
+    const currentBullet = previousContent.benefitsBullets[bulletIndex] || "";
+
+    retryPrompt = `Regenerate ONLY Benefits bullet #${bulletIndex + 1}.
+
+**Current bullet:** ${currentBullet}
+**Issue:** ${reason}
+
+**Primary Keyword:** ${primaryKeyword}
+**Service:** ${service}
+**Location:** ${location}
+
+**Requirements:**
+- MUST be at least 30 words (aim for 40-50 words)
+- MUST start with "<b>Topic Name:</b>" format (HTML bold tags)
+- Include the exact primary keyword naturally if relevant
+- Provide specific, valuable information
+- Professional tone
+
+Return ONLY a JSON object with the single bullet:
+{"benefitsBullet": "<b>Topic:</b> 30+ words here..."}`;
+  }
+  else if (field.startsWith("whyBullet-")) {
+    const bulletIndex = parseInt(field.split("-")[1]) - 1;
+    const currentBullet = previousContent.whyBullets[bulletIndex] || "";
+
+    retryPrompt = `Regenerate ONLY Why bullet #${bulletIndex + 1}.
+
+**Current bullet:** ${currentBullet}
+**Issue:** ${reason}
+
+**Primary Keyword:** ${primaryKeyword}
+**Service:** ${service}
+**Location:** ${location}
+
+**Requirements:**
+- MUST be at least 30 words (aim for 40-50 words)
+- MUST start with "<b>Topic Name:</b>" format (HTML bold tags)
+- Include the exact primary keyword naturally if relevant
+- Provide specific, valuable information about why this service matters
+- Professional tone
+
+Return ONLY a JSON object with the single bullet:
+{"whyBullet": "<b>Topic:</b> 30+ words here..."}`;
+  }
+  else if (field.startsWith("faq-")) {
+    const faqIndex = parseInt(field.split("-")[1]) - 1;
+    const currentFaq = previousContent.faqs[faqIndex] || { question: "", answer: "" };
+    // Extract service without adjective for FAQ questions
+    const serviceWithoutAdjective = primaryKeyword.split(' ').slice(1).join(' ') || service;
+
+    retryPrompt = `Regenerate ONLY FAQ #${faqIndex + 1}.
+
+**Current FAQ:**
+Q: ${currentFaq.question}
+A: ${currentFaq.answer}
+
+**Issue:** ${reason}
+
+**Primary Keyword (for reference):** ${primaryKeyword}
+**Service (without adjective):** ${serviceWithoutAdjective}
+**Company Name:** ${companyName}
+**Location:** ${location}
+
+**CRITICAL - FAQ QUESTION FORMAT:**
+- FAQ question should use "${serviceWithoutAdjective}" (WITHOUT the adjective)
+- Example: If primary keyword is "Professional Plumber in Carlsbad, CA", question should use "plumber in Carlsbad, CA"
+- Remove adjectives like "Professional", "Expert", "Trusted", etc. from the question
+- ✅ CORRECT: "How much does plumber in ${location} cost?"
+- ❌ WRONG: "How much does ${primaryKeyword} cost?"
+
+**Requirements:**
+1. Generate an SEO-relevant question that real customers would search for
+2. NOT a promotional question (avoid "why choose us")
+3. Use "${serviceWithoutAdjective}" in the question (service without adjective)
+4. Answer must be 50-75 words
+5. Answer can use the full primary keyword "${primaryKeyword}" naturally when relevant
+6. Answer must mention company name "${companyName}" in the latter half
+
+Return ONLY a JSON object with the single FAQ:
+{"faq": {"question": "...", "answer": "..."}}`;
   }
 
   try {

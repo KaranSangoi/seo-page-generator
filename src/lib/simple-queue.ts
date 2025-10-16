@@ -516,40 +516,35 @@ function replaceElementorContent(
             }
           }
         }
-      } else if (cssId.includes('map')) {
-        // Replace map description
-        if (element.widgetType === 'text-editor' && element.settings.editor) {
-          let content = generatedContent.mapDescription || '';
-          // Add internal link if this section is designated for internal link
-          if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
-            content = insertInternalLink(content, internalLinkUrl, companyName);
-          }
-          element.settings.editor = content;
+      } else if (cssId === 'map-description' && element.settings.editor) {
+        // Replace map description - match specific ID, no widget type check
+        let content = generatedContent.mapDescription || '';
+        if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
+          content = insertInternalLink(content, internalLinkUrl, companyName);
         }
+        element.settings.editor = content;
       }
 
-      // Replace Google Maps iframe in custom HTML widget
-      if (cssId.includes('map-iframe') && element.widgetType === 'html' && location) {
-        if (element.settings.html) {
-          // Generate new Google Maps embed URL for the location
-          const encodedLocation = encodeURIComponent(location);
+      // Replace Google Maps iframe - match specific ID
+      else if (cssId === 'map-iframe' && element.settings.html && location) {
+        // Generate new Google Maps embed URL for the location
+        const encodedLocation = encodeURIComponent(location);
 
-          // Create keyword-stuffed iframe closing tag for SEO
-          const keywords = [
-            `${service} in ${location}`,
-            `${service} near me`,
-            service
-          ].filter(Boolean).join(',');
+        // Create keyword-stuffed iframe closing tag for SEO
+        const keywords = [
+          service ? `${service} in ${location}` : location,
+          service ? `${service} near me` : '',
+          service || ''
+        ].filter(Boolean).join(',');
 
-          // Replace iframe src and add keywords before closing tag
-          element.settings.html = element.settings.html.replace(
-            /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
-            (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
-              const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
-              return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
-            }
-          );
-        }
+        // Replace iframe src and add keywords before closing tag
+        element.settings.html = element.settings.html.replace(
+          /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
+          (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
+            const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
+            return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
+          }
+        );
       }
     }
 
@@ -655,7 +650,7 @@ async function duplicateTemplateAndPublish(params: {
 
     // Build new page from template - duplicate all template settings
     const pagePayload: any = {
-      title: generatedContent.metaTitle, // Use meta title as page title
+      title: generatedContent.h1, // Use H1 as page title (metaTitle is for SEO only)
       slug: slug,
       status: 'publish',
       content: templatePage.content?.rendered || '', // Keep original content as fallback

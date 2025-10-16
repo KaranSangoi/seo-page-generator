@@ -40,9 +40,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
-    // Map section names to field names
-    const sectionFieldMap: Record<string, 'faqs' | 'mapDescription' | 'heroDescription' | 'bullets'> = {
-      'meta': 'faqs', // Not supported for regeneration yet
+    // Map section names to field names (for backward compatibility with whole-section regeneration)
+    const sectionFieldMap: Record<string, string> = {
+      'meta': 'meta', // Will regenerate both metaTitle and metaDescription
       'hero': 'heroDescription',
       'benefits': 'bullets',
       'why': 'bullets',
@@ -50,10 +50,12 @@ export async function POST(request: NextRequest) {
       'map': 'mapDescription',
     };
 
-    const fieldToRegenerate = sectionFieldMap[sectionToRegenerate];
+    // Determine field to regenerate: use direct field name if it looks specific, otherwise map section name
+    let fieldToRegenerate = sectionToRegenerate;
 
-    if (!fieldToRegenerate) {
-      return NextResponse.json({ error: 'Invalid section' }, { status: 400 });
+    // Check if this is a section-level regeneration or field-level
+    if (sectionFieldMap[sectionToRegenerate]) {
+      fieldToRegenerate = sectionFieldMap[sectionToRegenerate];
     }
 
     // Regenerate the specific field
@@ -75,10 +77,31 @@ export async function POST(request: NextRequest) {
     );
 
     // Merge regenerated content with current content
-    const updatedContent = {
-      ...currentContent,
-      ...regeneratedContent,
-    };
+    let updatedContent = { ...currentContent };
+
+    // Handle different regeneration types
+    if (fieldToRegenerate.startsWith('benefitsBullet-')) {
+      // Individual benefits bullet
+      const bulletIndex = parseInt(fieldToRegenerate.split('-')[1]) - 1;
+      updatedContent.benefitsBullets = [...currentContent.benefitsBullets];
+      updatedContent.benefitsBullets[bulletIndex] = regeneratedContent.benefitsBullet;
+    } else if (fieldToRegenerate.startsWith('whyBullet-')) {
+      // Individual why bullet
+      const bulletIndex = parseInt(fieldToRegenerate.split('-')[1]) - 1;
+      updatedContent.whyBullets = [...currentContent.whyBullets];
+      updatedContent.whyBullets[bulletIndex] = regeneratedContent.whyBullet;
+    } else if (fieldToRegenerate.startsWith('faq-')) {
+      // Individual FAQ
+      const faqIndex = parseInt(fieldToRegenerate.split('-')[1]) - 1;
+      updatedContent.faqs = [...currentContent.faqs];
+      updatedContent.faqs[faqIndex] = regeneratedContent.faq;
+    } else {
+      // Whole section or simple field
+      updatedContent = {
+        ...currentContent,
+        ...regeneratedContent,
+      };
+    }
 
     return NextResponse.json({
       success: true,

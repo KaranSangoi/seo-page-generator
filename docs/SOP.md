@@ -46,19 +46,21 @@
 
 ### Meta Description
 
-**Character Length:** ≤155 characters (strictly enforced)
+**Character Length:** 120-155 characters INCLUDING "Call now!" at the end (strictly enforced)
 
 **Components:**
 
 1. Company Name + Primary Keyword
 2. Unique Selling Proposition (USP)
-3. Call to Action: "Call now!"
+3. Call to Action: "Call now!" (MUST be included within the 120-155 character limit)
+
+**Format:** "{CompanyName} provides {service} in {location}. [Brief benefit]. Call now!"
 
 **Examples:**
 
-- Nested County: "Gikas Roofing offers premier roofing services in Rockland County, NY. Experienced professionals, quality materials, and excellence. Call now!"
-- Broad Town: "Gikas Roofing is your go-to for superior roofing services in Pearl River, NY. Expertise in repair, installation, and maintenance. Call now!"
-- Service Town: "Gikas Roofing offers premier roof installation services in Pearl River, NY. Our expert team ensures top-quality roof installations. Call now!"
+- Nested County: "Gikas Roofing offers premier roofing services in Rockland County, NY. Experienced professionals, quality materials, and excellence. Call now!" (149 chars)
+- Broad Town: "Gikas Roofing is your go-to for superior roofing services in Pearl River, NY. Expertise in repair, installation, and maintenance. Call now!" (147 chars)
+- Service Town: "Gikas Roofing offers premier roof installation services in Pearl River, NY. Our expert team ensures top-quality installations. Call now!" (143 chars)
 
 **Tone:** Professional, trustworthy, local, clear, action-oriented
 
@@ -181,7 +183,10 @@
 - Specific to [service] in [location]
 - **Must be unique** across pages for same company
 - **Must be SEO-relevant** (not company promotional)
-- **Must use primary keyword** in question or answer
+- **FAQ Questions:** Use service and location WITHOUT the adjective from the primary keyword
+  - Example: If primary keyword is "Professional Plumber in Carlsbad, CA", FAQ questions should use "plumber in Carlsbad, CA"
+  - Remove adjectives like "Professional", "Expert", "Trusted", etc. from questions
+- **FAQ Answers:** Can use the full primary keyword naturally when relevant
 - **Company name mentioned in 2nd half of answer only**
 - **CRITICAL: Use company name instead of "we", "our", "us" in answers**
   - ✅ Say: "[Company Name] provides..."
@@ -422,7 +427,7 @@ See: `docs/ADJECTIVE_SYSTEM.md` for complete implementation details
 ### Auto-Fixed (No Retry):
 These are automatically corrected without AI regeneration:
 
-1. **Meta description** - Ensures primary keyword, company name, "Call now!", under 155 chars
+1. **Meta description** - Ensures primary keyword, company name, "Call now!", 120-155 chars total (including CTA)
 2. **Meta title** - Format: `{primary keyword} | {company name}`, under 80 chars
 3. **H1** - Forces to be exactly the primary keyword (no company name)
 4. **Benefits heading** - Warns if missing company name or primary keyword (does not enforce format)

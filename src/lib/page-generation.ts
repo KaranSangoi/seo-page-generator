@@ -454,7 +454,7 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
 
   // Build new page from template
   const pagePayload: any = {
-    title: params.generatedContent.metaTitle,
+    title: params.generatedContent.h1, // Use H1 as page title (metaTitle is for SEO only)
     slug: slug,
     status: 'publish',
     content: templatePage.content?.rendered || '',

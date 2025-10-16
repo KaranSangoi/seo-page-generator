@@ -172,15 +172,46 @@ export function replaceElementorContent(
         }
       }
 
-      // Map section
-      else if (cssId.includes('map')) {
-        if (element.widgetType === 'text-editor' && element.settings.editor) {
+      // Map description - match IDs containing 'map' and 'description'
+      else if (cssId.includes('map') && cssId.includes('description')) {
+        // Handle text-editor widgets
+        if (element.settings.editor) {
           let content = generatedContent.mapDescription || '';
           if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
             content = insertInternalLink(content, internalLinkUrl, companyName);
           }
           element.settings.editor = content;
         }
+        // Handle heading widgets
+        else if (element.widgetType === 'heading' && element.settings.title) {
+          let content = generatedContent.mapDescription || '';
+          if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
+            content = insertInternalLink(content, internalLinkUrl, companyName);
+          }
+          element.settings.title = content;
+        }
+      }
+
+      // Map iframe - match specific ID
+      else if (cssId === 'map-iframe' && element.settings.html && location) {
+        // Generate new Google Maps embed URL for the location
+        const encodedLocation = encodeURIComponent(location);
+
+        // Create keyword-stuffed iframe closing tag for SEO
+        const keywords = [
+          service ? `${service} in ${location}` : location,
+          service ? `${service} near me` : '',
+          service || ''
+        ].filter(Boolean).join(',');
+
+        // Replace iframe src and add keywords before closing tag
+        element.settings.html = element.settings.html.replace(
+          /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
+          (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
+            const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
+            return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
+          }
+        );
       }
     }
 

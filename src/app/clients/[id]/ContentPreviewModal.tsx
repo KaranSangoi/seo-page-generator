@@ -30,6 +30,10 @@ interface PageContent {
   location: string;
   primaryKeyword: string;
   content: GeneratedContent;
+  internalLinkPlacement?: string;
+  internalLinkUrl?: string;
+  externalLinkPlacement?: string;
+  externalLinkUrl?: string;
   status: 'pending' | 'regenerating' | 'ready' | 'publishing' | 'published' | 'failed';
   publishedUrl?: string;
   error?: string;
@@ -53,6 +57,7 @@ export default function ContentPreviewModal({
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['meta', 'hero']));
   const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
+  const [regeneratingField, setRegeneratingField] = useState<string | null>(null); // Track individual field regeneration
 
   const selectedPage = pages[selectedPageIndex];
   const publishedCount = pages.filter((p) => p.status === 'published').length;
@@ -77,6 +82,49 @@ export default function ContentPreviewModal({
     } finally {
       setRegeneratingSection(null);
     }
+  };
+
+  const handleRegenerateField = async (fieldName: string) => {
+    setRegeneratingField(fieldName);
+    try {
+      await onRegenerateSection(selectedPage.pageId, fieldName);
+    } finally {
+      setRegeneratingField(null);
+    }
+  };
+
+  // Helper to render individual field with inline regenerate button
+  const renderField = (label: string, fieldName: string, content: React.ReactNode, charInfo?: string) => {
+    const isRegenerating = regeneratingField === fieldName;
+
+    return (
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+            {label} {charInfo && <span className="text-gray-500">({charInfo})</span>}
+          </label>
+          <button
+            onClick={() => handleRegenerateField(fieldName)}
+            disabled={isRegenerating || selectedPage.status === 'publishing'}
+            className="text-xs px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:opacity-50"
+            title={`Regenerate ${label}`}
+          >
+            {isRegenerating ? '...' : '🔄'}
+          </button>
+        </div>
+        {isRegenerating ? (
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 py-2">
+            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span className="text-xs">Regenerating...</span>
+          </div>
+        ) : (
+          content
+        )}
+      </div>
+    );
   };
 
   const renderSection = (
@@ -187,7 +235,7 @@ export default function ContentPreviewModal({
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-start justify-between">
-              <div>
+              <div className="flex-1">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   {selectedPage.pageName}
                 </h2>
@@ -204,10 +252,65 @@ export default function ContentPreviewModal({
                     View published page →
                   </a>
                 )}
+
+                {/* Links Information */}
+                {(selectedPage.internalLinkPlacement || selectedPage.externalLinkPlacement) && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                      Link Placements
+                    </h3>
+                    <div className="space-y-2">
+                      {selectedPage.internalLinkPlacement && (
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Internal Link:</span>{' '}
+                          <span className="text-blue-600 dark:text-blue-400">{selectedPage.internalLinkPlacement}</span>
+                          {selectedPage.internalLinkUrl && (
+                            <>
+                              {' → '}
+                              <a
+                                href={selectedPage.internalLinkUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:underline break-all"
+                                title={selectedPage.internalLinkUrl}
+                              >
+                                {selectedPage.internalLinkUrl.length > 50
+                                  ? `${selectedPage.internalLinkUrl.substring(0, 50)}...`
+                                  : selectedPage.internalLinkUrl}
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {selectedPage.externalLinkPlacement && (
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">External Link:</span>{' '}
+                          <span className="text-purple-600 dark:text-purple-400">{selectedPage.externalLinkPlacement}</span>
+                          {selectedPage.externalLinkUrl && (
+                            <>
+                              {' → '}
+                              <a
+                                href={selectedPage.externalLinkUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:underline break-all"
+                                title={selectedPage.externalLinkUrl}
+                              >
+                                {selectedPage.externalLinkUrl.length > 50
+                                  ? `${selectedPage.externalLinkUrl.substring(0, 50)}...`
+                                  : selectedPage.externalLinkUrl}
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0 ml-4"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -222,15 +325,19 @@ export default function ContentPreviewModal({
             {renderSection(
               'Meta Tags (SEO)',
               'meta',
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Meta Title ({selectedPage.content.metaTitle.length} chars)</label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedPage.content.metaTitle}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Meta Description ({selectedPage.content.metaDescription.length} chars)</label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedPage.content.metaDescription}</p>
-                </div>
+              <div className="space-y-1">
+                {renderField(
+                  'Meta Title',
+                  'metaTitle',
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedPage.content.metaTitle}</p>,
+                  `${selectedPage.content.metaTitle.length} chars`
+                )}
+                {renderField(
+                  'Meta Description',
+                  'metaDescription',
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedPage.content.metaDescription}</p>,
+                  `${selectedPage.content.metaDescription.length} chars`
+                )}
               </div>
             )}
 
@@ -238,15 +345,18 @@ export default function ContentPreviewModal({
             {renderSection(
               'Hero Section',
               'hero',
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">H1 Heading</label>
-                  <h1 className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{selectedPage.content.h1}</h1>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Hero Description ({selectedPage.content.heroDescription.split(' ').length} words)</label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white leading-relaxed">{selectedPage.content.heroDescription}</p>
-                </div>
+              <div className="space-y-1">
+                {renderField(
+                  'H1 Heading',
+                  'h1',
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{selectedPage.content.h1}</h1>
+                )}
+                {renderField(
+                  'Hero Description',
+                  'heroDescription',
+                  <p className="text-sm text-gray-900 dark:text-white leading-relaxed">{selectedPage.content.heroDescription}</p>,
+                  `${selectedPage.content.heroDescription.split(' ').length} words`
+                )}
               </div>
             )}
 
@@ -254,27 +364,54 @@ export default function ContentPreviewModal({
             {renderSection(
               'Benefits Section',
               'benefits',
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Heading</label>
-                  <h2 className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{selectedPage.content.benefitsHeading}</h2>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Subheading</label>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{selectedPage.content.benefitsSubheading}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Bullet Points</label>
-                  <ul className="mt-2 space-y-2">
+              <div className="space-y-1">
+                {renderField(
+                  'Benefits Heading',
+                  'benefitsHeading',
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedPage.content.benefitsHeading}</h2>
+                )}
+                {renderField(
+                  'Benefits Subheading',
+                  'benefitsSubheading',
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{selectedPage.content.benefitsSubheading}</p>
+                )}
+                <div className="pt-2">
+                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide block mb-2">
+                    Bullet Points
+                  </label>
+                  <div className="space-y-2">
                     {selectedPage.content.benefitsBullets.map((bullet, idx) => (
-                      <li key={idx} className="text-sm text-gray-900 dark:text-white p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                        <div dangerouslySetInnerHTML={{ __html: bullet }} />
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          {bullet.replace(/<[^>]*>/g, '').split(' ').length} words
-                        </p>
-                      </li>
+                      <div key={idx} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-start justify-between mb-1">
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Bullet #{idx + 1}</span>
+                          <button
+                            onClick={() => handleRegenerateField(`benefitsBullet-${idx + 1}`)}
+                            disabled={regeneratingField === `benefitsBullet-${idx + 1}` || selectedPage.status === 'publishing'}
+                            className="text-xs px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:opacity-50"
+                            title={`Regenerate bullet #${idx + 1}`}
+                          >
+                            {regeneratingField === `benefitsBullet-${idx + 1}` ? '...' : '🔄'}
+                          </button>
+                        </div>
+                        {regeneratingField === `benefitsBullet-${idx + 1}` ? (
+                          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 py-2">
+                            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span className="text-xs">Regenerating...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-sm text-gray-900 dark:text-white" dangerouslySetInnerHTML={{ __html: bullet }} />
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {bullet.replace(/<[^>]*>/g, '').split(' ').length} words
+                            </p>
+                          </>
+                        )}
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               </div>
             )}
@@ -283,27 +420,54 @@ export default function ContentPreviewModal({
             {renderSection(
               'Why Section',
               'why',
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Heading</label>
-                  <h2 className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{selectedPage.content.whyHeading}</h2>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Subheading</label>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{selectedPage.content.whySubheading}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Bullet Points</label>
-                  <ul className="mt-2 space-y-2">
+              <div className="space-y-1">
+                {renderField(
+                  'Why Heading',
+                  'whyHeading',
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedPage.content.whyHeading}</h2>
+                )}
+                {renderField(
+                  'Why Subheading',
+                  'whySubheading',
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{selectedPage.content.whySubheading}</p>
+                )}
+                <div className="pt-2">
+                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide block mb-2">
+                    Bullet Points
+                  </label>
+                  <div className="space-y-2">
                     {selectedPage.content.whyBullets.map((bullet, idx) => (
-                      <li key={idx} className="text-sm text-gray-900 dark:text-white p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                        <div dangerouslySetInnerHTML={{ __html: bullet }} />
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          {bullet.replace(/<[^>]*>/g, '').split(' ').length} words
-                        </p>
-                      </li>
+                      <div key={idx} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-start justify-between mb-1">
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Bullet #{idx + 1}</span>
+                          <button
+                            onClick={() => handleRegenerateField(`whyBullet-${idx + 1}`)}
+                            disabled={regeneratingField === `whyBullet-${idx + 1}` || selectedPage.status === 'publishing'}
+                            className="text-xs px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:opacity-50"
+                            title={`Regenerate bullet #${idx + 1}`}
+                          >
+                            {regeneratingField === `whyBullet-${idx + 1}` ? '...' : '🔄'}
+                          </button>
+                        </div>
+                        {regeneratingField === `whyBullet-${idx + 1}` ? (
+                          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 py-2">
+                            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span className="text-xs">Regenerating...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-sm text-gray-900 dark:text-white" dangerouslySetInnerHTML={{ __html: bullet }} />
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {bullet.replace(/<[^>]*>/g, '').split(' ').length} words
+                            </p>
+                          </>
+                        )}
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               </div>
             )}
@@ -312,14 +476,37 @@ export default function ContentPreviewModal({
             {renderSection(
               'FAQ Section',
               'faqs',
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {selectedPage.content.faqs.map((faq, idx) => (
-                  <div key={idx} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{faq.question}</h3>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{faq.answer}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      {faq.answer.split(' ').length} words
-                    </p>
+                  <div key={idx} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">FAQ #{idx + 1}</span>
+                      <button
+                        onClick={() => handleRegenerateField(`faq-${idx + 1}`)}
+                        disabled={regeneratingField === `faq-${idx + 1}` || selectedPage.status === 'publishing'}
+                        className="text-xs px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:opacity-50"
+                        title={`Regenerate FAQ #${idx + 1}`}
+                      >
+                        {regeneratingField === `faq-${idx + 1}` ? '...' : '🔄'}
+                      </button>
+                    </div>
+                    {regeneratingField === `faq-${idx + 1}` ? (
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 py-4">
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span className="text-xs">Regenerating...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{faq.question}</h3>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{faq.answer}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                          {faq.answer.split(' ').length} words
+                        </p>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -329,10 +516,12 @@ export default function ContentPreviewModal({
             {selectedPage.content.mapDescription && renderSection(
               'Map Section',
               'map',
-              <div>
-                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Description ({selectedPage.content.mapDescription.split(' ').length} words)</label>
-                <p className="mt-1 text-sm text-gray-900 dark:text-white leading-relaxed">{selectedPage.content.mapDescription}</p>
-              </div>
+              renderField(
+                'Map Description',
+                'mapDescription',
+                <p className="text-sm text-gray-900 dark:text-white leading-relaxed">{selectedPage.content.mapDescription}</p>,
+                `${selectedPage.content.mapDescription.split(' ').length} words`
+              )
             )}
           </div>
 
