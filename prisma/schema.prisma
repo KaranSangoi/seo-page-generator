@@ -37,6 +37,8 @@ model Client {
   wpAppPassword    String // Will be encrypted
   seoPlugin        String // "Yoast" or "RankMath"
   templatePageId   String
+  pageBuilder      String   @default("elementor") // "elementor", "divi", "wpbakery", "gutenberg", etc.
+  builderDetected  Boolean  @default(false) // Was it auto-detected or manually set?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
