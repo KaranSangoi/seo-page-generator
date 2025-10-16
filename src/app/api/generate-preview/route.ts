@@ -22,6 +22,9 @@ import {
   type ContentValidationParams
 } from '@/lib/page-generation';
 
+// Force dynamic rendering (uses cookies for authentication)
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
 

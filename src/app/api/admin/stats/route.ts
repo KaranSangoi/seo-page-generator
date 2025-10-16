@@ -9,6 +9,9 @@ import { prisma } from '@/lib/prisma';
 import { getQueueStats, getActiveJobs, checkQueueHealth } from '@/lib/simple-queue';
 import { checkApiHealth } from '@/lib/claude-api';
 
+// Force dynamic rendering (uses cookies for authentication)
+export const dynamic = 'force-dynamic';
+
 // Helper to check if user is admin
 function isAdmin(userEmail: string): boolean {
   const adminEmails = process.env.ADMIN_EMAILS?.split(',').map((email) => email.trim()) || [];

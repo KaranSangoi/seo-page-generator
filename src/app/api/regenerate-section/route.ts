@@ -8,6 +8,9 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { regenerateField } from '@/lib/claude-api';
 
+// Force dynamic rendering (uses cookies for authentication)
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();

@@ -9,6 +9,9 @@ import { prisma } from '@/lib/prisma';
 import { queueBatchGeneration } from '@/lib/simple-queue';
 import { randomBytes } from 'crypto';
 
+// Force dynamic rendering (uses cookies for authentication)
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Authenticate user

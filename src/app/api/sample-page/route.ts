@@ -7,6 +7,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Force dynamic rendering (uses cookies for authentication)
+export const dynamic = 'force-dynamic';
+
 // Sample content for test page
 const SAMPLE_CONTENT = {
   h1: 'Professional Service Provider in Your Location',

@@ -9,6 +9,9 @@ import { prisma } from '@/lib/prisma';
 import { generatePageContent, validateContent } from '@/lib/claude-api';
 import { randomBytes } from 'crypto';
 
+// Force dynamic rendering (uses cookies for authentication)
+export const dynamic = 'force-dynamic';
+
 // Helper function to generate slug
 function generateSlug(pageType: string, service: string, location: string): string {
   const isBroadStroke = pageType === 'Broad Stroke' || pageType === 'Nested Broad Stroke';
