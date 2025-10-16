@@ -41,6 +41,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
+    // Fetch original batch size for proper link placement rotation
+    // This ensures links follow the same pattern as during initial generation
+    let batchSize = 1; // Default fallback
+    if (dbId) {
+      try {
+        const page = await prisma.generatedPage.findUnique({
+          where: { id: dbId },
+          include: { batch: true },
+        });
+        if (page?.batch) {
+          batchSize = page.batch.totalPages;
+        }
+      } catch (error) {
+        console.warn('Could not fetch batch size, using default:', error);
+      }
+    }
+
     // Build publish params using shared function
     const publishParams: PublishParams = {
       wordpressUrl: client.wordpressUrl,
@@ -61,7 +78,7 @@ export async function POST(request: NextRequest) {
       },
       generatedContent,
       primaryKeyword,
-      batchSize: 1, // Single page publish
+      batchSize, // Use original batch size for proper link rotation
     };
 
     // Publish using shared function (same logic as v1)

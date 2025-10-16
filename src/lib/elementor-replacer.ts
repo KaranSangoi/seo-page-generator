@@ -170,6 +170,13 @@ export function replaceElementorContent(
             });
           }
         }
+        // Handle individual FAQ question widgets (separate IDs for each question)
+        else if (cssId.includes('question')) {
+          const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
+          if (generatedContent.faqs[faqIndex] && element.widgetType === 'heading' && element.settings.title) {
+            element.settings.title = generatedContent.faqs[faqIndex].question;
+          }
+        }
         // Handle individual FAQ answer widgets (separate IDs for each answer)
         else if (cssId.includes('answer')) {
           const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
