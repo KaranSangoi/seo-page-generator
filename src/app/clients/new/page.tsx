@@ -378,7 +378,7 @@ export default function NewClientPage() {
                   </>
                 )}
               </button>
-              <SubmitButton disabled={connectionResult && !connectionResult.success && !skipTest} />
+              <SubmitButton disabled={!!connectionResult && !connectionResult.success && !skipTest} />
             </div>
           </form>
         </div>
