@@ -49,16 +49,29 @@ export async function testConnectionAction(formData: FormData): Promise<{ succes
     console.log('Username:', wpUsername);
     console.log('Password length:', wpAppPassword.length);
 
-    // Test connection to WordPress REST API
+    // First, test if REST API is accessible
+    console.log('Step 1: Testing base REST API...');
+    const baseRestUrl = `${baseUrl}/wp-json/wp/v2`;
+    try {
+      const baseResponse = await fetch(baseRestUrl, { signal: AbortSignal.timeout(5000) });
+      console.log('Base REST API status:', baseResponse.status);
+    } catch (e) {
+      console.log('Base REST API error:', e);
+    }
+
+    // Test connection to WordPress REST API with auth
+    console.log('Step 2: Testing authenticated endpoint...');
     const authString = Buffer.from(`${wpUsername}:${wpAppPassword}`).toString('base64');
 
     const testUrl = `${baseUrl}/wp-json/wp/v2/users/me`;
     console.log('Full URL:', testUrl);
+    console.log('Auth header:', `Basic ${authString.substring(0, 20)}...`);
 
     const response = await fetch(testUrl, {
       headers: {
         'Authorization': `Basic ${authString}`,
         'Content-Type': 'application/json',
+        'User-Agent': 'SEO-Page-Generator/1.0',
       },
       // Add timeout
       signal: AbortSignal.timeout(10000),
@@ -67,12 +80,31 @@ export async function testConnectionAction(formData: FormData): Promise<{ succes
     console.log('Response status:', response.status);
     console.log('Response statusText:', response.statusText);
 
+    // If 500 error, try to get response body for debugging
+    let errorBody = '';
+    if (response.status === 500) {
+      try {
+        errorBody = await response.text();
+        console.log('500 Error body:', errorBody.substring(0, 500));
+
+        // Check if it's actually an authentication error disguised as 500
+        if (errorBody.includes('incorrect_password') || errorBody.includes('incorrect password')) {
+          return {
+            success: false,
+            message: '❌ Application Password Authentication Failed\n\nWordPress REST API rejected the Application Password.\n\n✅ QUICK FIX - Try your regular WordPress password instead:\n\n⚠️ Application Passwords may be disabled on this host.\nTry using your REGULAR WordPress login password in the field above.\n\n🔒 Security note: While Application Passwords are more secure,\nmany hosts disable them. Using regular password still works\nand credentials are encrypted in transit.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nAlternatively, if you want to enable Application Passwords:\n\n1. **Contact your hosting provider** to enable Application Passwords\n\n2. **Check security plugins:**\n   - Wordfence, iThemes Security, etc.\n   - Look for "REST API" settings\n   - Allow authenticated REST API requests\n\n3. **Check .htaccess** (if you have access):\n   - Authorization header might be stripped\n   - Add: SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1',
+          };
+        }
+      } catch (e) {
+        console.log('Could not read error body');
+      }
+    }
+
     if (!response.ok) {
       // Return early with specific error messages without trying to read body
       if (response.status === 401) {
         return {
           success: false,
-          message: '❌ Authentication Failed\n\nThe username or Application Password is incorrect.\n\n✅ Steps to fix:\n1. Go to WordPress Admin → Users → Profile\n2. Scroll to "Application Passwords"\n3. Generate a new password (name it "SEO Generator")\n4. Copy the password exactly as shown\n5. Paste it here and try again\n\n⚠️ Note: Do NOT use your regular WordPress password!',
+          message: '❌ Authentication Failed\n\nThe username or Application Password is incorrect.\n\n✅ Steps to fix:\n1. Use WordPress USERNAME (not email)\n2. Go to WordPress Admin → Users → Profile\n3. Scroll to "Application Passwords"\n4. Generate a new password (name it "SEO Generator")\n5. Copy the password exactly as shown\n6. Paste it here and try again\n\n⚠️ Note: Do NOT use your regular WordPress password!',
         };
       }
       if (response.status === 404) {
@@ -85,6 +117,12 @@ export async function testConnectionAction(formData: FormData): Promise<{ succes
         return {
           success: false,
           message: '❌ Access Forbidden\n\nYour WordPress user doesn\'t have permission to access the REST API.\n\n✅ Steps to fix:\n1. Log into WordPress Admin\n2. Go to Users → All Users\n3. Make sure your user has "Administrator" or "Editor" role\n4. If role is correct, try generating a new Application Password',
+        };
+      }
+      if (response.status === 500) {
+        return {
+          success: false,
+          message: `❌ WordPress Server Error\n\nThe WordPress site is experiencing an internal error.\n\n✅ Steps to fix:\n1. Check WordPress error logs (in wp-content/debug.log)\n2. Temporarily disable security plugins (Wordfence, Sucuri, etc.)\n3. Check if REST API is blocked by server firewall\n4. Try accessing ${baseUrl}/wp-json/wp/v2 in browser - should show JSON\n5. Contact your hosting provider if issue persists\n\n⚠️ Common causes:\n• Security plugin blocking REST API\n• Server firewall/WAF rules\n• PHP errors in WordPress\n• Memory limit issues`,
         };
       }
       return {

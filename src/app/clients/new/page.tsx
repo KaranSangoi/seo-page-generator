@@ -15,13 +15,13 @@ import Link from 'next/link';
 import { createClientAction, testConnectionAction } from './actions';
 import { useToast } from '@/components/ToastProvider';
 
-function SubmitButton() {
+function SubmitButton({ disabled: extraDisabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus();
 
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || extraDisabled}
       className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-sm"
     >
       {pending ? (
@@ -80,6 +80,7 @@ export default function NewClientPage() {
   const [state, formAction] = useFormState(createClientAction, null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionResult, setConnectionResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [skipTest, setSkipTest] = useState(false);
 
   // Handle redirect after successful client creation
   useEffect(() => {
@@ -230,8 +231,8 @@ export default function NewClientPage() {
                 {/* WordPress Application Password */}
                 <div>
                   <label htmlFor="wpAppPassword" className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    WordPress Application Password
-                    <InfoIcon content="Generate an Application Password in WordPress under Users → Profile → Application Passwords. Copy the password exactly as shown (spaces will be automatically removed). DO NOT use your regular WordPress password." />
+                    WordPress Password
+                    <InfoIcon content="RECOMMENDED: Generate an Application Password in WordPress under Users → Profile → Application Passwords. FALLBACK: If Application Passwords are disabled by your host, use your regular WordPress login password." />
                   </label>
                   <input
                     id="wpAppPassword"
@@ -240,10 +241,10 @@ export default function NewClientPage() {
                     required
                     autoComplete="off"
                     className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all font-mono text-sm"
-                    placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+                    placeholder="Application Password OR regular login password"
                   />
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Copy and paste the application password exactly as shown in WordPress (including spaces is OK)
+                    Try Application Password first (recommended). If test fails, use your regular WordPress login password.
                   </p>
                 </div>
               </div>
@@ -315,6 +316,26 @@ export default function NewClientPage() {
                     {connectionResult.message}
                   </div>
                 </div>
+                {!connectionResult.success && (
+                  <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={skipTest}
+                        onChange={(e) => setSkipTest(e.target.checked)}
+                        className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <div className="text-sm">
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          Skip connection test and save anyway
+                        </div>
+                        <div className="text-gray-600 dark:text-gray-400 mt-1">
+                          Use this if you're certain your credentials are correct but the hosting provider is blocking REST API authentication. The actual page generation might still work.
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                )}
               </div>
             )}
 
@@ -357,7 +378,7 @@ export default function NewClientPage() {
                   </>
                 )}
               </button>
-              <SubmitButton />
+              <SubmitButton disabled={connectionResult && !connectionResult.success && !skipTest} />
             </div>
           </form>
         </div>
@@ -373,7 +394,7 @@ export default function NewClientPage() {
               <ul className="list-disc list-inside space-y-1.5">
                 <li><strong>WordPress Site URL:</strong> Enter only the base domain (e.g., https://example.com) - NOT /wp-admin or /wp-json</li>
                 <li><strong>Username:</strong> Your WordPress login username (must have Editor or Administrator role)</li>
-                <li><strong>Application Password:</strong> Generate in WordPress under Users → Profile → Application Passwords (copy exactly as shown)</li>
+                <li><strong>Password:</strong> Try Application Password first (Users → Profile → Application Passwords). If that fails, use regular login password.</li>
                 <li><strong>Test Connection:</strong> Always test before saving to verify credentials work</li>
                 <li><strong>Template Page:</strong> The template page should already exist in WordPress</li>
               </ul>
