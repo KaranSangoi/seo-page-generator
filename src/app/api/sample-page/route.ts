@@ -143,17 +143,8 @@ function replaceElementorContent(
     if (element.settings) {
       const cssId = element.settings._element_id || element.settings.css_id || '';
 
-      // H1 heading - match IDs containing 'h1'
-      if (cssId.includes('h1')) {
-        if (element.settings.title) {
-          element.settings.title = generatedContent.h1;
-        } else if (element.settings.editor) {
-          element.settings.editor = generatedContent.h1;
-        }
-      }
-
-      // Hero description - match IDs containing 'hero' and 'description'
-      else if (cssId.includes('hero') && cssId.includes('description')) {
+      // Hero description - match IDs containing 'hero' and 'description' (check FIRST - more specific)
+      if (cssId.includes('hero') && cssId.includes('description')) {
         // Handle text-editor widgets
         if (element.settings.editor) {
           let content = generatedContent.heroDescription;
@@ -169,6 +160,15 @@ function replaceElementorContent(
             content = insertInternalLink(content, parentPageUrl, service);
           }
           element.settings.title = content;
+        }
+      }
+
+      // H1 heading - match IDs containing 'h1' (check AFTER hero description)
+      else if (cssId.includes('h1')) {
+        if (element.settings.title) {
+          element.settings.title = generatedContent.h1;
+        } else if (element.settings.editor) {
+          element.settings.editor = generatedContent.h1;
         }
       }
 

@@ -139,11 +139,14 @@ Simply re-comment all sections marked with "V2 FEATURE" to disable.
 - **Root Cause:** Hero section logic combined H1 and hero description handling with `cssId.includes('hero') || cssId.includes('h1')`
   - Hero description would only update if widget was text-editor type
   - CSS ID "hero-description" wouldn't match properly due to combined logic
+  - **Critical bug:** H1 check came BEFORE hero description, so CSS IDs like "h1-hero-description" would incorrectly get H1 content instead of hero description
 
-- **Solution:** Separated H1 from hero description, applied same flexible pattern matching
-  - H1 matching: `cssId.includes('h1')` - supports both text-editor and heading widgets
-  - Hero description matching: `cssId.includes('hero') && cssId.includes('description')` - supports both widget types
-  - Removed all widget type restrictions for hero description
+- **Solution:** Separated H1 from hero description with correct priority order
+  - **Check hero description FIRST** (more specific): `cssId.includes('hero') && cssId.includes('description')`
+  - **Check H1 SECOND** (less specific): `cssId.includes('h1')`
+  - This ensures "h1-hero-description" gets hero description content, not H1 content
+  - Both checks support text-editor and heading widgets
+  - Removed all widget type restrictions
   - Files: `src/lib/elementor-replacer.ts:66-93`, `src/app/api/sample-page/route.ts:146-173`
 
 ### Added
