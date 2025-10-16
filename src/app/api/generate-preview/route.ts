@@ -23,6 +23,8 @@ import {
 } from '@/lib/page-generation';
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
     const user = await getCurrentUser();
     if (!user) {
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { clientId, pages } = body;
+    const { clientId, pages, csvFilename } = body;
 
     if (!clientId || !pages || !Array.isArray(pages)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -47,6 +49,17 @@ export async function POST(request: NextRequest) {
     if (!client) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
+
+    // Create generation batch for history tracking
+    const batch = await prisma.generationBatch.create({
+      data: {
+        clientId: client.id,
+        userId: user.id,
+        csvFilename: csvFilename || `preview_${Date.now()}.csv`,
+        totalPages: pages.length,
+        status: 'in_progress',
+      },
+    });
 
     // Fetch sitemap once for all pages (for intelligent internal linking)
     const sitemap = await fetchSitemap(client.clientWebsite);
@@ -158,9 +171,54 @@ export async function POST(request: NextRequest) {
       })
     );
 
+    // Create GeneratedPage records for history tracking
+    const pageRecords = await Promise.all(
+      generatedPages.map(async (genPage) => {
+        try {
+          const pageRecord = await prisma.generatedPage.create({
+            data: {
+              batchId: batch.id,
+              pageName: genPage.pageName,
+              pageType: genPage.rawData.pageType,
+              service: genPage.service,
+              location: genPage.location,
+              parentSlug: genPage.rawData.parentSlug,
+              rowNumber: genPage.rawData.rowNumber,
+              status: genPage.status === 'ready' ? 'validating' : 'failed', // 'validating' = ready for review
+              errorMessage: genPage.error,
+              primaryKeyword: genPage.primaryKeyword,
+              generatedContent: JSON.stringify(genPage.content),
+              timeElapsed: 0, // Will be updated when published
+            },
+          });
+          return { ...genPage, dbId: pageRecord.id }; // Add database ID to response
+        } catch (dbError) {
+          console.error('Failed to create page record:', dbError);
+          return genPage; // Return original if DB insert fails
+        }
+      })
+    );
+
+    // Count successful and failed pages
+    const successfulPages = generatedPages.filter(p => p.status === 'ready').length;
+    const failedPages = generatedPages.filter(p => p.status === 'failed').length;
+    const timeTakenSeconds = Math.floor((Date.now() - startTime) / 1000);
+
+    // Update batch with stats
+    await prisma.generationBatch.update({
+      where: { id: batch.id },
+      data: {
+        successfulPages,
+        failedPages,
+        timeTakenSeconds,
+        status: failedPages === generatedPages.length ? 'failed' : 'completed',
+      },
+    });
+
     return NextResponse.json({
       success: true,
-      pages: generatedPages,
+      batchId: batch.id, // Return batch ID for publishing
+      pages: pageRecords,
       message: 'Content generated successfully. Review and publish when ready.',
     });
   } catch (error) {

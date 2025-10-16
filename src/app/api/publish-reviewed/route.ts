@@ -11,6 +11,8 @@ import { prisma } from '@/lib/prisma';
 import { publishToWordPress, type PublishParams } from '@/lib/page-generation';
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
     const user = await getCurrentUser();
     if (!user) {
@@ -18,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { clientId, pageData, generatedContent, primaryKeyword } = body;
+    const { clientId, pageData, generatedContent, primaryKeyword, dbId } = body;
 
     if (!clientId || !pageData || !generatedContent) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -62,6 +64,24 @@ export async function POST(request: NextRequest) {
     // Publish using shared function (same logic as v1)
     const pageUrl = await publishToWordPress(publishParams);
 
+    // Update page record in database if dbId provided
+    if (dbId) {
+      try {
+        const timeElapsed = Date.now() - startTime;
+        await prisma.generatedPage.update({
+          where: { id: dbId },
+          data: {
+            publishedUrl: pageUrl,
+            status: 'success',
+            timeElapsed,
+          },
+        });
+      } catch (dbError) {
+        console.error('Failed to update page record:', dbError);
+        // Don't fail the whole operation if DB update fails
+      }
+    }
+
     return NextResponse.json({
       success: true,
       pageUrl,
@@ -69,6 +89,22 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Publish error:', error);
+
+    // Update page record with error if dbId provided
+    if ((error as any).dbId) {
+      try {
+        await prisma.generatedPage.update({
+          where: { id: (error as any).dbId },
+          data: {
+            status: 'failed',
+            errorMessage: error instanceof Error ? error.message : 'Publishing failed',
+          },
+        });
+      } catch (dbError) {
+        console.error('Failed to update error in DB:', dbError);
+      }
+    }
+
     return NextResponse.json(
       {
         error: 'Failed to publish page',

@@ -496,6 +496,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId,
+          csvFilename: csvFile?.name || `preview_${Date.now()}.csv`, // Pass CSV filename for history
           pages: parsedPages.map((page) => {
             const edits = editedData.get(page.rowNumber);
             return {
@@ -569,6 +570,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           pageData: page.rawData,
           generatedContent: page.content,
           primaryKeyword: page.primaryKeyword,
+          dbId: page.dbId, // Pass database ID for history tracking
         }),
       });
       if (!response.ok) throw new Error('Failed to publish page');

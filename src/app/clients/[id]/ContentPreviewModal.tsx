@@ -56,8 +56,9 @@ export default function ContentPreviewModal({
 }: ContentPreviewModalProps) {
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['meta', 'hero']));
-  const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
-  const [regeneratingField, setRegeneratingField] = useState<string | null>(null); // Track individual field regeneration
+  // Support multiple concurrent regenerations
+  const [regeneratingSections, setRegeneratingSections] = useState<Set<string>>(new Set());
+  const [regeneratingFields, setRegeneratingFields] = useState<Set<string>>(new Set());
 
   const selectedPage = pages[selectedPageIndex];
   const publishedCount = pages.filter((p) => p.status === 'published').length;
@@ -76,26 +77,38 @@ export default function ContentPreviewModal({
   };
 
   const handleRegenerateSection = async (section: string) => {
-    setRegeneratingSection(section);
+    // Add to regenerating set
+    setRegeneratingSections((prev) => new Set(prev).add(section));
     try {
       await onRegenerateSection(selectedPage.pageId, section);
     } finally {
-      setRegeneratingSection(null);
+      // Remove from regenerating set
+      setRegeneratingSections((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(section);
+        return newSet;
+      });
     }
   };
 
   const handleRegenerateField = async (fieldName: string) => {
-    setRegeneratingField(fieldName);
+    // Add to regenerating set
+    setRegeneratingFields((prev) => new Set(prev).add(fieldName));
     try {
       await onRegenerateSection(selectedPage.pageId, fieldName);
     } finally {
-      setRegeneratingField(null);
+      // Remove from regenerating set
+      setRegeneratingFields((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(fieldName);
+        return newSet;
+      });
     }
   };
 
   // Helper to render individual field with inline regenerate button
   const renderField = (label: string, fieldName: string, content: React.ReactNode, charInfo?: string) => {
-    const isRegenerating = regeneratingField === fieldName;
+    const isRegenerating = regeneratingFields.has(fieldName);
 
     return (
       <div className="mb-3">
@@ -134,7 +147,7 @@ export default function ContentPreviewModal({
     canRegenerate = true
   ) => {
     const isExpanded = expandedSections.has(sectionKey);
-    const isRegenerating = regeneratingSection === sectionKey;
+    const isRegenerating = regeneratingSections.has(sectionKey);
 
     return (
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -386,14 +399,14 @@ export default function ContentPreviewModal({
                           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Bullet #{idx + 1}</span>
                           <button
                             onClick={() => handleRegenerateField(`benefitsBullet-${idx + 1}`)}
-                            disabled={regeneratingField === `benefitsBullet-${idx + 1}` || selectedPage.status === 'publishing'}
+                            disabled={regeneratingFields.has(`benefitsBullet-${idx + 1}`) || selectedPage.status === 'publishing'}
                             className="text-xs px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:opacity-50"
                             title={`Regenerate bullet #${idx + 1}`}
                           >
-                            {regeneratingField === `benefitsBullet-${idx + 1}` ? '...' : '🔄'}
+                            {regeneratingFields.has(`benefitsBullet-${idx + 1}`) ? '...' : '🔄'}
                           </button>
                         </div>
-                        {regeneratingField === `benefitsBullet-${idx + 1}` ? (
+                        {regeneratingFields.has(`benefitsBullet-${idx + 1}`) ? (
                           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 py-2">
                             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -442,14 +455,14 @@ export default function ContentPreviewModal({
                           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Bullet #{idx + 1}</span>
                           <button
                             onClick={() => handleRegenerateField(`whyBullet-${idx + 1}`)}
-                            disabled={regeneratingField === `whyBullet-${idx + 1}` || selectedPage.status === 'publishing'}
+                            disabled={regeneratingFields.has(`whyBullet-${idx + 1}`) || selectedPage.status === 'publishing'}
                             className="text-xs px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:opacity-50"
                             title={`Regenerate bullet #${idx + 1}`}
                           >
-                            {regeneratingField === `whyBullet-${idx + 1}` ? '...' : '🔄'}
+                            {regeneratingFields.has(`whyBullet-${idx + 1}`) ? '...' : '🔄'}
                           </button>
                         </div>
-                        {regeneratingField === `whyBullet-${idx + 1}` ? (
+                        {regeneratingFields.has(`whyBullet-${idx + 1}`) ? (
                           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 py-2">
                             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -483,14 +496,14 @@ export default function ContentPreviewModal({
                       <span className="text-xs font-medium text-gray-600 dark:text-gray-400">FAQ #{idx + 1}</span>
                       <button
                         onClick={() => handleRegenerateField(`faq-${idx + 1}`)}
-                        disabled={regeneratingField === `faq-${idx + 1}` || selectedPage.status === 'publishing'}
+                        disabled={regeneratingFields.has(`faq-${idx + 1}`) || selectedPage.status === 'publishing'}
                         className="text-xs px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:opacity-50"
                         title={`Regenerate FAQ #${idx + 1}`}
                       >
-                        {regeneratingField === `faq-${idx + 1}` ? '...' : '🔄'}
+                        {regeneratingFields.has(`faq-${idx + 1}`) ? '...' : '🔄'}
                       </button>
                     </div>
-                    {regeneratingField === `faq-${idx + 1}` ? (
+                    {regeneratingFields.has(`faq-${idx + 1}`) ? (
                       <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 py-4">
                         <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
