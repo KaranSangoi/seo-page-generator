@@ -143,22 +143,36 @@ function replaceElementorContent(
     if (element.settings) {
       const cssId = element.settings._element_id || element.settings.css_id || '';
 
-      if (cssId.includes('hero') || cssId.includes('h1')) {
-        if (element.widgetType === 'heading' || element.elType === 'widget') {
-          if (element.settings.title) {
-            element.settings.title = generatedContent.h1;
-          }
+      // H1 heading - match IDs containing 'h1'
+      if (cssId.includes('h1')) {
+        if (element.settings.title) {
+          element.settings.title = generatedContent.h1;
+        } else if (element.settings.editor) {
+          element.settings.editor = generatedContent.h1;
         }
-        if (element.widgetType === 'text-editor') {
-          if (element.settings.editor) {
-            let content = generatedContent.heroDescription;
-            if (internalLinkSection === 0 && parentPageUrl && service) {
-              content = insertInternalLink(content, parentPageUrl, service);
-            }
-            element.settings.editor = content;
+      }
+
+      // Hero description - match IDs containing 'hero' and 'description'
+      else if (cssId.includes('hero') && cssId.includes('description')) {
+        // Handle text-editor widgets
+        if (element.settings.editor) {
+          let content = generatedContent.heroDescription;
+          if (internalLinkSection === 0 && parentPageUrl && service) {
+            content = insertInternalLink(content, parentPageUrl, service);
           }
+          element.settings.editor = content;
         }
-      } else if (cssId.includes('benefits')) {
+        // Handle heading widgets
+        else if (element.settings.title) {
+          let content = generatedContent.heroDescription;
+          if (internalLinkSection === 0 && parentPageUrl && service) {
+            content = insertInternalLink(content, parentPageUrl, service);
+          }
+          element.settings.title = content;
+        }
+      }
+
+      else if (cssId.includes('benefits')) {
         if (element.widgetType === 'heading' && element.settings.title) {
           // Check if it's the main heading or subheading
           if (cssId.includes('subheading')) {

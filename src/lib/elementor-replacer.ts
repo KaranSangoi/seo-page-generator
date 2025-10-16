@@ -63,17 +63,32 @@ export function replaceElementorContent(
     if (element.settings) {
       const cssId = element.settings._element_id || element.settings.css_id || '';
 
-      // Hero section
-      if (cssId.includes('hero') || cssId.includes('h1')) {
-        if (element.widgetType === 'heading' && element.settings.title) {
+      // H1 heading - match IDs containing 'h1'
+      if (cssId.includes('h1')) {
+        if (element.settings.title) {
           element.settings.title = generatedContent.h1;
+        } else if (element.settings.editor) {
+          element.settings.editor = generatedContent.h1;
         }
-        if (element.widgetType === 'text-editor' && element.settings.editor) {
+      }
+
+      // Hero description - match IDs containing 'hero' and 'description'
+      else if (cssId.includes('hero') && cssId.includes('description')) {
+        // Handle text-editor widgets
+        if (element.settings.editor) {
           let content = generatedContent.heroDescription;
           if (internalLinkPlacement === 'hero' && internalLinkUrl && companyName) {
             content = insertInternalLink(content, internalLinkUrl, companyName);
           }
           element.settings.editor = content;
+        }
+        // Handle heading widgets
+        else if (element.settings.title) {
+          let content = generatedContent.heroDescription;
+          if (internalLinkPlacement === 'hero' && internalLinkUrl && companyName) {
+            content = insertInternalLink(content, internalLinkUrl, companyName);
+          }
+          element.settings.title = content;
         }
       }
 

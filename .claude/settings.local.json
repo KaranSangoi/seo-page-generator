@@ -26,7 +26,9 @@
       "WebSearch",
       "WebFetch(domain:developers.webflow.com)",
       "WebFetch(domain:backlinko.com)",
-      "Bash(else echo \"✗ .env file missing\")"
+      "Bash(else echo \"✗ .env file missing\")",
+      "Bash(cat:*)",
+      "Read(//d/**)"
     ],
     "deny": [],
     "ask": []
