@@ -9,23 +9,23 @@ import { prisma } from '@/lib/prisma';
 
 // Sample content for test page
 const SAMPLE_CONTENT = {
-  h1: 'Sample Page - Test Your Template Style',
-  heroDescription: 'This is a sample page generated from your Elementor template. Review the styling, layout, and design to ensure it meets your needs before generating pages at scale. This content is for demonstration purposes only and showcases how your actual pages will look.',
-  metaTitle: 'Sample Page - Template Preview',
-  metaDescription: 'Preview your Elementor template styling with this sample page. Test the design and layout before generating pages at scale.',
-  benefitsHeading: 'Sample Benefits Section',
-  benefitsSubheading: 'This section demonstrates how your benefits content will appear on generated pages',
+  h1: 'Professional Service Provider in Your Location',
+  heroDescription: 'This is a sample page generated from your Elementor template. Review the styling, layout, and design to ensure it meets your needs before generating pages at scale. This content is for demonstration purposes only and showcases how your actual pages will look with proper formatting and structure.',
+  metaTitle: 'Professional Service Provider in Your Location | Company Name',
+  metaDescription: 'Company Name offers professional service in your location. Quality work, expert team, and reliable results. Call now!',
+  benefitsHeading: 'Experience Excellence with Company Name',
+  benefitsSubheading: 'Quality. Precision. Reliable.',
   benefitsBullets: [
-    'This is the first benefit bullet point with sample content to demonstrate how your actual benefit points will be displayed on the page. It includes enough text to meet the minimum word count requirements.',
-    'This is the second benefit bullet point showing how multiple benefits will be formatted and styled according to your template design. Notice the spacing and typography that will be applied to all your pages.',
-    'This is the third benefit bullet point completing the benefits section. Your actual pages will have custom content generated for each specific service and location while maintaining this exact styling and layout.',
+    '<b>Custom Solutions for Every Need:</b> This is the first benefit bullet point with sample content to demonstrate how your actual benefit points will be displayed on the page. It includes enough text to meet the minimum word count requirements and follows the proper format with bold heading.',
+    '<b>Professional Service Quality:</b> This is the second benefit bullet point showing how multiple benefits will be formatted and styled according to your template design. Notice the spacing and typography that will be applied to all your pages with consistent formatting throughout.',
+    '<b>Trusted Local Expertise:</b> This is the third benefit bullet point completing the benefits section. Your actual pages will have custom content generated for each specific service and location while maintaining this exact styling and layout with proper bold headings.',
   ],
-  whyHeading: 'Why Choose Us - Sample Section',
-  whySubheading: 'This section shows how your "why choose us" content will be presented',
+  whyHeading: 'Why Professional Service Matters in Your Location',
+  whySubheading: 'Protection. Appeal. Durability.',
   whyBullets: [
-    'This is the first reason why customers should choose your services. The sample text demonstrates the formatting and styling that will be applied to all your generated pages. Real content will be customized for each location.',
-    'This is the second reason highlighting your competitive advantages. The template styling you see here will be consistently applied across all pages, ensuring a professional and cohesive look throughout your website.',
-    'This is the third reason completing this section. Your actual pages will contain unique, SEO-optimized content while preserving the exact design and layout you see in this sample page.',
+    '<b>Protects Your Investment:</b> This is the first reason why customers should choose your services. The sample text demonstrates the formatting and styling that will be applied to all your generated pages. Real content will be customized for each location and service type.',
+    '<b>Enhances Property Value:</b> This is the second reason highlighting your competitive advantages. The template styling you see here will be consistently applied across all pages, ensuring a professional and cohesive look throughout your website with proper formatting.',
+    '<b>Prevents Costly Repairs:</b> This is the third reason completing this section. Your actual pages will contain unique, SEO-optimized content while preserving the exact design and layout you see in this sample page with bold topic headings.',
   ],
   faqs: [
     {
@@ -41,7 +41,7 @@ const SAMPLE_CONTENT = {
       answer: 'Absolutely! If you notice any styling issues or want to make changes, simply update your Elementor template page in WordPress, then generate a new sample page to preview the changes.',
     },
   ],
-  mapDescription: 'This is the map section description that demonstrates how location-specific content will appear. Your actual pages will include relevant local information and details specific to each geographic area you are targeting with your SEO strategy.',
+  mapDescription: 'This is the map section description demonstrating how location-specific content appears on your pages. Your actual pages will include relevant local information, service coverage details, and geographic specifics tailored to each target area. This helps establish local relevance and improves your search visibility in specific markets.',
 };
 
 // Helper to generate slug
@@ -160,8 +160,14 @@ function replaceElementorContent(
         }
       } else if (cssId.includes('benefits')) {
         if (element.widgetType === 'heading' && element.settings.title) {
-          element.settings.title = generatedContent.benefitsHeading;
+          // Check if it's the main heading or subheading
+          if (cssId.includes('subheading')) {
+            element.settings.title = generatedContent.benefitsSubheading;
+          } else {
+            element.settings.title = generatedContent.benefitsHeading;
+          }
         }
+        // Handle text-editor for subheading
         if (element.widgetType === 'text-editor' && element.settings.editor) {
           if (cssId.includes('subheading')) {
             element.settings.editor = generatedContent.benefitsSubheading;
@@ -177,10 +183,32 @@ function replaceElementorContent(
             }
           }
         }
+        // Handle icon-list widget (single ID for all bullets)
+        if (element.widgetType === 'icon-list' && cssId.includes('bullets')) {
+          if (element.settings.icon_list && Array.isArray(element.settings.icon_list)) {
+            element.settings.icon_list.forEach((item: any, index: number) => {
+              if (generatedContent.benefitsBullets[index]) {
+                let content = generatedContent.benefitsBullets[index];
+                // Add external link if this matches the external link section
+                const sectionKey = `benefits-${index + 1}`;
+                if (finalExternalLinkSection === sectionKey && location && cityWebsiteUrl) {
+                  content = insertExternalLink(content, location, cityWebsiteUrl);
+                }
+                item.text = content;
+              }
+            });
+          }
+        }
       } else if (cssId.includes('why')) {
         if (element.widgetType === 'heading' && element.settings.title) {
-          element.settings.title = generatedContent.whyHeading;
+          // Check if it's the main heading or subheading
+          if (cssId.includes('subheading')) {
+            element.settings.title = generatedContent.whySubheading;
+          } else {
+            element.settings.title = generatedContent.whyHeading;
+          }
         }
+        // Handle text-editor for subheading
         if (element.widgetType === 'text-editor' && element.settings.editor) {
           if (cssId.includes('subheading')) {
             element.settings.editor = generatedContent.whySubheading;
@@ -196,18 +224,93 @@ function replaceElementorContent(
             }
           }
         }
-      } else if (cssId.includes('faq')) {
-        const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
-        if (generatedContent.faqs[faqIndex]) {
-          if (element.widgetType === 'heading' && cssId.includes('question')) {
-            element.settings.title = generatedContent.faqs[faqIndex].question;
+        // Handle icon-list widget (single ID for all bullets)
+        if (element.widgetType === 'icon-list' && cssId.includes('bullets')) {
+          if (element.settings.icon_list && Array.isArray(element.settings.icon_list)) {
+            element.settings.icon_list.forEach((item: any, index: number) => {
+              if (generatedContent.whyBullets[index]) {
+                let content = generatedContent.whyBullets[index];
+                // Add external link if this matches the external link section
+                const sectionKey = `why-${index + 1}`;
+                if (finalExternalLinkSection === sectionKey && location && cityWebsiteUrl) {
+                  content = insertExternalLink(content, location, cityWebsiteUrl);
+                }
+                item.text = content;
+              }
+            });
           }
-          if (element.widgetType === 'text-editor' && cssId.includes('answer')) {
-            let content = generatedContent.faqs[faqIndex].answer;
-            if (internalLinkSection === 1 && faqIndex === 0 && parentPageUrl && service) {
-              content = insertInternalLink(content, parentPageUrl, service);
+        }
+      } else if (cssId.includes('faq')) {
+        // Handle FAQ section - check by ID first, then adapt to structure
+
+        // If this is the main FAQ container (ID contains 'questions')
+        if (cssId.includes('questions')) {
+          console.log('[DEBUG] Found FAQ container:', {
+            cssId: cssId,
+            widgetType: element.widgetType,
+            hasSettings: !!element.settings,
+            settingsKeys: element.settings ? Object.keys(element.settings) : [],
+            hasTabs: !!element.settings.tabs,
+            hasItems: !!element.settings.items,
+            hasElements: !!element.elements,
+          });
+
+          // Check if it uses tabs structure (classic accordion/toggle)
+          if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
+            console.log('[DEBUG] FAQ uses tabs structure (classic accordion), updating tabs...');
+            element.settings.tabs.forEach((tab: any, index: number) => {
+              if (generatedContent.faqs[index]) {
+                tab.tab_title = generatedContent.faqs[index].question;
+                let content = generatedContent.faqs[index].answer;
+                if (internalLinkSection === 1 && index === 0 && parentPageUrl && service) {
+                  content = insertInternalLink(content, parentPageUrl, service);
+                }
+                tab.tab_content = content;
+                console.log(`[DEBUG] Updated FAQ ${index} in tabs`);
+              }
+            });
+          }
+          // Check if it uses items structure (nested-accordion might use this)
+          else if (element.settings.items && Array.isArray(element.settings.items)) {
+            console.log('[DEBUG] FAQ uses items structure, updating items...');
+            element.settings.items.forEach((item: any, index: number) => {
+              if (generatedContent.faqs[index]) {
+                console.log(`[DEBUG] Item ${index} keys:`, Object.keys(item));
+                // Try different possible field names
+                if (item.item_title !== undefined) item.item_title = generatedContent.faqs[index].question;
+                if (item.item_content !== undefined) item.item_content = generatedContent.faqs[index].answer;
+                if (item.title !== undefined) item.title = generatedContent.faqs[index].question;
+                if (item.content !== undefined) item.content = generatedContent.faqs[index].answer;
+                console.log(`[DEBUG] Updated FAQ ${index} in items`);
+              }
+            });
+          }
+          // Nested accordion stores FAQs in child elements, not settings
+          else if (element.elements && Array.isArray(element.elements)) {
+            console.log('[DEBUG] FAQ uses nested elements structure - this is likely nested-accordion');
+            console.log('[DEBUG] FAQ container has', element.elements.length, 'child elements');
+            console.log('[DEBUG] Nested accordion questions are in child elements, not settings - skipping container update');
+          } else {
+            console.log('[DEBUG] FAQ container found but unknown structure');
+            console.log('[DEBUG] Full settings keys:', element.settings ? Object.keys(element.settings) : 'none');
+          }
+        }
+        // Handle individual FAQ items (separate IDs for each question/answer)
+        else {
+          const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
+          if (generatedContent.faqs[faqIndex]) {
+            if (element.widgetType === 'heading' && cssId.includes('question')) {
+              element.settings.title = generatedContent.faqs[faqIndex].question;
+              console.log(`[DEBUG] Updated individual FAQ ${faqIndex} question`);
             }
-            element.settings.editor = content;
+            if (element.widgetType === 'text-editor' && cssId.includes('answer')) {
+              let content = generatedContent.faqs[faqIndex].answer;
+              if (internalLinkSection === 1 && faqIndex === 0 && parentPageUrl && service) {
+                content = insertInternalLink(content, parentPageUrl, service);
+              }
+              element.settings.editor = content;
+              console.log(`[DEBUG] Updated individual FAQ ${faqIndex} answer`);
+            }
           }
         }
       } else if (cssId.includes('map')) {
@@ -306,6 +409,36 @@ export async function POST(request: NextRequest) {
 
     // Parse and replace content
     const parsedElementorData = typeof elementorData === 'string' ? JSON.parse(elementorData) : elementorData;
+
+    // Log element structure to help debug FAQ issue
+    console.log('[TEMPLATE ANALYSIS] Analyzing template structure...');
+    const analyzedElements = {
+      faqElements: [] as string[],
+      allCssIds: [] as string[],
+    };
+
+    const analyzeElement = (element: any): void => {
+      if (element?.settings) {
+        const cssId = element.settings._element_id || element.settings.css_id || '';
+        if (cssId) {
+          analyzedElements.allCssIds.push(`${cssId} (${element.widgetType || element.elType})`);
+          if (cssId.includes('faq')) {
+            analyzedElements.faqElements.push(`${cssId} - type: ${element.widgetType || element.elType}`);
+          }
+        }
+      }
+      if (element?.elements && Array.isArray(element.elements)) {
+        element.elements.forEach(analyzeElement);
+      }
+    };
+
+    parsedElementorData.forEach(analyzeElement);
+    console.log('[TEMPLATE ANALYSIS] FAQ elements found:', analyzedElements.faqElements.length > 0 ? analyzedElements.faqElements : 'NONE');
+    console.log('[TEMPLATE ANALYSIS] Total elements with CSS IDs:', analyzedElements.allCssIds.length);
+    if (analyzedElements.faqElements.length === 0) {
+      console.warn('[WARNING] No FAQ elements found in template! Check template CSS IDs.');
+    }
+
     const updatedElementorData = replaceElementorContent(
       parsedElementorData,
       SAMPLE_CONTENT,
@@ -352,6 +485,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the sample page
+    console.log('[REST API] Creating WordPress page...');
     const response = await fetch(wpApiUrl, {
       method: 'POST',
       headers: {
@@ -361,8 +495,11 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(pagePayload),
     });
 
+    console.log('[REST API] Response status:', response.status, response.statusText);
+
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('[REST API ERROR] WordPress returned error:', errorText);
       return NextResponse.json(
         { error: `WordPress API error: ${errorText}` },
         { status: 500 }
@@ -370,6 +507,11 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await response.json();
+    console.log('[REST API] WordPress page created successfully:', {
+      pageId: result.id,
+      pageUrl: result.link,
+      hasElementorData: !!result.meta?._elementor_data,
+    });
     const pageId = result.id;
     const pageUrl = result.link || result.guid?.rendered || 'Unknown URL';
 

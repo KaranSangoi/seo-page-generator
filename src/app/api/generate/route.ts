@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     // Generate batch ID
     const batchId = `batch_${Date.now()}_${randomBytes(8).toString('hex')}`;
 
-    // Add rowNumber to each page if not present
+    // Add rowNumber to each page if not present, include custom values
     const pagesWithRowNumber = pages.map((page, index) => ({
       pageType: page.pageType,
       service: page.service || '',
@@ -55,6 +55,8 @@ export async function POST(request: NextRequest) {
       externalLinkSection: page.externalLinkSection || '',
       omitSections: page.omitSections || [],
       rowNumber: page.rowNumber || index + 1,
+      customSlug: page.customSlug, // Custom slug from user edit
+      customPrimaryKeyword: page.customPrimaryKeyword, // Custom primary keyword from user edit
     }));
 
     // Queue the batch for processing

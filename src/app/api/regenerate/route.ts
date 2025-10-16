@@ -152,17 +152,69 @@ function replaceElementorContent(
           }
         }
       } else if (cssId.includes('faq')) {
-        const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
-        if (generatedContent.faqs[faqIndex]) {
-          if (element.widgetType === 'heading' && cssId.includes('question')) {
-            element.settings.title = generatedContent.faqs[faqIndex].question;
+        // Handle FAQ section - check by ID first, then adapt to structure
+
+        // If this is the main FAQ container (ID contains 'questions')
+        if (cssId.includes('questions')) {
+          console.log('[REGENERATE DEBUG] Found FAQ container:', {
+            cssId: cssId,
+            widgetType: element.widgetType,
+            hasSettings: !!element.settings,
+            settingsKeys: element.settings ? Object.keys(element.settings) : [],
+            hasTabs: !!element.settings.tabs,
+            hasItems: !!element.settings.items,
+          });
+
+          // Check if it uses tabs structure (classic accordion/toggle)
+          if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
+            console.log('[REGENERATE DEBUG] FAQ uses tabs structure (classic accordion), updating tabs...');
+            element.settings.tabs.forEach((tab: any, index: number) => {
+              if (generatedContent.faqs[index]) {
+                tab.tab_title = generatedContent.faqs[index].question;
+                let content = generatedContent.faqs[index].answer;
+                if (internalLinkSection === 1 && index === 0 && parentPageUrl && service) {
+                  content = insertInternalLink(content, parentPageUrl, service);
+                }
+                tab.tab_content = content;
+                console.log(`[REGENERATE DEBUG] Updated FAQ ${index} in tabs`);
+              }
+            });
           }
-          if (element.widgetType === 'text-editor' && cssId.includes('answer')) {
-            let content = generatedContent.faqs[faqIndex].answer;
-            if (internalLinkSection === 1 && faqIndex === 0 && parentPageUrl && service) {
-              content = insertInternalLink(content, parentPageUrl, service);
+          // Check if it uses items structure (nested-accordion might use this)
+          else if (element.settings.items && Array.isArray(element.settings.items)) {
+            console.log('[REGENERATE DEBUG] FAQ uses items structure, updating items...');
+            element.settings.items.forEach((item: any, index: number) => {
+              if (generatedContent.faqs[index]) {
+                console.log(`[REGENERATE DEBUG] Item ${index} keys:`, Object.keys(item));
+                // Try different possible field names
+                if (item.item_title !== undefined) item.item_title = generatedContent.faqs[index].question;
+                if (item.item_content !== undefined) item.item_content = generatedContent.faqs[index].answer;
+                if (item.title !== undefined) item.title = generatedContent.faqs[index].question;
+                if (item.content !== undefined) item.content = generatedContent.faqs[index].answer;
+                console.log(`[REGENERATE DEBUG] Updated FAQ ${index} in items`);
+              }
+            });
+          } else {
+            console.log('[REGENERATE DEBUG] FAQ container found but unknown structure');
+            console.log('[REGENERATE DEBUG] Full settings keys:', element.settings ? Object.keys(element.settings) : 'none');
+          }
+        }
+        // Handle individual FAQ items (separate IDs for each question/answer)
+        else {
+          const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
+          if (generatedContent.faqs[faqIndex]) {
+            if (element.widgetType === 'heading' && cssId.includes('question')) {
+              console.log(`[REGENERATE DEBUG] Updating individual FAQ ${faqIndex} question`);
+              element.settings.title = generatedContent.faqs[faqIndex].question;
             }
-            element.settings.editor = content;
+            if (element.widgetType === 'text-editor' && cssId.includes('answer')) {
+              console.log(`[REGENERATE DEBUG] Updating individual FAQ ${faqIndex} answer`);
+              let content = generatedContent.faqs[faqIndex].answer;
+              if (internalLinkSection === 1 && faqIndex === 0 && parentPageUrl && service) {
+                content = insertInternalLink(content, parentPageUrl, service);
+              }
+              element.settings.editor = content;
+            }
           }
         }
       } else if (cssId.includes('map')) {
@@ -275,7 +327,7 @@ async function publishToWordPress(params: {
         location,
         parentPageUrl,
         service,
-        page.rowNumber
+        undefined // No row number for regenerated pages (internal link rotation not applicable)
       );
 
       // Copy all template settings
@@ -334,20 +386,12 @@ async function publishToWordPress(params: {
       <div class="map">
         <p>${generatedContent.mapDescription}</p>
       </div>` : ''}
-    `,
-    status: 'publish',
-    meta: {
-      ...(seoPlugin === 'yoast' ? {
-        _yoast_wpseo_title: generatedContent.metaTitle,
-        _yoast_wpseo_metadesc: generatedContent.metaDescription,
-        _yoast_wpseo_focuskw: primaryKeyword,
-      } : {
-        rank_math_title: generatedContent.metaTitle,
-        rank_math_description: generatedContent.metaDescription,
-        rank_math_focus_keyword: primaryKeyword,
-      }),
-    },
-  };
+    `;
+    }
+  } catch (fetchError) {
+    console.error('Error fetching full template page:', fetchError);
+    // Continue with basic pagePayload already defined
+  }
 
   // Add parent if found
   if (parentId) {
@@ -444,10 +488,19 @@ export async function POST(request: NextRequest) {
 
     const startTime = Date.now();
 
-    // Generate adjective (single)
-    const { generateAdjectives } = await import('@/lib/claude-api');
-    const adjectives = await generateAdjectives(1);
-    const adjective = adjectives[0];
+    // Reuse original adjective if available, otherwise use deterministic selection
+    let adjective: string;
+    if (page.primaryKeyword) {
+      // Extract adjective from stored primaryKeyword (first word)
+      const words = page.primaryKeyword.split(' ');
+      adjective = words[0];
+      console.log(`[REGENERATE] Reusing original adjective: "${adjective}" from primary keyword: "${page.primaryKeyword}"`);
+    } else {
+      // Fallback: Use deterministic adjective based on row number if primaryKeyword not stored
+      const { getAdjectiveForRow } = await import('@/lib/adjectives');
+      adjective = getAdjectiveForRow(page.rowNumber || 1);
+      console.log(`[REGENERATE] Using deterministic adjective: "${adjective}" for row ${page.rowNumber || 1}`);
+    }
 
     // Form primary keyword
     let primaryKeyword: string;

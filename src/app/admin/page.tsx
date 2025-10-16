@@ -53,6 +53,7 @@ interface ActivityData {
   activeUsers: number;
   recentBatches: Array<{
     id: string;
+    userId: string;
     user: string;
     client: string;
     status: string;
@@ -65,6 +66,7 @@ interface ActivityData {
 
 interface ErrorLog {
   id: string;
+  userId: string;
   user: string;
   client: string;
   type: string;
@@ -72,12 +74,32 @@ interface ErrorLog {
   createdAt: string;
 }
 
+interface ErrorData {
+  data: ErrorLog[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface AdminStats {
   systemHealth: SystemHealth;
   queue: QueueStats;
   usage: UsageStats;
   activity: ActivityData;
-  errors: ErrorLog[];
+  errors: ErrorData;
+  users: User[];
+  filterUserId: string | null;
 }
 
 export default function AdminDashboard() {
@@ -85,12 +107,23 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [errorFilter, setErrorFilter] = useState<string>('all');
+  const [errorTypeFilter, setErrorTypeFilter] = useState<string>('all');
+  const [userFilter, setUserFilter] = useState<string>('all');
+  const [errorPage, setErrorPage] = useState(1);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/admin/stats');
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (userFilter !== 'all') {
+        params.set('userId', userFilter);
+      }
+      params.set('errorPage', errorPage.toString());
+      params.set('errorLimit', '20');
+
+      const url = `/api/admin/stats${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await fetch(url);
 
       if (response.status === 403) {
         setError('Access Denied: Admin privileges required');
@@ -118,7 +151,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [userFilter, errorPage]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -128,7 +161,7 @@ export default function AdminDashboard() {
     }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [autoRefresh, userFilter, errorPage]);
 
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
@@ -152,7 +185,7 @@ export default function AdminDashboard() {
   };
 
   const filteredErrors =
-    stats?.errors.filter((err) => errorFilter === 'all' || err.type === errorFilter) || [];
+    stats?.errors.data.filter((err) => errorTypeFilter === 'all' || err.type === errorTypeFilter) || [];
 
   if (loading) {
     return (
@@ -210,14 +243,40 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Real-time system monitoring and analytics
-              </p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Dashboard
+              </button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Real-time system monitoring and analytics
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-4">
+              <select
+                value={userFilter}
+                onChange={(e) => {
+                  setUserFilter(e.target.value);
+                  setErrorPage(1); // Reset to first page when changing filter
+                }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm"
+              >
+                <option value="all">All Users</option>
+                {stats?.users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name}
+                  </option>
+                ))}
+              </select>
               <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <input
                   type="checkbox"
@@ -235,6 +294,11 @@ export default function AdminDashboard() {
               </button>
             </div>
           </div>
+          {userFilter !== 'all' && (
+            <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-800 dark:text-blue-300">
+              Showing stats for: <strong>{stats?.users.find(u => u.id === userFilter)?.name}</strong>
+            </div>
+          )}
         </div>
       </div>
 
@@ -427,13 +491,20 @@ export default function AdminDashboard() {
           {/* Error Logs */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Error Logs</h2>
+              <div className="flex items-center gap-4">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Error Logs</h2>
+                {stats?.errors.pagination && (
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    ({stats.errors.pagination.total} total)
+                  </span>
+                )}
+              </div>
               <select
-                value={errorFilter}
-                onChange={(e) => setErrorFilter(e.target.value)}
+                value={errorTypeFilter}
+                onChange={(e) => setErrorTypeFilter(e.target.value)}
                 className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm"
               >
-                <option value="all">All Errors</option>
+                <option value="all">All Error Types</option>
                 <option value="generation">Generation</option>
                 <option value="validation">Validation</option>
                 <option value="wordpress">WordPress</option>
@@ -489,6 +560,31 @@ export default function AdminDashboard() {
                 </div>
               ))}
             </div>
+
+            {/* Pagination Controls */}
+            {stats?.errors.pagination && stats.errors.pagination.totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Page {stats.errors.pagination.page} of {stats.errors.pagination.totalPages}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setErrorPage(errorPage - 1)}
+                    disabled={!stats.errors.pagination.hasPrev}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setErrorPage(errorPage + 1)}
+                    disabled={!stats.errors.pagination.hasNext}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Scaling Notes */}

@@ -27,6 +27,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
+    // Get URL parameters
+    const { searchParams } = new URL(request.url);
+    const filterUserId = searchParams.get('userId') || undefined;
+    const errorPage = parseInt(searchParams.get('errorPage') || '1', 10);
+    const errorLimit = parseInt(searchParams.get('errorLimit') || '20', 10);
+
+    // Auto-delete error logs older than 3 days
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const deletedCount = await prisma.errorLog.deleteMany({
+      where: {
+        createdAt: {
+          lt: threeDaysAgo,
+        },
+      },
+    });
+
+    if (deletedCount.count > 0) {
+      console.log(`🗑️ Auto-deleted ${deletedCount.count} error logs older than 3 days`);
+    }
+
     // Get system health
     const [apiHealthy, queueHealthy] = await Promise.all([
       checkApiHealth(),
@@ -54,6 +74,10 @@ export async function GET(request: NextRequest) {
     const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+    // Build where clause for user filtering
+    const userFilter = filterUserId ? { batch: { userId: filterUserId } } : {};
+    const batchFilter = filterUserId ? { userId: filterUserId } : {};
+
     const [
       pagesToday,
       pagesWeek,
@@ -61,25 +85,30 @@ export async function GET(request: NextRequest) {
       successToday,
       failedToday,
       recentBatches,
+      totalErrors,
       recentErrors,
       activeUsers,
+      allUsers,
     ] = await Promise.all([
       // Pages generated today
       prisma.generatedPage.count({
         where: {
           createdAt: { gte: todayStart },
+          ...userFilter,
         },
       }),
       // Pages generated this week
       prisma.generatedPage.count({
         where: {
           createdAt: { gte: weekStart },
+          ...userFilter,
         },
       }),
       // Pages generated this month
       prisma.generatedPage.count({
         where: {
           createdAt: { gte: monthStart },
+          ...userFilter,
         },
       }),
       // Successful pages today
@@ -87,6 +116,7 @@ export async function GET(request: NextRequest) {
         where: {
           createdAt: { gte: todayStart },
           status: 'success',
+          ...userFilter,
         },
       }),
       // Failed pages today
@@ -94,17 +124,20 @@ export async function GET(request: NextRequest) {
         where: {
           createdAt: { gte: todayStart },
           status: 'failed',
+          ...userFilter,
         },
       }),
       // Recent batches
       prisma.generationBatch.findMany({
         take: 10,
+        where: batchFilter,
         orderBy: {
           createdAt: 'desc',
         },
         include: {
           user: {
             select: {
+              id: true,
               email: true,
               name: true,
             },
@@ -116,15 +149,22 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-      // Recent errors
+      // Total error count (for pagination)
+      prisma.errorLog.count({
+        where: filterUserId ? { userId: filterUserId } : {},
+      }),
+      // Recent errors (with pagination)
       prisma.errorLog.findMany({
-        take: 20,
+        take: errorLimit,
+        skip: (errorPage - 1) * errorLimit,
+        where: filterUserId ? { userId: filterUserId } : {},
         orderBy: {
           createdAt: 'desc',
         },
         include: {
           user: {
             select: {
+              id: true,
               email: true,
               name: true,
             },
@@ -146,6 +186,17 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
+      // All users (for filter dropdown)
+      prisma.user.findMany({
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        },
+        orderBy: {
+          email: 'asc',
+        },
+      }),
     ]);
 
     // Calculate success rate
@@ -156,6 +207,7 @@ export async function GET(request: NextRequest) {
       where: {
         createdAt: { gte: todayStart },
         status: 'success',
+        ...userFilter,
       },
       _avg: {
         timeElapsed: true,
@@ -168,6 +220,9 @@ export async function GET(request: NextRequest) {
     const costPerPage = 0.06; // $0.06 per page (approximate)
     const costToday = pagesToday * costPerPage;
     const costMonth = pagesMonth * costPerPage;
+
+    // Calculate pagination info
+    const totalErrorPages = Math.ceil(totalErrors / errorLimit);
 
     return NextResponse.json({
       success: true,
@@ -207,6 +262,7 @@ export async function GET(request: NextRequest) {
         activeUsers,
         recentBatches: recentBatches.map((batch) => ({
           id: batch.id,
+          userId: batch.user.id,
           user: batch.user.name || batch.user.email,
           client: batch.client.clientName,
           status: batch.status,
@@ -216,14 +272,31 @@ export async function GET(request: NextRequest) {
           createdAt: batch.createdAt,
         })),
       },
-      errors: recentErrors.map((error) => ({
-        id: error.id,
-        user: error.user.name || error.user.email,
-        client: error.client?.clientName || 'N/A',
-        type: error.errorType,
-        message: error.errorMessage,
-        createdAt: error.createdAt,
+      errors: {
+        data: recentErrors.map((error) => ({
+          id: error.id,
+          userId: error.user.id,
+          user: error.user.name || error.user.email,
+          client: error.client?.clientName || 'N/A',
+          type: error.errorType,
+          message: error.errorMessage,
+          createdAt: error.createdAt,
+        })),
+        pagination: {
+          total: totalErrors,
+          page: errorPage,
+          limit: errorLimit,
+          totalPages: totalErrorPages,
+          hasNext: errorPage < totalErrorPages,
+          hasPrev: errorPage > 1,
+        },
+      },
+      users: allUsers.map((u) => ({
+        id: u.id,
+        name: u.name || u.email,
+        email: u.email,
       })),
+      filterUserId: filterUserId || null,
     });
   } catch (error) {
     console.error('Admin stats API error:', error);
