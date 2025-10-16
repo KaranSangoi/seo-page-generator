@@ -27,15 +27,36 @@ Open http://localhost:3000
 
 ## Features
 
+### Core Functionality (v1.2 - Current)
 - ✅ User authentication (Clerk)
-- ✅ Client management (CRUD)
-- ✅ CSV upload & parsing
-- ✅ AI content generation (Claude Code)
-- ✅ WordPress publishing (Elementor)
+- ✅ Multi-client management (CRUD)
+- ✅ CSV upload & parsing with validation
+- ✅ AI content generation (Claude/OpenAI)
+- ✅ WordPress publishing (Elementor, Divi, WPBakery)
 - ✅ Real-time progress tracking
 - ✅ Generation history & reports
 - ✅ Time tracking per page
-- ✅ Comprehensive validation
+
+### Content Quality
+- ✅ **Deterministic adjective system** - 100% consistency from preview to generation
+- ✅ Smart validation with auto-fix
+- ✅ Selective retry for FAQs and map sections
+- ✅ Strict SOP enforcement
+- ✅ Primary keyword consistency guaranteed
+
+### Developer Experience
+- ✅ Page builder auto-detection
+- ✅ Sample page generation for template testing
+- ✅ Comprehensive error logging
+- ✅ Dark mode support
+
+### V2 Features (Ready, Commented Out)
+- 🚀 **Preview & Publish Mode** - Generate content, review in modal, regenerate sections, then publish
+- 🚀 **Section-level Regeneration** - Regenerate specific sections (hero, benefits, why, FAQs, map)
+- 🚀 **Dual Generation Modes** - Choose between direct publishing or review workflow
+- 🚀 **Content Review Modal** - Full-featured UI for reviewing and editing content before publishing
+
+> **Note**: V2 features are fully implemented and tested but disabled by default. See [V2 Activation Guide](docs/V2_ACTIVATION_GUIDE.md) for easy activation instructions.
 
 ## Tech Stack
 
@@ -57,11 +78,32 @@ Open http://localhost:3000
 
 ## Documentation
 
-- 📖 [Setup Guide](SETUP.md)
-- 📋 [Complete Requirements](docs/REQUIREMENTS.md)
-- 📄 [SOP Document](docs/SOP.md)
-- 💬 [Full Context](docs/CONVERSATION_CONTEXT.md)
-- ⏱️ [Development Timeline](docs/TIMELINE.md)
+> 📚 **Complete documentation available in [docs/](docs/) directory**
+> - **Quick Start:** [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) - 5 min overview
+> - **Full Index:** [docs/INDEX.md](docs/INDEX.md) - Navigate all documentation
+> - **Current State:** [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) - Complete project snapshot
+
+### Getting Started
+- 📖 [Setup Guide](SETUP.md) - Installation and configuration
+- 📋 [Complete Requirements](docs/REQUIREMENTS.md) - Full feature specifications
+- 🚀 **[V2 Activation Guide](docs/V2_ACTIVATION_GUIDE.md)** - Enable preview & publish mode
+
+### Content Guidelines
+- 📄 [SOP Document](docs/SOP.md) - Content structure and requirements
+- 📝 [Template Elements](docs/TEMPLATE_ELEMENTS.md) - Elementor element IDs
+- 🎯 [Adjective System](docs/ADJECTIVE_SYSTEM.md) - How keyword adjectives work
+
+### Technical Reference
+- 🔧 [Builder Auto-Detection](docs/BUILDER_AUTO_DETECTION.md) - Page builder detection
+- ✅ [Smart Validation](docs/SMART_VALIDATION.md) - Auto-fix and selective retry
+- 📂 [Folder Structure](docs/FOLDER_STRUCTURE.md) - Project organization
+
+### Project History
+- 📜 [Changelog](docs/CHANGELOG.md) - Version history and updates
+- 📊 **[Project Status](docs/PROJECT_STATUS.md)** - Complete current state snapshot
+- ⚡ **[Quick Reference](docs/QUICK_REFERENCE.md)** - Fast context for new sessions
+- 💬 [Full Context](docs/CONVERSATION_CONTEXT.md) - Development conversation
+- ⏱️ [Development Timeline](docs/TIMELINE.md) - Build history
 
 ## Development
 

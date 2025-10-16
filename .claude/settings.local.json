@@ -17,7 +17,16 @@
       "Bash(if exist package-lock.json del package-lock.json)",
       "mcp__ide__getDiagnostics",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(if [ -f .env ])",
+      "Bash(then echo \"✓ .env file exists\")",
+      "Bash(else echo \"✗ .env file missing - need to create it\")",
+      "Bash(fi)",
+      "Bash(npm run db:push:*)",
+      "WebSearch",
+      "WebFetch(domain:developers.webflow.com)",
+      "WebFetch(domain:backlinko.com)",
+      "Bash(else echo \"✗ .env file missing\")"
     ],
     "deny": [],
     "ask": []
