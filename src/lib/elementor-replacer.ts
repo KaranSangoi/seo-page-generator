@@ -233,11 +233,16 @@ export function replaceElementorContent(
 
       // FAQ section
       else if (cssId.includes('faq')) {
-        // Handle FAQ questions container (toggle/accordion with tabs structure)
+        // Handle FAQ questions container (toggle/accordion/nested-accordion with various structures)
         if (cssId.includes('questions')) {
+          let updated = false;
+          const faqCount = generatedContent.faqs?.length || 0;
+
+          // Try different FAQ widget structures
+
+          // 1. Classic toggle/accordion widget (settings.tabs)
           if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
             const tabCount = element.settings.tabs.length;
-            const faqCount = generatedContent.faqs?.length || 0;
             logUpdate(cssId, element.widgetType, 'faq container', `Found FAQ container with ${tabCount} tabs, ${faqCount} FAQs available`);
 
             element.settings.tabs.forEach((tab: any, index: number) => {
@@ -256,12 +261,96 @@ export function replaceElementorContent(
                   logUpdate(cssId, element.widgetType, `faq container tab-${index + 1}`, `Updated without link`);
                 }
                 tab.tab_content = content;
+                updated = true;
               } else {
                 logUpdate(cssId, element.widgetType, `faq container tab-${index + 1}`, `SKIPPED - no FAQ data at index ${index}`);
               }
             });
-          } else {
-            logUpdate(cssId, element.widgetType, 'faq container', 'FAILED - no tabs array found');
+          }
+
+          // 2. Nested accordion widget (child elements with accordion items)
+          else if (element.elements && Array.isArray(element.elements)) {
+            logUpdate(cssId, element.widgetType, 'faq container', `Found nested-accordion with ${element.elements.length} child elements, ${faqCount} FAQs available`);
+
+            // Look for accordion item elements
+            let faqIndex = 0;
+            element.elements.forEach((childElement: any) => {
+              if (!childElement || !childElement.settings) return;
+
+              const childId = childElement.settings._element_id || childElement.settings.css_id || '';
+
+              // Look for accordion item title (question)
+              if (childElement.widgetType === 'heading' || childElement.widgetType === 'text-editor' || childId.includes('title') || childId.includes('question')) {
+                if (generatedContent.faqs[faqIndex]) {
+                  if (childElement.settings.title) {
+                    childElement.settings.title = generatedContent.faqs[faqIndex].question;
+                    logUpdate(childId, childElement.widgetType, `faq nested item-${faqIndex + 1} title`, 'Updated question');
+                    updated = true;
+                  } else if (childElement.settings.editor) {
+                    childElement.settings.editor = generatedContent.faqs[faqIndex].question;
+                    logUpdate(childId, childElement.widgetType, `faq nested item-${faqIndex + 1} editor`, 'Updated question');
+                    updated = true;
+                  }
+                }
+              }
+
+              // Recursively search child elements for titles
+              if (childElement.elements && Array.isArray(childElement.elements)) {
+                childElement.elements.forEach((nestedChild: any) => {
+                  if (!nestedChild || !nestedChild.settings) return;
+
+                  if (nestedChild.widgetType === 'heading' && nestedChild.settings.title) {
+                    if (generatedContent.faqs[faqIndex]) {
+                      nestedChild.settings.title = generatedContent.faqs[faqIndex].question;
+                      logUpdate(nestedChild.settings._element_id || '', nestedChild.widgetType, `faq nested deep item-${faqIndex + 1}`, 'Updated question');
+                      updated = true;
+                      faqIndex++;
+                    }
+                  }
+                });
+              }
+            });
+          }
+
+          // 3. Nested accordion with HTML content (Elementor Pro nested accordion)
+          // Search for questions in HTML structure
+          else if (element.settings.html && typeof element.settings.html === 'string') {
+            logUpdate(cssId, element.widgetType, 'faq container', `Found FAQ with HTML content, attempting to update questions`);
+
+            let html = element.settings.html;
+            generatedContent.faqs.forEach((faq: any, index: number) => {
+              // Replace question text in various possible HTML structures
+              const patterns = [
+                // Nested accordion title text
+                /<div class="e-n-accordion-item-title-text">\s*([^<]+)\s*<\/div>/gi,
+                // Summary text
+                /<summary[^>]*>\s*<span[^>]*>\s*([^<]+)\s*<\/span>/gi,
+                // Heading in summary
+                /<summary[^>]*>.*?<h\d[^>]*>([^<]+)<\/h\d>/gi,
+              ];
+
+              patterns.forEach(pattern => {
+                let matchCount = 0;
+                html = html.replace(pattern, (match: string, ...args: any[]) => {
+                  if (matchCount === index && faq.question) {
+                    matchCount++;
+                    updated = true;
+                    return match.replace(args[0], faq.question);
+                  }
+                  matchCount++;
+                  return match;
+                });
+              });
+            });
+
+            if (updated) {
+              element.settings.html = html;
+              logUpdate(cssId, element.widgetType, 'faq container html', `Updated ${generatedContent.faqs.length} questions in HTML`);
+            }
+          }
+
+          if (!updated) {
+            logUpdate(cssId, element.widgetType, 'faq container', `FAILED - Could not find FAQ structure (no tabs, elements, or html)`);
           }
         }
         // Handle individual FAQ question widgets (separate IDs for each question)

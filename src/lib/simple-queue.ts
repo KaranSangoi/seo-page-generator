@@ -487,8 +487,81 @@ function replaceElementorContent(
           else if (element.elements && Array.isArray(element.elements)) {
             console.log('[BATCH DEBUG] FAQ uses nested elements structure - this is likely nested-accordion');
             console.log('[BATCH DEBUG] FAQ container has', element.elements.length, 'child elements');
-            console.log('[BATCH DEBUG] Nested accordion questions are in child elements, not settings - skipping container update');
-          } else {
+            console.log('[BATCH DEBUG] Processing nested accordion child elements for questions...');
+
+            // Look for accordion item elements and update questions
+            let faqIndex = 0;
+            element.elements.forEach((childElement: any) => {
+              if (!childElement || !childElement.settings) return;
+
+              const childId = childElement.settings._element_id || childElement.settings.css_id || '';
+
+              // Look for accordion item title (question)
+              if (childElement.widgetType === 'heading' || childElement.widgetType === 'text-editor' || childId.includes('title') || childId.includes('question')) {
+                if (generatedContent.faqs[faqIndex]) {
+                  if (childElement.settings.title) {
+                    childElement.settings.title = generatedContent.faqs[faqIndex].question;
+                    console.log(`[BATCH DEBUG] Updated nested FAQ ${faqIndex + 1} question (heading): ${generatedContent.faqs[faqIndex].question.substring(0, 60)}...`);
+                  } else if (childElement.settings.editor) {
+                    childElement.settings.editor = generatedContent.faqs[faqIndex].question;
+                    console.log(`[BATCH DEBUG] Updated nested FAQ ${faqIndex + 1} question (editor): ${generatedContent.faqs[faqIndex].question.substring(0, 60)}...`);
+                  }
+                }
+              }
+
+              // Recursively search deeply nested child elements for titles
+              if (childElement.elements && Array.isArray(childElement.elements)) {
+                childElement.elements.forEach((nestedChild: any) => {
+                  if (!nestedChild || !nestedChild.settings) return;
+
+                  if (nestedChild.widgetType === 'heading' && nestedChild.settings.title) {
+                    if (generatedContent.faqs[faqIndex]) {
+                      nestedChild.settings.title = generatedContent.faqs[faqIndex].question;
+                      console.log(`[BATCH DEBUG] Updated deeply nested FAQ ${faqIndex + 1} question: ${generatedContent.faqs[faqIndex].question.substring(0, 60)}...`);
+                      faqIndex++;
+                    }
+                  }
+                });
+              }
+            });
+            console.log(`[BATCH DEBUG] Processed ${faqIndex} nested FAQ questions`);
+          }
+          // Try HTML content replacement for Elementor Pro nested accordions
+          else if (element.settings.html && typeof element.settings.html === 'string') {
+            console.log('[BATCH DEBUG] FAQ uses HTML content, attempting to update questions in HTML');
+
+            let html = element.settings.html;
+            let updated = false;
+            generatedContent.faqs.forEach((faq: any, index: number) => {
+              // Replace question text in HTML structure
+              const patterns = [
+                /<div class="e-n-accordion-item-title-text">\s*([^<]+)\s*<\/div>/gi,
+                /<summary[^>]*>\s*<span[^>]*>\s*([^<]+)\s*<\/span>/gi,
+                /<summary[^>]*>.*?<h\d[^>]*>([^<]+)<\/h\d>/gi,
+              ];
+
+              patterns.forEach(pattern => {
+                let matchCount = 0;
+                html = html.replace(pattern, (match: string, ...args: any[]) => {
+                  if (matchCount === index && faq.question) {
+                    matchCount++;
+                    updated = true;
+                    return match.replace(args[0], faq.question);
+                  }
+                  matchCount++;
+                  return match;
+                });
+              });
+            });
+
+            if (updated) {
+              element.settings.html = html;
+              console.log(`[BATCH DEBUG] Updated ${generatedContent.faqs.length} FAQ questions in HTML content`);
+            } else {
+              console.log('[BATCH DEBUG] No FAQ questions found in HTML to update');
+            }
+          }
+          else {
             console.log('[BATCH DEBUG] FAQ container found but unknown structure');
             console.log('[BATCH DEBUG] Full settings keys:', element.settings ? Object.keys(element.settings) : 'none');
           }
