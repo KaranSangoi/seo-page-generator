@@ -407,7 +407,7 @@ function replaceElementorContent(
           }
         }
       } else if (cssId.includes('faq')) {
-        // Handle FAQ section - check by ID first, then adapt to structure
+        // Handle FAQ section - check by ID first, then adapt to structure (matching sample page logic)
 
         // If this is the main FAQ container (ID contains 'questions')
         if (cssId.includes('questions')) {
@@ -417,9 +417,8 @@ function replaceElementorContent(
             hasSettings: !!element.settings,
             settingsKeys: element.settings ? Object.keys(element.settings) : [],
             hasTabs: !!element.settings.tabs,
-            isArray: Array.isArray(element.settings.tabs),
-            tabsLength: element.settings.tabs ? element.settings.tabs.length : 0,
-            faqsLength: generatedContent.faqs ? generatedContent.faqs.length : 0,
+            hasItems: !!element.settings.items,
+            hasElements: !!element.elements,
           });
 
           // Check if it uses tabs structure (classic accordion/toggle)
@@ -427,14 +426,8 @@ function replaceElementorContent(
             console.log('[BATCH DEBUG] FAQ uses tabs structure (classic accordion), updating tabs...');
             element.settings.tabs.forEach((tab: any, index: number) => {
               if (generatedContent.faqs[index]) {
-                console.log(`[BATCH DEBUG] Updating FAQ ${index} question:`, generatedContent.faqs[index].question.substring(0, 60) + '...');
-
-                // Update question (tab title)
                 tab.tab_title = generatedContent.faqs[index].question;
-
-                // Update answer (tab content)
                 let content = generatedContent.faqs[index].answer;
-                // Add internal link if this FAQ is designated for internal link
                 if (internalLinkUrl && companyName) {
                   const faqKey = `faq-${index + 1}`;
                   if (internalLinkPlacement === faqKey) {
@@ -442,11 +435,9 @@ function replaceElementorContent(
                   }
                 }
                 tab.tab_content = content;
-
-                console.log(`[BATCH DEBUG] Updated FAQ ${index} successfully`);
+                console.log(`[BATCH DEBUG] Updated FAQ ${index} in tabs`);
               }
             });
-            console.log('[BATCH DEBUG] All FAQ tabs updated');
           }
           // Check if it uses items structure (nested-accordion might use this)
           else if (element.settings.items && Array.isArray(element.settings.items)) {
@@ -458,7 +449,6 @@ function replaceElementorContent(
                 if (item.item_title !== undefined) item.item_title = generatedContent.faqs[index].question;
                 if (item.item_content !== undefined) {
                   let content = generatedContent.faqs[index].answer;
-                  // Add internal link if this FAQ is designated for internal link
                   if (internalLinkUrl && companyName) {
                     const faqKey = `faq-${index + 1}`;
                     if (internalLinkPlacement === faqKey) {
@@ -470,7 +460,6 @@ function replaceElementorContent(
                 if (item.title !== undefined) item.title = generatedContent.faqs[index].question;
                 if (item.content !== undefined) {
                   let content = generatedContent.faqs[index].answer;
-                  // Add internal link if this FAQ is designated for internal link
                   if (internalLinkUrl && companyName) {
                     const faqKey = `faq-${index + 1}`;
                     if (internalLinkPlacement === faqKey) {
@@ -503,8 +492,6 @@ function replaceElementorContent(
                 childElement.elements.forEach((nestedChild: any) => {
                   if (!nestedChild || !nestedChild.settings) return;
 
-                  const nestedId = nestedChild.settings._element_id || nestedChild.settings.css_id || '';
-
                   // Found the question heading
                   if (nestedChild.widgetType === 'heading' && nestedChild.settings.title && generatedContent.faqs[faqIndex]) {
                     nestedChild.settings.title = generatedContent.faqs[faqIndex].question;
@@ -515,43 +502,7 @@ function replaceElementorContent(
               }
             });
             console.log(`[BATCH DEBUG] Processed ${faqIndex} nested FAQ questions`);
-          }
-          // Try HTML content replacement for Elementor Pro nested accordions
-          else if (element.settings.html && typeof element.settings.html === 'string') {
-            console.log('[BATCH DEBUG] FAQ uses HTML content, attempting to update questions in HTML');
-
-            let html = element.settings.html;
-            let updated = false;
-            generatedContent.faqs.forEach((faq: any, index: number) => {
-              // Replace question text in HTML structure
-              const patterns = [
-                /<div class="e-n-accordion-item-title-text">\s*([^<]+)\s*<\/div>/gi,
-                /<summary[^>]*>\s*<span[^>]*>\s*([^<]+)\s*<\/span>/gi,
-                /<summary[^>]*>.*?<h\d[^>]*>([^<]+)<\/h\d>/gi,
-              ];
-
-              patterns.forEach(pattern => {
-                let matchCount = 0;
-                html = html.replace(pattern, (match: string, ...args: any[]) => {
-                  if (matchCount === index && faq.question) {
-                    matchCount++;
-                    updated = true;
-                    return match.replace(args[0], faq.question);
-                  }
-                  matchCount++;
-                  return match;
-                });
-              });
-            });
-
-            if (updated) {
-              element.settings.html = html;
-              console.log(`[BATCH DEBUG] Updated ${generatedContent.faqs.length} FAQ questions in HTML content`);
-            } else {
-              console.log('[BATCH DEBUG] No FAQ questions found in HTML to update');
-            }
-          }
-          else {
+          } else {
             console.log('[BATCH DEBUG] FAQ container found but unknown structure');
             console.log('[BATCH DEBUG] Full settings keys:', element.settings ? Object.keys(element.settings) : 'none');
           }
@@ -559,16 +510,13 @@ function replaceElementorContent(
         // Handle individual FAQ items (separate IDs for each question/answer)
         else {
           const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
-          console.log(`[BATCH DEBUG] Found individual FAQ element: cssId="${cssId}", widgetType="${element.widgetType}", faqIndex=${faqIndex}`);
           if (generatedContent.faqs[faqIndex]) {
             if (element.widgetType === 'heading' && cssId.includes('question')) {
-              console.log(`[BATCH DEBUG] Updating individual FAQ ${faqIndex} question`);
               element.settings.title = generatedContent.faqs[faqIndex].question;
+              console.log(`[BATCH DEBUG] Updated individual FAQ ${faqIndex} question`);
             }
             if (element.widgetType === 'text-editor' && cssId.includes('answer')) {
-              console.log(`[BATCH DEBUG] Updating individual FAQ ${faqIndex} answer`);
               let content = generatedContent.faqs[faqIndex].answer;
-              // Add internal link if this FAQ is designated for internal link
               if (internalLinkUrl && companyName) {
                 const faqKey = `faq-${faqIndex + 1}`;
                 if (internalLinkPlacement === faqKey) {
@@ -576,6 +524,7 @@ function replaceElementorContent(
                 }
               }
               element.settings.editor = content;
+              console.log(`[BATCH DEBUG] Updated individual FAQ ${faqIndex} answer`);
             }
           }
         }

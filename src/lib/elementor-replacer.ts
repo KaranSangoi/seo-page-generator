@@ -231,20 +231,25 @@ export function replaceElementorContent(
         }
       }
 
-      // FAQ section
+      // FAQ section - exactly matching sample page logic
       else if (cssId.includes('faq')) {
-        // Handle FAQ questions container (toggle/accordion/nested-accordion with various structures)
+        // Handle FAQ section - check by ID first, then adapt to structure
+
+        // If this is the main FAQ container (ID contains 'questions')
         if (cssId.includes('questions')) {
-          let updated = false;
-          const faqCount = generatedContent.faqs?.length || 0;
+          console.log('[DEBUG] Found FAQ container:', {
+            cssId: cssId,
+            widgetType: element.widgetType,
+            hasSettings: !!element.settings,
+            settingsKeys: element.settings ? Object.keys(element.settings) : [],
+            hasTabs: !!element.settings.tabs,
+            hasItems: !!element.settings.items,
+            hasElements: !!element.elements,
+          });
 
-          // Try different FAQ widget structures
-
-          // 1. Classic toggle/accordion widget (settings.tabs)
+          // Check if it uses tabs structure (classic accordion/toggle)
           if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
-            const tabCount = element.settings.tabs.length;
-            logUpdate(cssId, element.widgetType, 'faq container', `Found FAQ container with ${tabCount} tabs, ${faqCount} FAQs available`);
-
+            console.log('[DEBUG] FAQ uses tabs structure (classic accordion), updating tabs...');
             element.settings.tabs.forEach((tab: any, index: number) => {
               if (generatedContent.faqs[index]) {
                 tab.tab_title = generatedContent.faqs[index].question;
@@ -253,129 +258,107 @@ export function replaceElementorContent(
                   const faqKey = `faq-${index + 1}`;
                   if (internalLinkPlacement === faqKey) {
                     content = insertInternalLink(content, internalLinkUrl, companyName);
-                    logUpdate(cssId, element.widgetType, `faq container tab-${index + 1}`, `Updated with internal link`);
-                  } else {
-                    logUpdate(cssId, element.widgetType, `faq container tab-${index + 1}`, `Updated without link`);
                   }
-                } else {
-                  logUpdate(cssId, element.widgetType, `faq container tab-${index + 1}`, `Updated without link`);
                 }
                 tab.tab_content = content;
-                updated = true;
-              } else {
-                logUpdate(cssId, element.widgetType, `faq container tab-${index + 1}`, `SKIPPED - no FAQ data at index ${index}`);
+                console.log(`[DEBUG] Updated FAQ ${index} in tabs`);
+                logUpdate(cssId, element.widgetType, `faq tab-${index + 1}`, 'Updated question and answer');
               }
             });
           }
-
-          // 2. Nested accordion widget (child elements with accordion items)
+          // Check if it uses items structure (nested-accordion might use this)
+          else if (element.settings.items && Array.isArray(element.settings.items)) {
+            console.log('[DEBUG] FAQ uses items structure, updating items...');
+            element.settings.items.forEach((item: any, index: number) => {
+              if (generatedContent.faqs[index]) {
+                console.log(`[DEBUG] Item ${index} keys:`, Object.keys(item));
+                // Try different possible field names
+                if (item.item_title !== undefined) item.item_title = generatedContent.faqs[index].question;
+                if (item.item_content !== undefined) {
+                  let content = generatedContent.faqs[index].answer;
+                  if (internalLinkUrl && companyName) {
+                    const faqKey = `faq-${index + 1}`;
+                    if (internalLinkPlacement === faqKey) {
+                      content = insertInternalLink(content, internalLinkUrl, companyName);
+                    }
+                  }
+                  item.item_content = content;
+                }
+                if (item.title !== undefined) item.title = generatedContent.faqs[index].question;
+                if (item.content !== undefined) {
+                  let content = generatedContent.faqs[index].answer;
+                  if (internalLinkUrl && companyName) {
+                    const faqKey = `faq-${index + 1}`;
+                    if (internalLinkPlacement === faqKey) {
+                      content = insertInternalLink(content, internalLinkUrl, companyName);
+                    }
+                  }
+                  item.content = content;
+                }
+                console.log(`[DEBUG] Updated FAQ ${index} in items`);
+                logUpdate(cssId, element.widgetType, `faq item-${index + 1}`, 'Updated');
+              }
+            });
+          }
+          // Nested accordion stores FAQs in child elements, not settings
           else if (element.elements && Array.isArray(element.elements)) {
-            logUpdate(cssId, element.widgetType, 'faq container', `Found nested-accordion with ${element.elements.length} child elements, ${faqCount} FAQs available`);
+            console.log('[DEBUG] FAQ uses nested elements structure - this is likely nested-accordion');
+            console.log('[DEBUG] FAQ container has', element.elements.length, 'child elements');
+            console.log('[DEBUG] Processing nested accordion child elements for questions...');
 
-            // Each child element is an accordion item/details element representing one FAQ
+            // Look for accordion item elements - each child is an accordion item/details element
             let faqIndex = 0;
             element.elements.forEach((childElement: any, childIdx: number) => {
               if (!childElement || !childElement.settings) return;
 
-              // Each child element contains nested elements (heading for question, content for answer)
+              console.log(`[DEBUG] Processing child element ${childIdx + 1}/${element.elements.length}`);
+
+              // Each child element (details/accordion-item) represents one FAQ
+              // Questions are in nested child elements
               if (childElement.elements && Array.isArray(childElement.elements)) {
                 // Search for heading widget containing the question
                 childElement.elements.forEach((nestedChild: any) => {
                   if (!nestedChild || !nestedChild.settings) return;
 
-                  const nestedId = nestedChild.settings._element_id || nestedChild.settings.css_id || '';
-
                   // Found the question heading
                   if (nestedChild.widgetType === 'heading' && nestedChild.settings.title && generatedContent.faqs[faqIndex]) {
                     nestedChild.settings.title = generatedContent.faqs[faqIndex].question;
-                    logUpdate(nestedId, nestedChild.widgetType, `faq nested item-${faqIndex + 1}`, 'Updated question');
-                    updated = true;
+                    console.log(`[DEBUG] Updated nested FAQ ${faqIndex + 1} question: ${generatedContent.faqs[faqIndex].question.substring(0, 60)}...`);
+                    logUpdate(cssId, nestedChild.widgetType, `faq nested-${faqIndex + 1}`, 'Updated question');
                     faqIndex++;
                   }
                 });
               }
             });
-          }
-
-          // 3. Nested accordion with HTML content (Elementor Pro nested accordion)
-          // Search for questions in HTML structure
-          else if (element.settings.html && typeof element.settings.html === 'string') {
-            logUpdate(cssId, element.widgetType, 'faq container', `Found FAQ with HTML content, attempting to update questions`);
-
-            let html = element.settings.html;
-            generatedContent.faqs.forEach((faq: any, index: number) => {
-              // Replace question text in various possible HTML structures
-              const patterns = [
-                // Nested accordion title text
-                /<div class="e-n-accordion-item-title-text">\s*([^<]+)\s*<\/div>/gi,
-                // Summary text
-                /<summary[^>]*>\s*<span[^>]*>\s*([^<]+)\s*<\/span>/gi,
-                // Heading in summary
-                /<summary[^>]*>.*?<h\d[^>]*>([^<]+)<\/h\d>/gi,
-              ];
-
-              patterns.forEach(pattern => {
-                let matchCount = 0;
-                html = html.replace(pattern, (match: string, ...args: any[]) => {
-                  if (matchCount === index && faq.question) {
-                    matchCount++;
-                    updated = true;
-                    return match.replace(args[0], faq.question);
-                  }
-                  matchCount++;
-                  return match;
-                });
-              });
-            });
-
-            if (updated) {
-              element.settings.html = html;
-              logUpdate(cssId, element.widgetType, 'faq container html', `Updated ${generatedContent.faqs.length} questions in HTML`);
-            }
-          }
-
-          if (!updated) {
-            logUpdate(cssId, element.widgetType, 'faq container', `FAILED - Could not find FAQ structure (no tabs, elements, or html)`);
-          }
-        }
-        // Handle individual FAQ question widgets (separate IDs for each question)
-        else if (cssId.includes('question')) {
-          const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
-          if (generatedContent.faqs[faqIndex] && element.widgetType === 'heading' && element.settings.title) {
-            element.settings.title = generatedContent.faqs[faqIndex].question;
-            logUpdate(cssId, element.widgetType, `faq question-${faqIndex + 1}`, 'Updated question heading');
+            console.log(`[DEBUG] Processed ${faqIndex} nested FAQ questions`);
           } else {
-            const reason = !generatedContent.faqs[faqIndex] ? 'no FAQ data' :
-                          element.widgetType !== 'heading' ? 'not a heading widget' : 'no title setting';
-            logUpdate(cssId, element.widgetType, `faq question-${faqIndex + 1}`, `FAILED - ${reason}`);
+            console.log('[DEBUG] FAQ container found but unknown structure');
+            console.log('[DEBUG] Full settings keys:', element.settings ? Object.keys(element.settings) : 'none');
+            logUpdate(cssId, element.widgetType, 'faq container', 'FAILED - unknown structure');
           }
         }
-        // Handle individual FAQ answer widgets (separate IDs for each answer)
-        else if (cssId.includes('answer')) {
-          const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
-          if (generatedContent.faqs[faqIndex] && element.widgetType === 'text-editor' && element.settings.editor) {
-            let content = generatedContent.faqs[faqIndex].answer;
-            // Add internal link if this FAQ is designated for internal link
-            if (internalLinkUrl && companyName) {
-              const faqKey = `faq-${faqIndex + 1}`;
-              if (internalLinkPlacement === faqKey) {
-                content = insertInternalLink(content, internalLinkUrl, companyName);
-                logUpdate(cssId, element.widgetType, `faq answer-${faqIndex + 1}`, 'Updated with internal link');
-              } else {
-                logUpdate(cssId, element.widgetType, `faq answer-${faqIndex + 1}`, 'Updated without link');
-              }
-            } else {
-              logUpdate(cssId, element.widgetType, `faq answer-${faqIndex + 1}`, 'Updated without link');
-            }
-            element.settings.editor = content;
-          } else {
-            const reason = !generatedContent.faqs[faqIndex] ? 'no FAQ data' :
-                          element.widgetType !== 'text-editor' ? 'not a text-editor widget' : 'no editor setting';
-            logUpdate(cssId, element.widgetType, `faq answer-${faqIndex + 1}`, `FAILED - ${reason}`);
-          }
-        }
+        // Handle individual FAQ items (separate IDs for each question/answer)
         else {
-          logUpdate(cssId, element.widgetType, 'faq', 'UNHANDLED - cssId has "faq" but doesn\'t match any handler');
+          const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
+          if (generatedContent.faqs[faqIndex]) {
+            if (element.widgetType === 'heading' && cssId.includes('question')) {
+              element.settings.title = generatedContent.faqs[faqIndex].question;
+              console.log(`[DEBUG] Updated individual FAQ ${faqIndex} question`);
+              logUpdate(cssId, element.widgetType, `faq question-${faqIndex + 1}`, 'Updated');
+            }
+            if (element.widgetType === 'text-editor' && cssId.includes('answer')) {
+              let content = generatedContent.faqs[faqIndex].answer;
+              if (internalLinkUrl && companyName) {
+                const faqKey = `faq-${faqIndex + 1}`;
+                if (internalLinkPlacement === faqKey) {
+                  content = insertInternalLink(content, internalLinkUrl, companyName);
+                }
+              }
+              element.settings.editor = content;
+              console.log(`[DEBUG] Updated individual FAQ ${faqIndex} answer`);
+              logUpdate(cssId, element.widgetType, `faq answer-${faqIndex + 1}`, 'Updated');
+            }
+          }
         }
       }
 
