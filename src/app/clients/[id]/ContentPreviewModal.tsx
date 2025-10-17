@@ -34,7 +34,7 @@ interface PageContent {
   internalLinkUrl?: string;
   externalLinkPlacement?: string;
   externalLinkUrl?: string;
-  status: 'pending' | 'regenerating' | 'ready' | 'publishing' | 'published' | 'failed';
+  status: 'pending' | 'generating' | 'regenerating' | 'ready' | 'publishing' | 'published' | 'failed';
   publishedUrl?: string;
   error?: string;
 }
@@ -230,6 +230,8 @@ export default function ContentPreviewModal({
                       {page.pageName}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {page.status === 'pending' && '⏱️ Waiting...'}
+                      {page.status === 'generating' && '⚙️ Generating...'}
                       {page.status === 'published' && '✅ Published'}
                       {page.status === 'ready' && '⏳ Ready'}
                       {page.status === 'publishing' && '📤 Publishing...'}
@@ -334,6 +336,27 @@ export default function ContentPreviewModal({
 
           {/* Content Sections */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {/* Show loading state for pending/generating pages */}
+            {(selectedPage.status === 'pending' || selectedPage.status === 'generating') && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <svg className="animate-spin h-12 w-12 text-blue-600 dark:text-blue-400 mb-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  {selectedPage.status === 'pending' ? 'Waiting to Generate...' : 'Generating Content...'}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 text-center max-w-md">
+                  {selectedPage.status === 'pending'
+                    ? 'This page is in the queue. Content will be generated shortly.'
+                    : 'AI is creating optimized content for this page. This may take a minute.'}
+                </p>
+              </div>
+            )}
+
+            {/* Show content for ready/published/failed pages */}
+            {selectedPage.status !== 'pending' && selectedPage.status !== 'generating' && selectedPage.content && (
+              <>
             {/* Meta Tags */}
             {renderSection(
               'Meta Tags (SEO)',
@@ -535,6 +558,8 @@ export default function ContentPreviewModal({
                 <p className="text-sm text-gray-900 dark:text-white leading-relaxed">{selectedPage.content.mapDescription}</p>,
                 `${selectedPage.content.mapDescription.split(' ').length} words`
               )
+            )}
+              </>
             )}
           </div>
 

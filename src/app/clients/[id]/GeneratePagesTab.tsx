@@ -489,14 +489,35 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
   // V2 ACTIVATED: Preview mode handler functions enabled
 
   const startPreviewGeneration = async () => {
+    // Create placeholder pages with 'generating' status and show modal immediately
+    const placeholderPages = parsedPages.map((page, index) => {
+      const edits = editedData.get(page.rowNumber);
+      const pageName = getPageDisplayName(page);
+
+      return {
+        pageId: `preview_${page.rowNumber}`,
+        pageName,
+        service: page.service,
+        location: page.location,
+        primaryKeyword: edits?.primaryKeyword || '',
+        content: null as any,
+        status: index === 0 ? 'generating' : 'pending', // First page generating, others pending
+        rawData: page,
+      };
+    });
+
+    // Show modal immediately with placeholder pages
+    setContentPreviewPages(placeholderPages);
+    setShowContentPreview(true);
     setIsGeneratingPreview(true);
+
     try {
       const response = await fetch('/api/generate-preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId,
-          csvFilename: csvFile?.name || `preview_${Date.now()}.csv`, // Pass CSV filename for history
+          csvFilename: csvFile?.name || `preview_${Date.now()}.csv`,
           pages: parsedPages.map((page) => {
             const edits = editedData.get(page.rowNumber);
             return {
@@ -516,12 +537,17 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
       if (!response.ok) throw new Error('Failed to generate preview');
       const data = await response.json();
       if (data.success) {
+        // Update all pages with generated content
         setContentPreviewPages(data.pages);
-        setShowContentPreview(true);
       }
     } catch (error) {
       console.error('Preview generation error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to generate preview');
+      // Update all pages to failed status
+      setContentPreviewPages(prev => prev.map(p => ({
+        ...p,
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Failed to generate preview'
+      })));
     } finally {
       setIsGeneratingPreview(false);
     }
@@ -1159,31 +1185,6 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
         />
       )}
 
-      {/* Loading Overlay for Preview Generation */}
-      {isGeneratingPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
-            <div className="text-center">
-              <svg className="animate-spin h-12 w-12 text-blue-600 dark:text-blue-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Generating Content...
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Creating content for {parsedPages.length} {parsedPages.length === 1 ? 'page' : 'pages'}
-              </p>
-              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 justify-center">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>This may take a few moments. Please wait...</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Preview Modal */}
       {showPreviewModal && (
