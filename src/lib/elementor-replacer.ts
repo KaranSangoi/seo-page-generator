@@ -272,40 +272,25 @@ export function replaceElementorContent(
           else if (element.elements && Array.isArray(element.elements)) {
             logUpdate(cssId, element.widgetType, 'faq container', `Found nested-accordion with ${element.elements.length} child elements, ${faqCount} FAQs available`);
 
-            // Look for accordion item elements
+            // Each child element is an accordion item/details element representing one FAQ
             let faqIndex = 0;
-            element.elements.forEach((childElement: any) => {
+            element.elements.forEach((childElement: any, childIdx: number) => {
               if (!childElement || !childElement.settings) return;
 
-              const childId = childElement.settings._element_id || childElement.settings.css_id || '';
-
-              // Look for accordion item title (question)
-              if (childElement.widgetType === 'heading' || childElement.widgetType === 'text-editor' || childId.includes('title') || childId.includes('question')) {
-                if (generatedContent.faqs[faqIndex]) {
-                  if (childElement.settings.title) {
-                    childElement.settings.title = generatedContent.faqs[faqIndex].question;
-                    logUpdate(childId, childElement.widgetType, `faq nested item-${faqIndex + 1} title`, 'Updated question');
-                    updated = true;
-                  } else if (childElement.settings.editor) {
-                    childElement.settings.editor = generatedContent.faqs[faqIndex].question;
-                    logUpdate(childId, childElement.widgetType, `faq nested item-${faqIndex + 1} editor`, 'Updated question');
-                    updated = true;
-                  }
-                }
-              }
-
-              // Recursively search child elements for titles
+              // Each child element contains nested elements (heading for question, content for answer)
               if (childElement.elements && Array.isArray(childElement.elements)) {
+                // Search for heading widget containing the question
                 childElement.elements.forEach((nestedChild: any) => {
                   if (!nestedChild || !nestedChild.settings) return;
 
-                  if (nestedChild.widgetType === 'heading' && nestedChild.settings.title) {
-                    if (generatedContent.faqs[faqIndex]) {
-                      nestedChild.settings.title = generatedContent.faqs[faqIndex].question;
-                      logUpdate(nestedChild.settings._element_id || '', nestedChild.widgetType, `faq nested deep item-${faqIndex + 1}`, 'Updated question');
-                      updated = true;
-                      faqIndex++;
-                    }
+                  const nestedId = nestedChild.settings._element_id || nestedChild.settings.css_id || '';
+
+                  // Found the question heading
+                  if (nestedChild.widgetType === 'heading' && nestedChild.settings.title && generatedContent.faqs[faqIndex]) {
+                    nestedChild.settings.title = generatedContent.faqs[faqIndex].question;
+                    logUpdate(nestedId, nestedChild.widgetType, `faq nested item-${faqIndex + 1}`, 'Updated question');
+                    updated = true;
+                    faqIndex++;
                   }
                 });
               }

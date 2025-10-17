@@ -489,37 +489,27 @@ function replaceElementorContent(
             console.log('[BATCH DEBUG] FAQ container has', element.elements.length, 'child elements');
             console.log('[BATCH DEBUG] Processing nested accordion child elements for questions...');
 
-            // Look for accordion item elements and update questions
+            // Look for accordion item elements - each child is an accordion item/details element
             let faqIndex = 0;
-            element.elements.forEach((childElement: any) => {
+            element.elements.forEach((childElement: any, childIdx: number) => {
               if (!childElement || !childElement.settings) return;
 
-              const childId = childElement.settings._element_id || childElement.settings.css_id || '';
+              console.log(`[BATCH DEBUG] Processing child element ${childIdx + 1}/${element.elements.length}`);
 
-              // Look for accordion item title (question)
-              if (childElement.widgetType === 'heading' || childElement.widgetType === 'text-editor' || childId.includes('title') || childId.includes('question')) {
-                if (generatedContent.faqs[faqIndex]) {
-                  if (childElement.settings.title) {
-                    childElement.settings.title = generatedContent.faqs[faqIndex].question;
-                    console.log(`[BATCH DEBUG] Updated nested FAQ ${faqIndex + 1} question (heading): ${generatedContent.faqs[faqIndex].question.substring(0, 60)}...`);
-                  } else if (childElement.settings.editor) {
-                    childElement.settings.editor = generatedContent.faqs[faqIndex].question;
-                    console.log(`[BATCH DEBUG] Updated nested FAQ ${faqIndex + 1} question (editor): ${generatedContent.faqs[faqIndex].question.substring(0, 60)}...`);
-                  }
-                }
-              }
-
-              // Recursively search deeply nested child elements for titles
+              // Each child element (details/accordion-item) represents one FAQ
+              // Questions are in nested child elements
               if (childElement.elements && Array.isArray(childElement.elements)) {
+                // Search for heading widget containing the question
                 childElement.elements.forEach((nestedChild: any) => {
                   if (!nestedChild || !nestedChild.settings) return;
 
-                  if (nestedChild.widgetType === 'heading' && nestedChild.settings.title) {
-                    if (generatedContent.faqs[faqIndex]) {
-                      nestedChild.settings.title = generatedContent.faqs[faqIndex].question;
-                      console.log(`[BATCH DEBUG] Updated deeply nested FAQ ${faqIndex + 1} question: ${generatedContent.faqs[faqIndex].question.substring(0, 60)}...`);
-                      faqIndex++;
-                    }
+                  const nestedId = nestedChild.settings._element_id || nestedChild.settings.css_id || '';
+
+                  // Found the question heading
+                  if (nestedChild.widgetType === 'heading' && nestedChild.settings.title && generatedContent.faqs[faqIndex]) {
+                    nestedChild.settings.title = generatedContent.faqs[faqIndex].question;
+                    console.log(`[BATCH DEBUG] Updated nested FAQ ${faqIndex + 1} question: ${generatedContent.faqs[faqIndex].question.substring(0, 60)}...`);
+                    faqIndex++;
                   }
                 });
               }
