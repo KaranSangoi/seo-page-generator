@@ -6,6 +6,81 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.3.2] - 2025-10-18
+
+### 🔧 Fixed: FAQ Logic Consolidation & Preview Modal UX
+
+**Problems Solved:**
+1. Sample page FAQ updates worked perfectly but real page generation didn't - code duplication caused inconsistency
+2. Preview & Publish mode showed blocking "wait" overlay - users couldn't see progress until all pages completed
+
+### Fixed
+
+#### FAQ Logic Consolidation
+- **Root Cause:** Three separate implementations of `replaceElementorContent` with slightly different FAQ handling logic
+  - `src/app/api/sample-page/route.ts` - Had its own local copy (working perfectly)
+  - `src/lib/simple-queue.ts` - Had its own local copy (had bugs)
+  - `src/lib/elementor-replacer.ts` - Shared version (had bugs)
+
+- **Solution:** Consolidated all FAQ logic to match sample page's proven implementation
+  - All three files now use identical FAQ handling code
+  - Supports: classic accordion/toggle (settings.tabs), items structure (settings.items), nested accordion (child elements), individual FAQ widgets
+  - Fixed nested-accordion FAQ index incrementing bug (was causing all questions to show same text)
+  - Files: `src/lib/elementor-replacer.ts:234-363`, `src/lib/simple-queue.ts:409-531`
+
+- **Impact:** Sample page generation and real page generation now produce identical results
+  - FAQ questions update correctly in all widget types
+  - No more code duplication or drift between implementations
+  - Future bug fixes only need to be applied once
+
+### Added
+
+#### Improved Preview & Publish Modal UX
+- **Immediate Modal Display** - No more blocking "wait" overlay
+  - Modal opens immediately when clicking "Generate Preview"
+  - Shows all pages with initial status indicators
+  - File: `src/app/clients/[id]/GeneratePagesTab.tsx:491-554`
+
+- **Progressive Status Indicators** in modal
+  - ⏱️ **Waiting...** (`pending`) - Page queued for generation
+  - ⚙️ **Generating...** (`generating`) - AI creating content
+  - ⏳ **Ready** - Content ready for review
+  - ✅ **Published** - Already published to WordPress
+  - ❌ **Failed** - Generation failed
+  - File: `src/app/clients/[id]/ContentPreviewModal.tsx:37,233-240`
+
+- **In-Modal Loading State** for pending pages
+  - Shows animated spinner with status message
+  - User-friendly messages: "Waiting to Generate..." or "Generating Content..."
+  - Helpful context text explaining what's happening
+  - File: `src/app/clients/[id]/ContentPreviewModal.tsx:340-355`
+
+### Changed
+
+#### Preview Modal Behavior
+- **Before:** Blocking overlay → Wait for all pages → Show modal with all pages ready
+- **After:** Show modal immediately → Display placeholder pages with status → Update as pages complete
+
+#### Status Management
+- Added `'generating'` status to `PageContent` type
+- Modal now conditionally renders content based on page status
+- Pending/generating pages show loading state instead of content sections
+
+### Benefits
+- ✅ **Better UX:** Users see progress immediately instead of staring at a loading overlay
+- ✅ **Start Reviewing Faster:** Can browse page list while generation is in progress
+- ✅ **Consistent FAQ Updates:** Sample page and real pages now use identical logic
+- ✅ **Reduced Code Duplication:** One source of truth for FAQ handling
+- ✅ **Easier Maintenance:** Bug fixes only need to be applied once
+
+### Technical Details
+- Preview generation still happens in parallel (fast completion)
+- Modal updates all pages to "ready" status when generation completes
+- Can be extended for true progressive updates (update each page as it completes) in future
+- FAQ consolidation maintains backward compatibility with all widget types
+
+---
+
 ## [2.0.0] - Ready for Activation (Code Complete)
 
 ### 🚀 Major: Preview & Publish Mode

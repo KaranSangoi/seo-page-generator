@@ -163,10 +163,49 @@ element.settings.tabs.forEach((tab: any, index: number) => {
 
 **Typical use case:** When you want to style each answer independently or place them in different sections of the page.
 
+### ✅ Structure 3: Nested Accordion Widget (Elementor Pro)
+
+**Widget Setup:**
+- **Nested Accordion** widget with ID containing "faq" AND "questions"
+- Each accordion item (`<details>` element) contains child widgets
+- Questions are in **heading widgets** within each item
+- Answers can be in text widgets or other content
+
+**How it works:**
+- System detects nested structure (child elements instead of tabs array)
+- Searches for heading widgets within each accordion item
+- Updates heading widget's `title` setting with FAQ question
+- Files: `src/lib/elementor-replacer.ts:304-333`, `src/lib/simple-queue.ts:476-504`
+
+**Example Structure:**
+```
+nested-accordion (id="faq-questions")
+  ├─ accordion-item-1 (details element)
+  │   ├─ heading widget → Question 1
+  │   └─ text widget → Answer 1
+  ├─ accordion-item-2 (details element)
+  │   ├─ heading widget → Question 2
+  │   └─ text widget → Answer 2
+  └─ accordion-item-3 (details element)
+      ├─ heading widget → Question 3
+      └─ text widget → Answer 3
+```
+
+### ✅ Code Consolidation (v1.3.2)
+
+**All FAQ logic now uses identical implementation:**
+- Sample page generation (`sample-page/route.ts`)
+- Real page batch generation (`simple-queue.ts`)
+- Shared utilities (`elementor-replacer.ts`)
+
+**Benefits:**
+- ✅ Consistent behavior across all generation modes
+- ✅ Bug fixes apply everywhere automatically
+- ✅ No code duplication or drift
+
 ### ❌ Does NOT Work With:
 
 - Custom FAQ builders (non-Elementor)
-- Nested accordions with complex structures
 - FAQ widgets without proper IDs
 
 ---
@@ -388,6 +427,7 @@ The system will automatically:
 
 ---
 
-**Last Updated:** 2025-10-16
-**Compatibility:** Toggle widget, Accordion widget
+**Last Updated:** 2025-10-18
+**Compatibility:** Toggle widget, Accordion widget, Nested Accordion widget (Elementor Pro)
 **Required Keywords:** `faq` + `questions`
+**Code Consolidation:** v1.3.2 - All implementations now use identical FAQ logic

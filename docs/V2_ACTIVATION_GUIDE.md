@@ -137,9 +137,12 @@ Uncomment the modal component near the end (~line 930):
 1. **Upload a test CSV** with 2-3 pages
 2. **Select "Preview & Publish" mode**
 3. **Click "Generate Preview"**
-   - Should generate content for all pages
-   - Should open the preview modal
+   - ✅ **NEW (v1.3.2):** Modal opens immediately with placeholder pages
+   - Watch pages transition from "Waiting..." to "Generating..." to "Ready"
+   - No more blocking overlay - see progress right away!
 4. **Test navigation** between pages
+   - Browse pages while generation is in progress
+   - Pages show loading state until content is ready
 5. **Test section regeneration**:
    - Click "🔄 Regenerate" on any section
    - Verify new content appears
@@ -147,6 +150,24 @@ Uncomment the modal component near the end (~line 930):
    - Click "Publish This Page" for single page
    - Click "Publish All Ready Pages" for bulk
 7. **Verify published pages** in WordPress
+
+### New UX Features (v1.3.2)
+
+**Immediate Modal Display:**
+- Modal opens instantly when clicking "Generate Preview"
+- Shows all pages with status indicators
+- Users can see progress as it happens
+
+**Status Indicators:**
+- ⏱️ **Waiting...** - Page queued
+- ⚙️ **Generating...** - AI working
+- ⏳ **Ready** - Can review now
+- ✅ **Published** - Already live
+
+**Benefits:**
+- No more staring at a "wait" overlay
+- Can start reviewing as soon as first page is ready
+- Better visibility into generation progress
 
 ---
 
