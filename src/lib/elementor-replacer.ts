@@ -22,7 +22,8 @@ export function replaceElementorContent(
   companyName?: string,
   service?: string,
   internalLinkPlacement?: string,
-  externalLinkPlacement?: string
+  externalLinkPlacement?: string,
+  omitSections?: string[]
 ): { data: any; log: ElementorReplacementLog } {
   if (!elementorData || !Array.isArray(elementorData)) {
     return {
@@ -35,7 +36,7 @@ export function replaceElementorContent(
     };
   }
 
-  const clonedData = JSON.parse(JSON.stringify(elementorData));
+  let clonedData = JSON.parse(JSON.stringify(elementorData));
 
   // Tracking what we find and update
   const replacementLog: ElementorReplacementLog = {
@@ -304,7 +305,7 @@ export function replaceElementorContent(
           else if (element.elements && Array.isArray(element.elements)) {
             console.log('[DEBUG] FAQ uses nested elements structure - this is likely nested-accordion');
             console.log('[DEBUG] FAQ container has', element.elements.length, 'child elements');
-            console.log('[DEBUG] Processing nested accordion child elements for questions...');
+            console.log('[DEBUG] Processing nested accordion child elements for questions and answers...');
 
             // Look for accordion item elements - each child is an accordion item/details element
             let faqIndex = 0;
@@ -314,23 +315,46 @@ export function replaceElementorContent(
               console.log(`[DEBUG] Processing child element ${childIdx + 1}/${element.elements.length}`);
 
               // Each child element (details/accordion-item) represents one FAQ
-              // Questions are in nested child elements
-              if (childElement.elements && Array.isArray(childElement.elements)) {
-                // Search for heading widget containing the question
+              // Questions and answers are in nested child elements
+              if (childElement.elements && Array.isArray(childElement.elements) && generatedContent.faqs[faqIndex]) {
+                let foundQuestion = false;
+                let foundAnswer = false;
+
+                // Search for both question heading and answer content
                 childElement.elements.forEach((nestedChild: any) => {
                   if (!nestedChild || !nestedChild.settings) return;
 
                   // Found the question heading
-                  if (nestedChild.widgetType === 'heading' && nestedChild.settings.title && generatedContent.faqs[faqIndex]) {
+                  if (nestedChild.widgetType === 'heading' && nestedChild.settings.title) {
                     nestedChild.settings.title = generatedContent.faqs[faqIndex].question;
                     console.log(`[DEBUG] Updated nested FAQ ${faqIndex + 1} question: ${generatedContent.faqs[faqIndex].question.substring(0, 60)}...`);
-                    logUpdate(cssId, nestedChild.widgetType, `faq nested-${faqIndex + 1}`, 'Updated question');
-                    faqIndex++;
+                    logUpdate(cssId, nestedChild.widgetType, `faq nested-${faqIndex + 1} question`, 'Updated question');
+                    foundQuestion = true;
+                  }
+
+                  // Found the answer content (text-editor or other content widget)
+                  if (nestedChild.widgetType === 'text-editor' && nestedChild.settings.editor) {
+                    let content = generatedContent.faqs[faqIndex].answer;
+                    if (internalLinkUrl && companyName) {
+                      const faqKey = `faq-${faqIndex + 1}`;
+                      if (internalLinkPlacement === faqKey) {
+                        content = insertInternalLink(content, internalLinkUrl, companyName);
+                      }
+                    }
+                    nestedChild.settings.editor = content;
+                    console.log(`[DEBUG] Updated nested FAQ ${faqIndex + 1} answer`);
+                    logUpdate(cssId, nestedChild.widgetType, `faq nested-${faqIndex + 1} answer`, 'Updated answer');
+                    foundAnswer = true;
                   }
                 });
+
+                // Only increment if we processed this FAQ
+                if (foundQuestion || foundAnswer) {
+                  faqIndex++;
+                }
               }
             });
-            console.log(`[DEBUG] Processed ${faqIndex} nested FAQ questions`);
+            console.log(`[DEBUG] Processed ${faqIndex} nested FAQ items (questions and answers)`);
           } else {
             console.log('[DEBUG] FAQ container found but unknown structure');
             console.log('[DEBUG] Full settings keys:', element.settings ? Object.keys(element.settings) : 'none');
@@ -429,6 +453,43 @@ export function replaceElementorContent(
   }
 
   clonedData.forEach(replaceInElement);
+
+  // Delete omitted sections if specified
+  if (omitSections && omitSections.length > 0) {
+    console.log('[Elementor Replacer] Deleting omitted sections:', omitSections);
+
+    const deleteSections = (elements: any[]): any[] => {
+      return elements.filter((element) => {
+        if (!element || typeof element !== 'object') return true;
+
+        const cssId = (element.settings?._element_id || element.settings?.css_id || '').toLowerCase();
+
+        // Check if this element's CSS ID matches any omitted section
+        for (const section of omitSections!) {
+          const sectionKeyword = section.toLowerCase();
+          if (cssId.includes(sectionKeyword)) {
+            console.log(`[Elementor Replacer] Deleting element with ID '${cssId}' (omitted section: ${section})`);
+            replacementLog.elementDetails.push({
+              cssId: cssId,
+              widgetType: element.widgetType || 'unknown',
+              section: section,
+              action: 'DELETED - section omitted',
+            });
+            return false; // Remove this element
+          }
+        }
+
+        // Recursively process children
+        if (element.elements && Array.isArray(element.elements)) {
+          element.elements = deleteSections(element.elements);
+        }
+
+        return true; // Keep this element
+      });
+    };
+
+    clonedData = deleteSections(clonedData);
+  }
 
   // Log summary
   console.log('[Elementor Replacer] Summary:', {

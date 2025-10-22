@@ -455,7 +455,8 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     params.clientName,
     params.pageData.service,
     internalLinkPlacement,
-    externalLinkPlacement
+    externalLinkPlacement,
+    params.pageData.omitSections
   );
 
   // Log element replacement details

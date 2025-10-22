@@ -286,7 +286,8 @@ function replaceElementorContent(
   companyName?: string,
   service?: string,
   internalLinkPlacement?: string,
-  externalLinkPlacement?: string
+  externalLinkPlacement?: string,
+  omitSections?: string[]
 ): any {
   if (!elementorData || !Array.isArray(elementorData)) return elementorData;
 
@@ -575,6 +576,40 @@ function replaceElementorContent(
   // Process all sections
   clonedData.forEach(replaceInElement);
 
+  // Delete omitted sections if specified
+  if (omitSections && omitSections.length > 0) {
+    console.log('[Simple Queue] Deleting omitted sections:', omitSections);
+
+    const deleteSections = (elements: any[]): any[] => {
+      return elements.filter((element) => {
+        if (!element || typeof element !== 'object') return true;
+
+        const cssId = (element.settings?._element_id || element.settings?.css_id || '').toLowerCase();
+
+        // Check if this element's CSS ID matches any omitted section
+        for (const section of omitSections!) {
+          const sectionKeyword = section.toLowerCase();
+          if (cssId.includes(sectionKeyword)) {
+            console.log(`[Simple Queue] Deleting element with ID '${cssId}' (omitted section: ${section})`);
+            return false; // Remove this element
+          }
+        }
+
+        // Recursively process children
+        if (element.elements && Array.isArray(element.elements)) {
+          element.elements = deleteSections(element.elements);
+        }
+
+        return true; // Keep this element
+      });
+    };
+
+    const originalLength = clonedData.length;
+    const filteredData = deleteSections(clonedData);
+    console.log(`[Simple Queue] Deleted ${originalLength - filteredData.length} top-level sections`);
+    return filteredData;
+  }
+
   return clonedData;
 }
 
@@ -663,7 +698,8 @@ async function duplicateTemplateAndPublish(params: {
       clientData.clientName,
       pageData.service,
       internalLinkPlacement,
-      externalLinkPlacement
+      externalLinkPlacement,
+      pageData.omitSections
     );
 
     // Generate schema.org structured data
