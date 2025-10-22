@@ -491,7 +491,7 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
 
   // Build new page from template
   const pagePayload: any = {
-    title: params.generatedContent.metaTitle, // CHANGED: Use metaTitle for universal fallback (works with or without SEO plugin)
+    title: params.primaryKeyword, // Use primaryKeyword only - WordPress/theme will append site name via title template
     slug: slug,
     status: 'publish',
     content: schemaScript + (templatePage.content?.rendered || ''), // CHANGED: Inject schema at top of content
@@ -511,11 +511,13 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
   };
 
   // Add SEO plugin fields
+  // NOTE: Use primaryKeyword only (not full metaTitle) to avoid duplicate company names
+  // SEO plugins (Yoast/RankMath) have title templates that append site name automatically
   if (params.seoPlugin === 'yoast') {
-    pagePayload.meta._yoast_wpseo_title = String(params.generatedContent.metaTitle);
+    pagePayload.meta._yoast_wpseo_title = String(params.primaryKeyword);
     pagePayload.meta._yoast_wpseo_metadesc = String(params.generatedContent.metaDescription);
   } else if (params.seoPlugin === 'rank-math' || params.seoPlugin === 'rankmath') {
-    pagePayload.meta.rank_math_title = String(params.generatedContent.metaTitle);
+    pagePayload.meta.rank_math_title = String(params.primaryKeyword);
     pagePayload.meta.rank_math_description = String(params.generatedContent.metaDescription);
   }
 
@@ -548,10 +550,10 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     const updatePayload: any = { meta: {} };
 
     if (params.seoPlugin === 'yoast') {
-      updatePayload.meta._yoast_wpseo_title = String(params.generatedContent.metaTitle);
+      updatePayload.meta._yoast_wpseo_title = String(params.primaryKeyword);
       updatePayload.meta._yoast_wpseo_metadesc = String(params.generatedContent.metaDescription);
     } else if (params.seoPlugin === 'rank-math' || params.seoPlugin === 'rankmath') {
-      updatePayload.meta.rank_math_title = String(params.generatedContent.metaTitle);
+      updatePayload.meta.rank_math_title = String(params.primaryKeyword);
       updatePayload.meta.rank_math_description = String(params.generatedContent.metaDescription);
     }
 

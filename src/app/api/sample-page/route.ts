@@ -488,9 +488,13 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const slug = `sample-page-${timestamp}`;
 
+    // Extract keyword only (before "|") to avoid duplicate company names
+    // WordPress/SEO plugins have title templates that append site name automatically
+    const sampleKeywordOnly = SAMPLE_CONTENT.metaTitle.split('|')[0].trim();
+
     // Build page payload
     const pagePayload: any = {
-      title: SAMPLE_CONTENT.h1,
+      title: sampleKeywordOnly, // Use keyword only, let WordPress/theme append site name
       slug: slug,
       status: 'publish',
       content: templatePage.content?.rendered || '',
@@ -510,13 +514,14 @@ export async function POST(request: NextRequest) {
     };
 
     // Add SEO plugin fields - ONLY meta title and meta description
+    // NOTE: Use keyword only to avoid duplicate company names
     if (client.seoPlugin === 'yoast') {
       // Yoast SEO fields
-      pagePayload.meta._yoast_wpseo_title = String(SAMPLE_CONTENT.metaTitle);
+      pagePayload.meta._yoast_wpseo_title = String(sampleKeywordOnly);
       pagePayload.meta._yoast_wpseo_metadesc = String(SAMPLE_CONTENT.metaDescription);
     } else if (client.seoPlugin === 'rank-math' || client.seoPlugin === 'rankmath') {
       // Rank Math SEO fields
-      pagePayload.meta.rank_math_title = String(SAMPLE_CONTENT.metaTitle);
+      pagePayload.meta.rank_math_title = String(sampleKeywordOnly);
       pagePayload.meta.rank_math_description = String(SAMPLE_CONTENT.metaDescription);
     }
 
@@ -559,10 +564,10 @@ export async function POST(request: NextRequest) {
       };
 
       if (client.seoPlugin === 'yoast') {
-        updatePayload.meta._yoast_wpseo_title = String(SAMPLE_CONTENT.metaTitle);
+        updatePayload.meta._yoast_wpseo_title = String(sampleKeywordOnly);
         updatePayload.meta._yoast_wpseo_metadesc = String(SAMPLE_CONTENT.metaDescription);
       } else if (client.seoPlugin === 'rank-math' || client.seoPlugin === 'rankmath') {
-        updatePayload.meta.rank_math_title = String(SAMPLE_CONTENT.metaTitle);
+        updatePayload.meta.rank_math_title = String(sampleKeywordOnly);
         updatePayload.meta.rank_math_description = String(SAMPLE_CONTENT.metaDescription);
       }
 

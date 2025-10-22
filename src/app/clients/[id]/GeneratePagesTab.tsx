@@ -81,7 +81,8 @@ export default function GeneratePagesTab({ clientId }: GeneratePagesTabProps) {
 
   // ==================== V2 FEATURE: PREVIEW & PUBLISH MODE ====================
   // V2 ACTIVATED: Preview mode state variables enabled
-  const [generationMode, setGenerationMode] = useState<'direct' | 'preview'>('direct');
+  // DEFAULT MODE: 'preview' (Review & Publish) - users can still switch to 'direct' if needed
+  const [generationMode, setGenerationMode] = useState<'direct' | 'preview'>('preview');
   const [contentPreviewPages, setContentPreviewPages] = useState<any[]>([]);
   const [showContentPreview, setShowContentPreview] = useState(false);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);

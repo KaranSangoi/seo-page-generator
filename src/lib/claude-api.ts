@@ -726,6 +726,9 @@ function autoFixMetaDescription(
  * Auto-fix meta title
  * Format: {primary keyword} | {company name}, under 80 chars
  * If too long: remove adjective, then trim company name
+ *
+ * NOTE: For SEO plugin fields, use only primaryKeyword to avoid duplicates
+ * when the plugin has title templates enabled.
  */
 function autoFixMetaTitle(
   metaTitle: string,

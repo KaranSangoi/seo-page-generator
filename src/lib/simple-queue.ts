@@ -692,7 +692,7 @@ async function duplicateTemplateAndPublish(params: {
 
     // Build new page from template - duplicate all template settings
     const pagePayload: any = {
-      title: generatedContent.metaTitle, // CHANGED: Use metaTitle for universal fallback (works with or without SEO plugin)
+      title: primaryKeyword, // Use primaryKeyword only - WordPress/theme will append site name via title template
       slug: slug,
       status: 'publish',
       content: schemaScript + (templatePage.content?.rendered || ''), // CHANGED: Inject schema at top of content
@@ -714,13 +714,15 @@ async function duplicateTemplateAndPublish(params: {
     };
 
     // Add SEO plugin fields - ONLY meta title and meta description
+    // NOTE: Use primaryKeyword only (not full metaTitle) to avoid duplicate company names
+    // SEO plugins (Yoast/RankMath) have title templates that append site name automatically
     if (clientData.seoPlugin === 'yoast') {
       // Yoast SEO fields
-      pagePayload.meta._yoast_wpseo_title = String(generatedContent.metaTitle);
+      pagePayload.meta._yoast_wpseo_title = String(primaryKeyword);
       pagePayload.meta._yoast_wpseo_metadesc = String(generatedContent.metaDescription);
     } else if (clientData.seoPlugin === 'rank-math' || clientData.seoPlugin === 'rankmath') {
       // Rank Math SEO fields
-      pagePayload.meta.rank_math_title = String(generatedContent.metaTitle);
+      pagePayload.meta.rank_math_title = String(primaryKeyword);
       pagePayload.meta.rank_math_description = String(generatedContent.metaDescription);
     }
 
@@ -756,10 +758,10 @@ async function duplicateTemplateAndPublish(params: {
       };
 
       if (clientData.seoPlugin === 'yoast') {
-        updatePayload.meta._yoast_wpseo_title = String(generatedContent.metaTitle);
+        updatePayload.meta._yoast_wpseo_title = String(primaryKeyword);
         updatePayload.meta._yoast_wpseo_metadesc = String(generatedContent.metaDescription);
       } else if (clientData.seoPlugin === 'rank-math' || clientData.seoPlugin === 'rankmath') {
-        updatePayload.meta.rank_math_title = String(generatedContent.metaTitle);
+        updatePayload.meta.rank_math_title = String(primaryKeyword);
         updatePayload.meta.rank_math_description = String(generatedContent.metaDescription);
       }
 

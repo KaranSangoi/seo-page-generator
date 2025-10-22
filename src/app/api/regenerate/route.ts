@@ -284,17 +284,19 @@ async function publishToWordPress(params: {
   const elementorTemplate = await fetchElementorTemplate(wordpressUrl, templatePageId, credentials);
 
   // Build page payload
+  // NOTE: Use primaryKeyword for both page title and SEO title to avoid duplicate company names
+  // WordPress/SEO plugins have title templates that append site name automatically
   const pagePayload: any = {
-    title: generatedContent.h1,
+    title: primaryKeyword,
     slug: slug,
     status: 'publish',
     meta: {
       ...(seoPlugin === 'yoast' ? {
-        _yoast_wpseo_title: generatedContent.metaTitle,
+        _yoast_wpseo_title: primaryKeyword,
         _yoast_wpseo_metadesc: generatedContent.metaDescription,
         _yoast_wpseo_focuskw: primaryKeyword,
       } : {
-        rank_math_title: generatedContent.metaTitle,
+        rank_math_title: primaryKeyword,
         rank_math_description: generatedContent.metaDescription,
         rank_math_focus_keyword: primaryKeyword,
       }),
@@ -428,7 +430,7 @@ if (seoPlugin === 'yoast') {
       },
       body: JSON.stringify({
         meta: {
-          _yoast_wpseo_title: generatedContent.metaTitle,
+          _yoast_wpseo_title: primaryKeyword,
           _yoast_wpseo_metadesc: generatedContent.metaDescription,
           _yoast_wpseo_focuskw: primaryKeyword,
         },
