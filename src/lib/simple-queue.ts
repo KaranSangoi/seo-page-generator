@@ -5,6 +5,7 @@
 
 import { generatePageContent, validateContent, validateAndFixContent, regenerateField, generateAdjectives, clearBatchContext } from './claude-api';
 import { prisma } from './prisma';
+import { generateStructuredData } from './schema-generator';
 
 interface PageJob {
   batchId: string;
@@ -29,6 +30,11 @@ interface PageJob {
     wpAppPassword: string;
     seoPlugin: string;
     templatePageId: string;
+    // Business metadata for schema.org (optional)
+    businessPhone?: string;
+    businessAddress?: string;
+    businessType?: string;
+    gbpUrl?: string;
   };
   adjective: string;
 }
@@ -660,12 +666,36 @@ async function duplicateTemplateAndPublish(params: {
       externalLinkPlacement
     );
 
+    // Generate schema.org structured data
+    let schemaScript = '';
+    try {
+      const schemaData = generateStructuredData({
+        companyName: clientData.clientName,
+        companyWebsite: clientData.clientWebsite,
+        businessPhone: clientData.businessPhone,
+        businessAddress: clientData.businessAddress,
+        businessType: clientData.businessType,
+        gbpUrl: clientData.gbpUrl,
+        service: pageData.service,
+        location: pageData.location,
+        primaryKeyword: primaryKeyword,
+        pageType: pageData.pageType,
+        faqs: pageData.omitSections.includes('FAQ') ? undefined : generatedContent.faqs,
+      });
+
+      schemaScript = `<script type="application/ld+json">\n${JSON.stringify(schemaData, null, 2)}\n</script>\n\n`;
+      console.log('[Publishing] Generated schema.org JSON-LD');
+    } catch (error) {
+      console.warn('[Publishing] Failed to generate schema:', error);
+      // Continue without schema if generation fails
+    }
+
     // Build new page from template - duplicate all template settings
     const pagePayload: any = {
-      title: generatedContent.h1, // Use H1 as page title (metaTitle is for SEO only)
+      title: generatedContent.metaTitle, // CHANGED: Use metaTitle for universal fallback (works with or without SEO plugin)
       slug: slug,
       status: 'publish',
-      content: templatePage.content?.rendered || '', // Keep original content as fallback
+      content: schemaScript + (templatePage.content?.rendered || ''), // CHANGED: Inject schema at top of content
       excerpt: generatedContent.metaDescription, // Set excerpt to meta description
       featured_media: templatePage.featured_media || 0,
       comment_status: templatePage.comment_status || 'closed',

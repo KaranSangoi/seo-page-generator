@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteClientAction } from './actions';
 import { useToast } from '@/components/ToastProvider';
+import { hasCompleteMetadata } from '@/lib/schema-generator';
 
 interface ClientCardProps {
   client: {
@@ -18,6 +19,11 @@ interface ClientCardProps {
     clientWebsite: string;
     totalPages: number;
     lastGeneration: Date | null;
+    // Business metadata (optional)
+    businessPhone: string | null;
+    businessAddress: string | null;
+    businessType: string | null;
+    gbpUrl: string | null;
   };
 }
 
@@ -86,9 +92,19 @@ export default function ClientCard({ client }: ClientCardProps) {
         >
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 line-clamp-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                {client.clientName}
-              </h3>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white line-clamp-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                  {client.clientName}
+                </h3>
+                {!hasCompleteMetadata(client) && (
+                  <span
+                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 flex-shrink-0"
+                    title="Business metadata incomplete - Add phone, address, and business type for better SEO"
+                  >
+                    ⚠️ SEO Setup
+                  </span>
+                )}
+              </div>
               <a
                 href={client.clientWebsite}
                 target="_blank"

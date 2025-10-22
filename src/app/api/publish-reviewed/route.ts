@@ -67,6 +67,11 @@ export async function POST(request: NextRequest) {
       seoPlugin: client.seoPlugin,
       clientName: client.clientName,
       clientWebsite: client.clientWebsite,
+      // Business metadata for schema.org (optional)
+      businessPhone: client.businessPhone ?? undefined,
+      businessAddress: client.businessAddress ?? undefined,
+      businessType: client.businessType ?? undefined,
+      gbpUrl: client.gbpUrl ?? undefined,
       pageData: {
         pageType: pageData.pageType,
         service: pageData.service,

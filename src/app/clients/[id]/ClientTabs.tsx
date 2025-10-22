@@ -22,6 +22,11 @@ interface Client {
   templatePageId: string;
   pageBuilder: string;
   builderDetected: boolean;
+  // Business metadata (optional)
+  businessPhone: string | null;
+  businessAddress: string | null;
+  businessType: string | null;
+  gbpUrl: string | null;
 }
 
 interface ClientTabsProps {

@@ -39,6 +39,13 @@ model Client {
   templatePageId   String
   pageBuilder      String   @default("elementor") // "elementor", "divi", "wpbakery", "gutenberg", etc.
   builderDetected  Boolean  @default(false) // Was it auto-detected or manually set?
+
+  // Business metadata for schema.org structured data (all optional)
+  businessPhone    String?  // Phone number in format: "+1-555-123-4567"
+  businessAddress  String?  // Full address: "123 Main St, Carlsbad, CA 92008"
+  businessType     String?  // Schema.org business type: "Plumber", "RoofingContractor", etc.
+  gbpUrl           String?  // Google Business Profile URL
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

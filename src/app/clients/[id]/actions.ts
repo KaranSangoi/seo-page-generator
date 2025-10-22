@@ -30,6 +30,12 @@ export async function updateClientAction(prevState: any, formData: FormData) {
     const pageBuilder = formData.get('pageBuilder') as string;
     const builderDetected = formData.get('builderDetected') === 'true';
 
+    // Extract optional business metadata fields
+    const businessPhone = (formData.get('businessPhone') as string) || null;
+    const businessAddress = (formData.get('businessAddress') as string) || null;
+    const businessType = (formData.get('businessType') as string) || null;
+    const gbpUrl = (formData.get('gbpUrl') as string) || null;
+
     // Validate required fields
     if (!clientId || !clientName || !clientWebsite || !wpSiteUrl || !wpUsername || !wpAppPassword || !seoPlugin || !templatePageId) {
       return { error: 'All fields are required.' };
@@ -85,6 +91,11 @@ export async function updateClientAction(prevState: any, formData: FormData) {
         templatePageId,
         pageBuilder: pageBuilder || 'elementor',
         builderDetected,
+        // Business metadata (optional)
+        businessPhone,
+        businessAddress,
+        businessType,
+        gbpUrl,
       },
     });
 

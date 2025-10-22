@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClientAction, testConnectionAction } from './actions';
 import { useToast } from '@/components/ToastProvider';
+import { BUSINESS_TYPES } from '@/lib/schema-generator';
 
 function SubmitButton({ disabled: extraDisabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus();
@@ -81,6 +82,9 @@ export default function NewClientPage() {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionResult, setConnectionResult] = useState<{ success: boolean; message: string } | null>(null);
   const [skipTest, setSkipTest] = useState(false);
+  const [businessTypeSearch, setBusinessTypeSearch] = useState('');
+  const [businessTypeOpen, setBusinessTypeOpen] = useState(false);
+  const [selectedBusinessType, setSelectedBusinessType] = useState('');
 
   // Handle redirect after successful client creation
   useEffect(() => {
@@ -287,6 +291,130 @@ export default function NewClientPage() {
                     className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                     placeholder="42"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Business Metadata Section (Optional - For SEO Rich Snippets) */}
+            <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-start gap-2 mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Business Metadata
+                </h2>
+                <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded">
+                  Optional
+                </span>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Enhance your SEO with schema.org structured data. These fields enable FAQ rich snippets, local business info, and improved search visibility. <strong>Highly recommended for better rankings!</strong>
+              </p>
+              <div className="space-y-4">
+                {/* Business Type */}
+                <div>
+                  <label htmlFor="businessType" className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Business Type
+                    <InfoIcon content="Select from 90+ business types or type your own. Start typing to search. This helps search engines understand and display your business info correctly in search results." />
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="businessType"
+                      name="businessType"
+                      type="text"
+                      value={selectedBusinessType}
+                      onChange={(e) => {
+                        setSelectedBusinessType(e.target.value);
+                        setBusinessTypeSearch(e.target.value);
+                        setBusinessTypeOpen(true);
+                      }}
+                      onFocus={() => setBusinessTypeOpen(true)}
+                      placeholder="Search or select business type (optional)"
+                      className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                    />
+                    {businessTypeOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setBusinessTypeOpen(false)}
+                        />
+                        <div className="absolute z-20 w-full mt-1 max-h-60 overflow-auto bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
+                          {BUSINESS_TYPES.filter(type =>
+                            type.label.toLowerCase().includes(businessTypeSearch.toLowerCase()) ||
+                            type.value.toLowerCase().includes(businessTypeSearch.toLowerCase())
+                          ).map((type) => (
+                            <div
+                              key={type.value}
+                              onClick={() => {
+                                setSelectedBusinessType(type.value);
+                                setBusinessTypeSearch(type.value);
+                                setBusinessTypeOpen(false);
+                              }}
+                              className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white"
+                            >
+                              {type.label}
+                            </div>
+                          ))}
+                          {businessTypeSearch && !BUSINESS_TYPES.find(t =>
+                            t.value.toLowerCase() === businessTypeSearch.toLowerCase()
+                          ) && (
+                            <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-600">
+                              💡 Custom type: "{businessTypeSearch}"
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    💡 Click to see all options, or start typing to search through 90+ business types
+                  </p>
+                </div>
+
+                {/* Business Phone */}
+                <div>
+                  <label htmlFor="businessPhone" className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Business Phone Number
+                    <InfoIcon content="Enter phone number in format: +1-555-123-4567. This will appear in local business rich snippets and help customers contact you directly from search results." />
+                  </label>
+                  <input
+                    id="businessPhone"
+                    name="businessPhone"
+                    type="tel"
+                    className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                    placeholder="+1-555-123-4567"
+                  />
+                </div>
+
+                {/* Business Address */}
+                <div>
+                  <label htmlFor="businessAddress" className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Business Address
+                    <InfoIcon content="Full address including street, city, state, and ZIP code (e.g., '123 Main St, Los Angeles, CA 90001'). This appears in local search results and maps." />
+                  </label>
+                  <input
+                    id="businessAddress"
+                    name="businessAddress"
+                    type="text"
+                    className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                    placeholder="123 Main St, Los Angeles, CA 90001"
+                  />
+                </div>
+
+                {/* Google Business Profile URL */}
+                <div>
+                  <label htmlFor="gbpUrl" className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Google Business Profile URL
+                    <InfoIcon content="Link to your Google Business Profile (e.g., 'https://maps.google.com/?cid=12345'). This boosts local SEO and connects your pages to your Google My Business listing." />
+                  </label>
+                  <input
+                    id="gbpUrl"
+                    name="gbpUrl"
+                    type="url"
+                    className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                    placeholder="https://maps.google.com/?cid=12345..."
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Find this by opening your Google Business Profile and copying the URL
+                  </p>
                 </div>
               </div>
             </div>

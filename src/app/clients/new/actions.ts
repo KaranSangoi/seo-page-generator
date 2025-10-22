@@ -193,6 +193,12 @@ export async function createClientAction(
     const templatePageUrl = formData.get('templatePageUrl') as string;
     const templatePageId = formData.get('templatePageId') as string;
 
+    // Extract optional business metadata fields
+    const businessPhone = (formData.get('businessPhone') as string) || null;
+    const businessAddress = (formData.get('businessAddress') as string) || null;
+    const businessType = (formData.get('businessType') as string) || null;
+    const gbpUrl = (formData.get('gbpUrl') as string) || null;
+
     // Remove spaces from application password (WordPress shows them with spaces)
     wpAppPassword = wpAppPassword.replace(/\s/g, '');
 
@@ -252,6 +258,11 @@ export async function createClientAction(
         seoPlugin: 'Yoast', // Default to Yoast for now
         templatePageId: templatePageId, // Keep as string
         userId: user.id,
+        // Business metadata (optional)
+        businessPhone,
+        businessAddress,
+        businessType,
+        gbpUrl,
       },
     });
 

@@ -76,6 +76,11 @@ export async function POST(request: NextRequest) {
         wpAppPassword: client.wpAppPassword,
         seoPlugin: client.seoPlugin,
         templatePageId: client.templatePageId,
+        // Business metadata for schema.org (optional)
+        businessPhone: client.businessPhone ?? undefined,
+        businessAddress: client.businessAddress ?? undefined,
+        businessType: client.businessType ?? undefined,
+        gbpUrl: client.gbpUrl ?? undefined,
       },
     });
 

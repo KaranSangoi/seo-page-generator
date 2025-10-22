@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { logoutAction } from '@/app/logout/actions';
 import ClientCard from './ClientCard';
 import SearchClients from './SearchClients';
+import MetadataWarningBanner from '@/components/MetadataWarningBanner';
 
 // Force dynamic rendering (uses cookies for authentication)
 export const dynamic = 'force-dynamic';
@@ -119,6 +120,11 @@ export default async function DashboardPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Metadata Warning Banner */}
+        {clientsWithStats.length > 0 && (
+          <MetadataWarningBanner clients={clientsWithStats} />
+        )}
+
         {/* Header Section */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">

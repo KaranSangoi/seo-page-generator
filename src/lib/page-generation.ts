@@ -9,6 +9,7 @@
 
 import { generatePageContent, validateAndFixContent, regenerateField } from './claude-api';
 import { replaceElementorContent } from './elementor-replacer';
+import { generateStructuredData } from './schema-generator';
 
 // ============================================================================
 // Helper Functions
@@ -362,6 +363,11 @@ export interface PublishParams {
   seoPlugin: string;
   clientName: string;
   clientWebsite: string;
+  // Business metadata for schema.org (optional)
+  businessPhone?: string;
+  businessAddress?: string;
+  businessType?: string;
+  gbpUrl?: string;
   pageData: {
     pageType: string;
     service: string;
@@ -459,12 +465,36 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     totalElements: elementorLog.elementDetails.length,
   });
 
+  // Generate schema.org structured data
+  let schemaScript = '';
+  try {
+    const schemaData = generateStructuredData({
+      companyName: params.clientName,
+      companyWebsite: params.clientWebsite,
+      businessPhone: params.businessPhone,
+      businessAddress: params.businessAddress,
+      businessType: params.businessType,
+      gbpUrl: params.gbpUrl,
+      service: params.pageData.service,
+      location: params.pageData.location,
+      primaryKeyword: params.primaryKeyword,
+      pageType: params.pageData.pageType,
+      faqs: params.pageData.omitSections.includes('FAQ') ? undefined : params.generatedContent.faqs,
+    });
+
+    schemaScript = `<script type="application/ld+json">\n${JSON.stringify(schemaData, null, 2)}\n</script>\n\n`;
+    console.log('[Publishing] Generated schema.org JSON-LD');
+  } catch (error) {
+    console.warn('[Publishing] Failed to generate schema:', error);
+    // Continue without schema if generation fails
+  }
+
   // Build new page from template
   const pagePayload: any = {
-    title: params.generatedContent.h1, // Use H1 as page title (metaTitle is for SEO only)
+    title: params.generatedContent.metaTitle, // CHANGED: Use metaTitle for universal fallback (works with or without SEO plugin)
     slug: slug,
     status: 'publish',
-    content: templatePage.content?.rendered || '',
+    content: schemaScript + (templatePage.content?.rendered || ''), // CHANGED: Inject schema at top of content
     excerpt: params.generatedContent.metaDescription,
     featured_media: templatePage.featured_media || 0,
     comment_status: templatePage.comment_status || 'closed',
