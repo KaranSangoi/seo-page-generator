@@ -483,7 +483,7 @@ function replaceElementorContent(
           else if (element.elements && Array.isArray(element.elements)) {
             console.log('[BATCH DEBUG] FAQ uses nested elements structure - this is likely nested-accordion');
             console.log('[BATCH DEBUG] FAQ container has', element.elements.length, 'child elements');
-            console.log('[BATCH DEBUG] Processing nested accordion child elements for questions...');
+            console.log('[BATCH DEBUG] Processing nested accordion child elements for questions and answers...');
 
             // Look for accordion item elements - each child is an accordion item/details element
             let faqIndex = 0;
@@ -493,22 +493,44 @@ function replaceElementorContent(
               console.log(`[BATCH DEBUG] Processing child element ${childIdx + 1}/${element.elements.length}`);
 
               // Each child element (details/accordion-item) represents one FAQ
-              // Questions are in nested child elements
-              if (childElement.elements && Array.isArray(childElement.elements)) {
-                // Search for heading widget containing the question
+              // Questions and answers are in nested child elements
+              if (childElement.elements && Array.isArray(childElement.elements) && generatedContent.faqs[faqIndex]) {
+                let foundQuestion = false;
+                let foundAnswer = false;
+
+                // Search for both question heading and answer content
                 childElement.elements.forEach((nestedChild: any) => {
                   if (!nestedChild || !nestedChild.settings) return;
 
                   // Found the question heading
-                  if (nestedChild.widgetType === 'heading' && nestedChild.settings.title && generatedContent.faqs[faqIndex]) {
+                  if (nestedChild.widgetType === 'heading' && nestedChild.settings.title) {
                     nestedChild.settings.title = generatedContent.faqs[faqIndex].question;
                     console.log(`[BATCH DEBUG] Updated nested FAQ ${faqIndex + 1} question: ${generatedContent.faqs[faqIndex].question.substring(0, 60)}...`);
-                    faqIndex++;
+                    foundQuestion = true;
+                  }
+
+                  // Found the answer content (text-editor or other content widget)
+                  if (nestedChild.widgetType === 'text-editor' && nestedChild.settings.editor) {
+                    let content = generatedContent.faqs[faqIndex].answer;
+                    if (internalLinkUrl && companyName) {
+                      const faqKey = `faq-${faqIndex + 1}`;
+                      if (internalLinkPlacement === faqKey) {
+                        content = insertInternalLink(content, internalLinkUrl, companyName);
+                      }
+                    }
+                    nestedChild.settings.editor = content;
+                    console.log(`[BATCH DEBUG] Updated nested FAQ ${faqIndex + 1} answer`);
+                    foundAnswer = true;
                   }
                 });
+
+                // Only increment if we processed this FAQ
+                if (foundQuestion || foundAnswer) {
+                  faqIndex++;
+                }
               }
             });
-            console.log(`[BATCH DEBUG] Processed ${faqIndex} nested FAQ questions`);
+            console.log(`[BATCH DEBUG] Processed ${faqIndex} nested FAQ items (questions and answers)`);
           } else {
             console.log('[BATCH DEBUG] FAQ container found but unknown structure');
             console.log('[BATCH DEBUG] Full settings keys:', element.settings ? Object.keys(element.settings) : 'none');
