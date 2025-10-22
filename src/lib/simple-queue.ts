@@ -1247,6 +1247,11 @@ export async function queueBatchGeneration(params: {
     wpAppPassword: string;
     seoPlugin: string;
     templatePageId: string;
+    // Business metadata for schema.org (optional)
+    businessPhone?: string;
+    businessAddress?: string;
+    businessType?: string;
+    gbpUrl?: string;
   };
 }) {
   const { batchId, clientId, userId, pages, clientData } = params;
