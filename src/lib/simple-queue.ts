@@ -428,8 +428,27 @@ function replaceElementorContent(
             hasElements: !!element.elements,
           });
 
+          // Check if it uses ElementsKit accordion structure
+          if (element.settings.ekit_accordion_items && Array.isArray(element.settings.ekit_accordion_items)) {
+            console.log('[BATCH DEBUG] FAQ uses ElementsKit accordion structure, updating items...');
+            element.settings.ekit_accordion_items.forEach((item: any, index: number) => {
+              if (generatedContent.faqs[index]) {
+                item.acc_title = generatedContent.faqs[index].question;
+                let content = generatedContent.faqs[index].answer;
+                if (internalLinkUrl && companyName) {
+                  const faqKey = `faq-${index + 1}`;
+                  if (internalLinkPlacement === faqKey) {
+                    content = insertInternalLink(content, internalLinkUrl, companyName);
+                  }
+                }
+                // ElementsKit stores content with <p> tags
+                item.acc_content = `<p>${content}</p>`;
+                console.log(`[BATCH DEBUG] Updated ElementsKit FAQ ${index + 1}: ${generatedContent.faqs[index].question.substring(0, 60)}...`);
+              }
+            });
+          }
           // Check if it uses tabs structure (classic accordion/toggle)
-          if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
+          else if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
             console.log('[BATCH DEBUG] FAQ uses tabs structure (classic accordion), updating tabs...');
             element.settings.tabs.forEach((tab: any, index: number) => {
               if (generatedContent.faqs[index]) {
@@ -724,6 +743,37 @@ async function duplicateTemplateAndPublish(params: {
       pageData.omitSections
     );
 
+    // Inject meta description tag directly (fallback if SEO plugin doesn't output it)
+    const metaDescriptionScript = `<script>
+(function() {
+  if (!document.querySelector('meta[name="description"]')) {
+    var meta = document.createElement('meta');
+    meta.name = 'description';
+    meta.content = '${generatedContent.metaDescription.replace(/'/g, "\\'")}';
+    document.head.appendChild(meta);
+  }
+})();
+</script>`;
+
+    // Add invisible HTML widget at the beginning of the first section for meta tag injection
+    if (updatedElementorData && updatedElementorData.length > 0 && updatedElementorData[0].elements) {
+      const firstSection = updatedElementorData[0];
+      if (firstSection.elements.length > 0 && firstSection.elements[0].elements) {
+        // Add HTML widget at the beginning of first column
+        firstSection.elements[0].elements.unshift({
+          id: 'meta-injection-' + Date.now(),
+          elType: 'widget',
+          settings: {
+            html: metaDescriptionScript,
+            _margin: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0' },
+            _padding: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0' },
+          },
+          elements: [],
+          widgetType: 'html',
+        });
+      }
+    }
+
     // Generate schema.org structured data
     let schemaScript = '';
     try {
@@ -774,14 +824,17 @@ async function duplicateTemplateAndPublish(params: {
     // Add SEO plugin fields - ONLY meta title and meta description
     // NOTE: Use primaryKeyword only (not full metaTitle) to avoid duplicate company names
     // SEO plugins (Yoast/RankMath) have title templates that append site name automatically
-    if (clientData.seoPlugin === 'yoast') {
+    const seoPlugin = clientData.seoPlugin?.toLowerCase();
+    if (seoPlugin === 'yoast') {
       // Yoast SEO fields
       pagePayload.meta._yoast_wpseo_title = String(primaryKeyword);
       pagePayload.meta._yoast_wpseo_metadesc = String(generatedContent.metaDescription);
-    } else if (clientData.seoPlugin === 'rank-math' || clientData.seoPlugin === 'rankmath') {
+      pagePayload.meta._yoast_wpseo_focuskw = String(primaryKeyword);
+    } else if (seoPlugin === 'rank-math' || seoPlugin === 'rankmath') {
       // Rank Math SEO fields
       pagePayload.meta.rank_math_title = String(primaryKeyword);
       pagePayload.meta.rank_math_description = String(generatedContent.metaDescription);
+      pagePayload.meta.rank_math_focus_keyword = String(primaryKeyword);
     }
 
     // Add parent if found
@@ -815,12 +868,14 @@ async function duplicateTemplateAndPublish(params: {
         meta: {},
       };
 
-      if (clientData.seoPlugin === 'yoast') {
+      if (seoPlugin === 'yoast') {
         updatePayload.meta._yoast_wpseo_title = String(primaryKeyword);
         updatePayload.meta._yoast_wpseo_metadesc = String(generatedContent.metaDescription);
-      } else if (clientData.seoPlugin === 'rank-math' || clientData.seoPlugin === 'rankmath') {
+        updatePayload.meta._yoast_wpseo_focuskw = String(primaryKeyword);
+      } else if (seoPlugin === 'rank-math' || seoPlugin === 'rankmath') {
         updatePayload.meta.rank_math_title = String(primaryKeyword);
         updatePayload.meta.rank_math_description = String(generatedContent.metaDescription);
+        updatePayload.meta.rank_math_focus_keyword = String(primaryKeyword);
       }
 
       // Only update if we have SEO fields to set

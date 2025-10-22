@@ -248,8 +248,28 @@ export function replaceElementorContent(
             hasElements: !!element.elements,
           });
 
+          // Check if it uses ElementsKit accordion structure
+          if (element.settings.ekit_accordion_items && Array.isArray(element.settings.ekit_accordion_items)) {
+            console.log('[DEBUG] FAQ uses ElementsKit accordion structure, updating items...');
+            element.settings.ekit_accordion_items.forEach((item: any, index: number) => {
+              if (generatedContent.faqs[index]) {
+                item.acc_title = generatedContent.faqs[index].question;
+                let content = generatedContent.faqs[index].answer;
+                if (internalLinkUrl && companyName) {
+                  const faqKey = `faq-${index + 1}`;
+                  if (internalLinkPlacement === faqKey) {
+                    content = insertInternalLink(content, internalLinkUrl, companyName);
+                  }
+                }
+                // ElementsKit stores content with <p> tags
+                item.acc_content = `<p>${content}</p>`;
+                console.log(`[DEBUG] Updated ElementsKit FAQ ${index + 1}: ${generatedContent.faqs[index].question.substring(0, 60)}...`);
+                logUpdate(cssId, element.widgetType, `faq elementskit-${index + 1}`, 'Updated question and answer');
+              }
+            });
+          }
           // Check if it uses tabs structure (classic accordion/toggle)
-          if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
+          else if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
             console.log('[DEBUG] FAQ uses tabs structure (classic accordion), updating tabs...');
             element.settings.tabs.forEach((tab: any, index: number) => {
               if (generatedContent.faqs[index]) {

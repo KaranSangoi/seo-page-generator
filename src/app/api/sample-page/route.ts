@@ -270,10 +270,32 @@ function replaceElementorContent(
             hasTabs: !!element.settings.tabs,
             hasItems: !!element.settings.items,
             hasElements: !!element.elements,
+            hasEkitAccordionItems: !!element.settings.ekit_accordion_items,
           });
 
+          // Log ElementsKit accordion items structure if present
+          if (element.settings.ekit_accordion_items) {
+            console.log('[DEBUG] ElementsKit accordion items:', JSON.stringify(element.settings.ekit_accordion_items, null, 2));
+          }
+
+          // Check if it uses ElementsKit accordion structure
+          if (element.settings.ekit_accordion_items && Array.isArray(element.settings.ekit_accordion_items)) {
+            console.log('[DEBUG] FAQ uses ElementsKit accordion structure, updating items...');
+            element.settings.ekit_accordion_items.forEach((item: any, index: number) => {
+              if (generatedContent.faqs[index]) {
+                item.acc_title = generatedContent.faqs[index].question;
+                let content = generatedContent.faqs[index].answer;
+                if (internalLinkSection === 1 && index === 0 && parentPageUrl && service) {
+                  content = insertInternalLink(content, parentPageUrl, service);
+                }
+                // ElementsKit stores content with <p> tags
+                item.acc_content = `<p>${content}</p>`;
+                console.log(`[DEBUG] Updated ElementsKit FAQ ${index + 1}: ${generatedContent.faqs[index].question.substring(0, 60)}...`);
+              }
+            });
+          }
           // Check if it uses tabs structure (classic accordion/toggle)
-          if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
+          else if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
             console.log('[DEBUG] FAQ uses tabs structure (classic accordion), updating tabs...');
             element.settings.tabs.forEach((tab: any, index: number) => {
               if (generatedContent.faqs[index]) {
@@ -528,6 +550,37 @@ export async function POST(request: NextRequest) {
       1 // use rotation 1 for sample (will add internal link to FAQ)
     );
 
+    // Inject meta description directly into page (fallback if Yoast doesn't output it)
+    const metaDescriptionScript = `<script>
+(function() {
+  if (!document.querySelector('meta[name="description"]')) {
+    var meta = document.createElement('meta');
+    meta.name = 'description';
+    meta.content = '${SAMPLE_CONTENT.metaDescription.replace(/'/g, "\\'")}';
+    document.head.appendChild(meta);
+  }
+})();
+</script>`;
+
+    // Add invisible HTML widget at the beginning of the first section for meta tag injection
+    if (updatedElementorData && updatedElementorData.length > 0 && updatedElementorData[0].elements) {
+      const firstSection = updatedElementorData[0];
+      if (firstSection.elements.length > 0 && firstSection.elements[0].elements) {
+        // Add HTML widget at the beginning of first column
+        firstSection.elements[0].elements.unshift({
+          id: 'meta-injection-' + Date.now(),
+          elType: 'widget',
+          settings: {
+            html: metaDescriptionScript,
+            _margin: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0' },
+            _padding: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0' },
+          },
+          elements: [],
+          widgetType: 'html',
+        });
+      }
+    }
+
     // Generate unique slug
     const timestamp = Date.now();
     const slug = `sample-page-${timestamp}`;
@@ -559,14 +612,22 @@ export async function POST(request: NextRequest) {
 
     // Add SEO plugin fields - ONLY meta title and meta description
     // NOTE: Use keyword only to avoid duplicate company names
-    if (client.seoPlugin === 'yoast') {
+    const seoPlugin = client.seoPlugin?.toLowerCase();
+    console.log('[SEO PLUGIN] Client SEO plugin setting:', client.seoPlugin, '(normalized:', seoPlugin, ')');
+    if (seoPlugin === 'yoast') {
+      console.log('[SEO PLUGIN] Using Yoast SEO fields');
       // Yoast SEO fields
       pagePayload.meta._yoast_wpseo_title = String(sampleKeywordOnly);
       pagePayload.meta._yoast_wpseo_metadesc = String(SAMPLE_CONTENT.metaDescription);
-    } else if (client.seoPlugin === 'rank-math' || client.seoPlugin === 'rankmath') {
+      pagePayload.meta._yoast_wpseo_focuskw = String(sampleKeywordOnly);
+    } else if (seoPlugin === 'rank-math' || seoPlugin === 'rankmath') {
+      console.log('[SEO PLUGIN] Using Rank Math SEO fields');
       // Rank Math SEO fields
       pagePayload.meta.rank_math_title = String(sampleKeywordOnly);
       pagePayload.meta.rank_math_description = String(SAMPLE_CONTENT.metaDescription);
+      pagePayload.meta.rank_math_focus_keyword = String(sampleKeywordOnly);
+    } else {
+      console.log('[SEO PLUGIN] No matching SEO plugin - value is:', client.seoPlugin);
     }
 
     // Create the sample page
@@ -607,17 +668,20 @@ export async function POST(request: NextRequest) {
         meta: {},
       };
 
-      if (client.seoPlugin === 'yoast') {
+      if (seoPlugin === 'yoast') {
         updatePayload.meta._yoast_wpseo_title = String(sampleKeywordOnly);
         updatePayload.meta._yoast_wpseo_metadesc = String(SAMPLE_CONTENT.metaDescription);
-      } else if (client.seoPlugin === 'rank-math' || client.seoPlugin === 'rankmath') {
+        updatePayload.meta._yoast_wpseo_focuskw = String(sampleKeywordOnly);
+      } else if (seoPlugin === 'rank-math' || seoPlugin === 'rankmath') {
         updatePayload.meta.rank_math_title = String(sampleKeywordOnly);
         updatePayload.meta.rank_math_description = String(SAMPLE_CONTENT.metaDescription);
+        updatePayload.meta.rank_math_focus_keyword = String(sampleKeywordOnly);
       }
 
       // Only update if we have SEO fields to set
       if (Object.keys(updatePayload.meta).length > 0) {
-        await fetch(`${wpApiUrl}/${pageId}`, {
+        console.log('[SEO UPDATE] Sending second update to refresh SEO fields:', updatePayload.meta);
+        const updateResponse = await fetch(`${wpApiUrl}/${pageId}`, {
           method: 'POST',
           headers: {
             Authorization: `Basic ${credentials}`,
@@ -625,10 +689,17 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify(updatePayload),
         });
+        console.log('[SEO UPDATE] Response status:', updateResponse.status, updateResponse.statusText);
+        if (!updateResponse.ok) {
+          const errorText = await updateResponse.text();
+          console.error('[SEO UPDATE ERROR]:', errorText);
+        }
+      } else {
+        console.log('[SEO UPDATE] Skipped - no SEO plugin configured or no fields to update');
       }
     } catch (updateError) {
       // Don't fail the whole operation if the update fails
-      console.warn('Failed to update SEO fields:', updateError);
+      console.error('[SEO UPDATE] Failed to update SEO fields:', updateError);
     }
 
     return NextResponse.json({

@@ -16,6 +16,41 @@ import { generateStructuredData } from './schema-generator';
 // ============================================================================
 
 /**
+ * Inject meta description tag directly into page HTML (fallback if SEO plugin doesn't output it)
+ */
+function injectMetaDescriptionTag(elementorData: any[], metaDescription: string): void {
+  const metaDescriptionScript = `<script>
+(function() {
+  if (!document.querySelector('meta[name="description"]')) {
+    var meta = document.createElement('meta');
+    meta.name = 'description';
+    meta.content = '${metaDescription.replace(/'/g, "\\'")}';
+    document.head.appendChild(meta);
+  }
+})();
+</script>`;
+
+  // Add invisible HTML widget at the beginning of the first section for meta tag injection
+  if (elementorData && elementorData.length > 0 && elementorData[0].elements) {
+    const firstSection = elementorData[0];
+    if (firstSection.elements.length > 0 && firstSection.elements[0].elements) {
+      // Add HTML widget at the beginning of first column
+      firstSection.elements[0].elements.unshift({
+        id: 'meta-injection-' + Date.now(),
+        elType: 'widget',
+        settings: {
+          html: metaDescriptionScript,
+          _margin: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0' },
+          _padding: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0' },
+        },
+        elements: [],
+        widgetType: 'html',
+      });
+    }
+  }
+}
+
+/**
  * Get page name based on page type
  */
 export function getPageName(pageType: string, service: string, location: string): string {
@@ -466,6 +501,9 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     totalElements: elementorLog.elementDetails.length,
   });
 
+  // Inject meta description tag directly (fallback if SEO plugin doesn't output it)
+  injectMetaDescriptionTag(updatedElementorData, params.generatedContent.metaDescription);
+
   // Generate schema.org structured data
   let schemaScript = '';
   try {
@@ -514,12 +552,15 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
   // Add SEO plugin fields
   // NOTE: Use primaryKeyword only (not full metaTitle) to avoid duplicate company names
   // SEO plugins (Yoast/RankMath) have title templates that append site name automatically
-  if (params.seoPlugin === 'yoast') {
+  const seoPlugin = params.seoPlugin?.toLowerCase();
+  if (seoPlugin === 'yoast') {
     pagePayload.meta._yoast_wpseo_title = String(params.primaryKeyword);
     pagePayload.meta._yoast_wpseo_metadesc = String(params.generatedContent.metaDescription);
-  } else if (params.seoPlugin === 'rank-math' || params.seoPlugin === 'rankmath') {
+    pagePayload.meta._yoast_wpseo_focuskw = String(params.primaryKeyword);
+  } else if (seoPlugin === 'rank-math' || seoPlugin === 'rankmath') {
     pagePayload.meta.rank_math_title = String(params.primaryKeyword);
     pagePayload.meta.rank_math_description = String(params.generatedContent.metaDescription);
+    pagePayload.meta.rank_math_focus_keyword = String(params.primaryKeyword);
   }
 
   // Add parent if found
@@ -550,12 +591,14 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
   try {
     const updatePayload: any = { meta: {} };
 
-    if (params.seoPlugin === 'yoast') {
+    if (seoPlugin === 'yoast') {
       updatePayload.meta._yoast_wpseo_title = String(params.primaryKeyword);
       updatePayload.meta._yoast_wpseo_metadesc = String(params.generatedContent.metaDescription);
-    } else if (params.seoPlugin === 'rank-math' || params.seoPlugin === 'rankmath') {
+      updatePayload.meta._yoast_wpseo_focuskw = String(params.primaryKeyword);
+    } else if (seoPlugin === 'rank-math' || seoPlugin === 'rankmath') {
       updatePayload.meta.rank_math_title = String(params.primaryKeyword);
       updatePayload.meta.rank_math_description = String(params.generatedContent.metaDescription);
+      updatePayload.meta.rank_math_focus_keyword = String(params.primaryKeyword);
     }
 
     if (Object.keys(updatePayload.meta).length > 0) {
