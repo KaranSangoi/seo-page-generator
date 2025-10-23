@@ -180,6 +180,42 @@ export async function destroySession(): Promise<void> {
   cookieStore.delete(SESSION_COOKIE_NAME);
 }
 
+/**
+ * Impersonate a user (admin only)
+ * Creates a session for a different user
+ * @param targetUserId - ID of the user to impersonate
+ * @returns Promise<{ success: boolean; user?: { id: string; email: string; name: string | null }; error?: string }>
+ */
+export async function impersonateUser(targetUserId: string): Promise<{
+  success: boolean;
+  user?: { id: string; email: string; name: string | null };
+  error?: string;
+}> {
+  try {
+    // Fetch the target user
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+      },
+    });
+
+    if (!targetUser) {
+      return { success: false, error: 'User not found' };
+    }
+
+    // Create a new session for the target user
+    await createSession(targetUser.id, targetUser.email);
+
+    return { success: true, user: targetUser };
+  } catch (error) {
+    console.error('Impersonation error:', error);
+    return { success: false, error: 'Failed to impersonate user' };
+  }
+}
+
 // =============================================================================
 // USER AUTHENTICATION
 // SCALE: Replace with Clerk's auth flows

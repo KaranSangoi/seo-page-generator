@@ -111,6 +111,7 @@ export default function AdminDashboard() {
   const [userFilter, setUserFilter] = useState<string>('all');
   const [errorPage, setErrorPage] = useState(1);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [impersonating, setImpersonating] = useState<string | null>(null);
 
   const fetchStats = async () => {
     try {
@@ -182,6 +183,34 @@ export default function AdminDashboard() {
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
     return date.toLocaleDateString();
+  };
+
+  const handleImpersonate = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to login as ${userName}? You will be redirected to their dashboard.`)) {
+      return;
+    }
+
+    setImpersonating(userId);
+
+    try {
+      const response = await fetch('/api/admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Impersonation failed');
+      }
+
+      // Redirect to dashboard after successful impersonation
+      router.push('/dashboard');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to impersonate user');
+      setImpersonating(null);
+    }
   };
 
   const filteredErrors =
@@ -480,6 +509,69 @@ export default function AdminDashboard() {
                       </td>
                       <td className="py-3 px-4 text-gray-500 dark:text-gray-400 text-xs">
                         {formatDate(batch.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* User Management */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                User Management
+              </h2>
+              <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium">
+                {stats.users.length} total users
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">
+                      Name
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">
+                      Email
+                    </th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.users.map((user) => (
+                    <tr key={user.id} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                      <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">
+                        {user.name || 'No name'}
+                      </td>
+                      <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                        {user.email}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={() => handleImpersonate(user.id, user.name || user.email)}
+                          disabled={impersonating === user.id}
+                          className="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                        >
+                          {impersonating === user.id ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              Logging in...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              Login as User
+                            </>
+                          )}
+                        </button>
                       </td>
                     </tr>
                   ))}
