@@ -6,6 +6,77 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.3.3] - 2025-10-23
+
+### 🔧 Fixed: ElementsKit Accordion Support & SEO Meta Description Issues
+
+**Problems Solved:**
+1. ElementsKit accordion FAQ widgets not updating (questions and answers stuck on template values)
+2. Meta descriptions missing from generated pages despite Yoast fields being set
+3. SEO plugin detection failing when capitalization differed ("Yoast" vs "yoast")
+4. Focus keyword field missing from Yoast/Rank Math configurations
+
+### Fixed
+
+#### ElementsKit Accordion Widget Support
+- **Problem:** FAQ widgets using ElementsKit accordion (third-party plugin) were not being detected/updated
+- **Root Cause:** Code only supported standard Elementor accordion (`tabs`), nested accordion (`elements`), and items structure, but not ElementsKit's `ekit_accordion_items` structure
+- **Solution:** Added detection and update logic for ElementsKit accordion widgets
+  - Detects `ekit_accordion_items` array structure
+  - Updates `acc_title` (question) and `acc_content` (answer) fields
+  - Files: `src/app/api/sample-page/route.ts:281-296`, `src/lib/elementor-replacer.ts:251-270`
+- **Impact:** FAQ questions and answers now update correctly for all ElementsKit accordion widgets
+
+#### Case-Insensitive SEO Plugin Detection
+- **Problem:** SEO plugin detection failed when database stored "Yoast" (capital Y) but code checked for "yoast" (lowercase)
+- **Solution:** Added `.toLowerCase()` normalization to all SEO plugin checks
+  - Now works with "Yoast", "yoast", "YOAST", "Rank Math", "rank-math", "rankmath", etc.
+  - Files: `src/app/api/sample-page/route.ts:615`, `src/lib/page-generation.ts:555`, `src/lib/simple-queue.ts:827`
+- **Impact:** SEO plugin fields now set correctly regardless of capitalization in database
+
+#### Added Focus Keyword Field
+- **Problem:** Only setting title and description, but Yoast/Rank Math require focus keyword to fully activate SEO features
+- **Solution:** Added `_yoast_wpseo_focuskw` and `rank_math_focus_keyword` to all SEO configurations
+  - Files: `src/app/api/sample-page/route.ts:622,674`, `src/lib/page-generation.ts:559,597`, `src/lib/simple-queue.ts:832,874`
+- **Impact:** Complete SEO plugin configuration with all three required fields (title, description, focus keyword)
+
+#### Meta Description Fallback System
+- **Problem:** Even with Yoast fields set correctly, `<meta name="description">` tag sometimes missing from HTML
+- **Root Cause:** Yoast configuration issues or theme conflicts preventing meta tag output
+- **Solution:** JavaScript injection fallback system
+  - Injects invisible HTML widget at beginning of each page
+  - Script checks if `<meta name="description">` exists in `<head>`
+  - If missing, creates and injects tag with correct content
+  - Only runs when SEO plugin fails (zero overhead when working correctly)
+  - Files: `src/app/api/sample-page/route.ts:553-582`, `src/lib/page-generation.ts:19-51,505`, `src/lib/simple-queue.ts:746-775`
+- **Impact:** **Guaranteed meta description presence** regardless of SEO plugin configuration
+
+### Changed
+
+#### Documentation Updates
+- **FAQ_TOGGLE_SETUP.md:** Added Structure 4 for ElementsKit Accordion widgets with example structure and implementation details
+- **TEMPLATE_SEO_SETUP.md:**
+  - Added case-insensitive detection notes for both Yoast and Rank Math
+  - Added "Meta Description Fallback System" section explaining how the JavaScript fallback works
+  - Added benefits and technical details of the fallback system
+- **Updated compatibility notes** across docs to include ElementsKit accordion support
+
+### Summary
+
+**All Generation Modes Updated:**
+- ✅ Sample Page generation (`src/app/api/sample-page/route.ts`)
+- ✅ Preview & Publish mode (`src/lib/page-generation.ts`, `src/lib/elementor-replacer.ts`)
+- ✅ Direct Generation mode (`src/lib/simple-queue.ts`)
+
+**Key Benefits:**
+- FAQ updates work for all widget types including third-party ElementsKit accordions
+- SEO plugin detection robust against capitalization variations
+- Complete Yoast/Rank Math configuration with all required fields
+- Guaranteed meta description in HTML via multi-layered fallback system
+- Zero visual impact, all changes work seamlessly in background
+
+---
+
 ## [1.3.2] - 2025-10-18
 
 ### 🔧 Fixed: FAQ Logic Consolidation & Preview Modal UX

@@ -177,7 +177,50 @@ element.settings.tabs.forEach((tab: any, index: number) => {
 - Updates heading widget's `title` setting with FAQ question
 - Files: `src/lib/elementor-replacer.ts:304-333`, `src/lib/simple-queue.ts:476-504`
 
+### ✅ Structure 4: ElementsKit Accordion Widget (Third-Party Plugin)
+
+**Widget Setup:**
+- **ElementsKit Accordion** widget with ID containing "faq" AND "questions"
+- Structure: `settings.ekit_accordion_items[]`
+- Each item has: `acc_title` (question), `acc_content` (answer)
+
+**How it works:**
+- System detects `ekit_accordion_items` array
+- Updates each item's `acc_title` with FAQ question
+- Updates each item's `acc_content` with FAQ answer
+- Files: `src/lib/elementor-replacer.ts:251-270`, `src/app/api/sample-page/route.ts:281-296`
+
 **Example Structure:**
+```json
+{
+  "widgetType": "elementskit-accordion",
+  "settings": {
+    "_element_id": "faq-questions",
+    "ekit_accordion_items": [
+      {
+        "_id": "item1",
+        "acc_title": "Question 1",
+        "acc_content": "<p>Answer 1</p>",
+        "ekit_acc_is_active": "yes"
+      },
+      {
+        "_id": "item2",
+        "acc_title": "Question 2",
+        "acc_content": "<p>Answer 2</p>",
+        "ekit_acc_is_active": ""
+      },
+      {
+        "_id": "item3",
+        "acc_title": "Question 3",
+        "acc_content": "<p>Answer 3</p>",
+        "ekit_acc_is_active": ""
+      }
+    ]
+  }
+}
+```
+
+### ✅ Structure 3 Example:
 ```
 nested-accordion (id="faq-questions")
   ├─ accordion-item-1 (details element)
@@ -427,7 +470,8 @@ The system will automatically:
 
 ---
 
-**Last Updated:** 2025-10-18
-**Compatibility:** Toggle widget, Accordion widget, Nested Accordion widget (Elementor Pro)
+**Last Updated:** 2025-10-23
+**Compatibility:** Toggle widget, Accordion widget, Nested Accordion widget (Elementor Pro), ElementsKit Accordion widget (Third-Party)
 **Required Keywords:** `faq` + `questions`
 **Code Consolidation:** v1.3.2 - All implementations now use identical FAQ logic
+**Latest Update:** v1.3.3 - Added ElementsKit Accordion support for third-party FAQ widgets

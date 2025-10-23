@@ -178,17 +178,43 @@ If you selected the wrong SEO plugin:
 - Meta description: `_yoast_wpseo_metadesc`
 - Focus keyword: `_yoast_wpseo_focuskw`
 - All Yoast settings preserved from template
+- **Case-insensitive detection**: Works with "Yoast", "yoast", "YOAST", etc.
+- **Fallback guarantee**: JavaScript injection ensures meta description tag is always present, even if Yoast doesn't output it
 
 ### ✅ Rank Math (Free & Pro)
 - Meta title: `rank_math_title`
 - Meta description: `rank_math_description`
 - Focus keyword: `rank_math_focus_keyword`
 - All Rank Math settings preserved from template
+- **Case-insensitive detection**: Works with "Rank Math", "rank-math", "rankmath", etc.
 
 ### ❌ Other Plugins
 Currently, only Yoast SEO and Rank Math are supported. If you're using a different SEO plugin:
 - Meta tags will still be set via WordPress's default `excerpt` field
+- **Fallback guarantee**: JavaScript injection ensures meta description tag is always present
 - You may need to install Yoast or Rank Math for full SEO plugin integration
+
+## Meta Description Fallback System
+
+**New in v1.3.3**: Guaranteed meta description presence, regardless of SEO plugin configuration.
+
+### How It Works
+1. System sets SEO plugin fields (`_yoast_wpseo_metadesc` or `rank_math_description`)
+2. System sets WordPress `excerpt` field as secondary fallback
+3. System injects invisible JavaScript that checks if `<meta name="description">` exists
+4. If missing, JavaScript creates and injects the tag into `<head>`
+
+### Benefits
+- ✅ **Always works**: Meta description guaranteed to appear in HTML
+- ✅ **Zero visual impact**: Script is invisible to users
+- ✅ **SEO-friendly**: Search engines always find the meta description
+- ✅ **Plugin-agnostic**: Works even if SEO plugin is misconfigured or disabled
+- ✅ **Performance**: Runs once on page load, no ongoing overhead
+
+### Technical Details
+- Location: Invisible HTML widget at beginning of page
+- Trigger: Only runs if meta description tag doesn't already exist
+- Priority: SEO plugins take precedence; fallback only activates if they fail
 
 ## Advanced: Manual Meta Field Verification
 
@@ -251,4 +277,5 @@ If you're still experiencing issues:
 
 ---
 
-**Last Updated**: 2025-10-14
+**Last Updated**: 2025-10-23
+**Version**: v1.3.3 - Added case-insensitive SEO plugin detection and meta description fallback system

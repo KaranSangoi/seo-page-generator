@@ -500,6 +500,17 @@ export async function POST(request: NextRequest) {
 
     const templatePage = await templateResponse.json();
 
+    // Log Yoast fields from template page to understand what's working
+    console.log('[TEMPLATE YOAST FIELDS]', {
+      hasYoastTitle: !!templatePage.meta?._yoast_wpseo_title,
+      hasYoastDesc: !!templatePage.meta?._yoast_wpseo_metadesc,
+      hasYoastFocus: !!templatePage.meta?._yoast_wpseo_focuskw,
+      yoastTitle: templatePage.meta?._yoast_wpseo_title,
+      yoastDesc: templatePage.meta?._yoast_wpseo_metadesc,
+      yoastFocus: templatePage.meta?._yoast_wpseo_focuskw,
+      allYoastFields: Object.keys(templatePage.meta || {}).filter(k => k.includes('yoast')),
+    });
+
     // Get Elementor data
     const elementorData = templatePage.meta?._elementor_data;
     if (!elementorData) {
@@ -620,6 +631,11 @@ export async function POST(request: NextRequest) {
       pagePayload.meta._yoast_wpseo_title = String(sampleKeywordOnly);
       pagePayload.meta._yoast_wpseo_metadesc = String(SAMPLE_CONTENT.metaDescription);
       pagePayload.meta._yoast_wpseo_focuskw = String(sampleKeywordOnly);
+      console.log('[SEO PAYLOAD] Yoast fields being sent:', {
+        title: pagePayload.meta._yoast_wpseo_title,
+        metadesc: pagePayload.meta._yoast_wpseo_metadesc,
+        focuskw: pagePayload.meta._yoast_wpseo_focuskw,
+      });
     } else if (seoPlugin === 'rank-math' || seoPlugin === 'rankmath') {
       console.log('[SEO PLUGIN] Using Rank Math SEO fields');
       // Rank Math SEO fields
