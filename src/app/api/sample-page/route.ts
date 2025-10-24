@@ -459,7 +459,7 @@ function replaceElementorContent(
             );
           } else {
             // Create new iframe if html field doesn't exist
-            element.settings.html = `<iframe src="${mapUrl}" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy">${keywords}</iframe>`;
+            element.settings.html = `<iframe src="${mapUrl}" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy">${keywords}</iframe>`;
             console.log('[DEBUG] Created new map iframe with location:', location);
           }
         } else {
