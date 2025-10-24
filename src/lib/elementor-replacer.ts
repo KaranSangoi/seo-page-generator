@@ -409,35 +409,35 @@ export function replaceElementorContent(
       // Map description - match IDs containing 'map' and 'description'
       else if (cssId.includes('map') && cssId.includes('description')) {
         // Handle text-editor widgets
-        if (element.settings.editor) {
+        if (element.widgetType === 'text-editor') {
           let content = generatedContent.mapDescription || '';
           if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
             content = insertInternalLink(content, internalLinkUrl, companyName);
-            logUpdate(cssId, element.widgetType, 'map description (text-editor)', 'Updated with internal link');
+            logUpdate(cssId, element.widgetType, 'map description (text-editor)', 'Updated with internal link (created field)');
           } else {
-            logUpdate(cssId, element.widgetType, 'map description (text-editor)', 'Updated without link');
+            logUpdate(cssId, element.widgetType, 'map description (text-editor)', 'Updated without link (created field)');
           }
           element.settings.editor = content;
         }
         // Handle heading widgets
-        else if (element.widgetType === 'heading' && element.settings.title) {
+        else if (element.widgetType === 'heading') {
           let content = generatedContent.mapDescription || '';
           if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
             content = insertInternalLink(content, internalLinkUrl, companyName);
-            logUpdate(cssId, element.widgetType, 'map description (heading)', 'Updated with internal link');
+            logUpdate(cssId, element.widgetType, 'map description (heading)', 'Updated with internal link (created field)');
           } else {
-            logUpdate(cssId, element.widgetType, 'map description (heading)', 'Updated without link');
+            logUpdate(cssId, element.widgetType, 'map description (heading)', 'Updated without link (created field)');
           }
           element.settings.title = content;
         }
         else {
-          logUpdate(cssId, element.widgetType, 'map description', 'FAILED - no editor or title setting');
+          logUpdate(cssId, element.widgetType, 'map description', 'FAILED - unsupported widget type');
         }
       }
 
       // Map iframe - match IDs containing 'map' and 'iframe'
       else if (cssId.includes('map') && cssId.includes('iframe')) {
-        if (element.settings.html && location) {
+        if (location) {
           // Generate new Google Maps embed URL for the location
           const encodedLocation = encodeURIComponent(location);
 
@@ -448,21 +448,24 @@ export function replaceElementorContent(
             service || ''
           ].filter(Boolean).join(',');
 
-          // Replace iframe src and add keywords before closing tag
-          element.settings.html = element.settings.html.replace(
-            /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
-            (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
-              const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
-              logUpdate(cssId, element.widgetType, 'map iframe', `Updated with location: ${location}`);
-              return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
-            }
-          );
-        } else {
-          if (!element.settings.html) {
-            logUpdate(cssId, element.widgetType, 'map iframe', 'FAILED - no html setting');
-          } else if (!location) {
-            logUpdate(cssId, element.widgetType, 'map iframe', 'FAILED - no location provided');
+          const mapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
+
+          // If html exists, replace the src; otherwise create new iframe
+          if (element.settings.html) {
+            element.settings.html = element.settings.html.replace(
+              /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
+              (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
+                logUpdate(cssId, element.widgetType, 'map iframe', `Replaced src with location: ${location}`);
+                return `${prefix}${mapUrl}${middle}${keywords}</iframe>`;
+              }
+            );
+          } else {
+            // Create new iframe if html field doesn't exist
+            element.settings.html = `<iframe src="${mapUrl}" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy">${keywords}</iframe>`;
+            logUpdate(cssId, element.widgetType, 'map iframe', `Created new iframe with location: ${location}`);
           }
+        } else {
+          logUpdate(cssId, element.widgetType, 'map iframe', 'FAILED - no location provided');
         }
       }
     }

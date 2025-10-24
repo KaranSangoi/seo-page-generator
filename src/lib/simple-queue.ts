@@ -580,29 +580,29 @@ function replaceElementorContent(
       // Map description - match IDs containing 'map' and 'description'
       else if (cssId.includes('map') && cssId.includes('description')) {
         // Handle text-editor widgets
-        if (element.settings.editor) {
+        if (element.widgetType === 'text-editor') {
           let content = generatedContent.mapDescription || '';
           if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
             content = insertInternalLink(content, internalLinkUrl, companyName);
-            console.log(`[BATCH DEBUG] Updated map description (text-editor) with internal link`);
+            console.log(`[BATCH DEBUG] Updated map description (text-editor) with internal link (created field)`);
           } else {
-            console.log(`[BATCH DEBUG] Updated map description (text-editor)`);
+            console.log(`[BATCH DEBUG] Updated map description (text-editor) (created field)`);
           }
           element.settings.editor = content;
         }
         // Handle heading widgets
-        else if (element.widgetType === 'heading' && element.settings.title) {
+        else if (element.widgetType === 'heading') {
           let content = generatedContent.mapDescription || '';
           if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
             content = insertInternalLink(content, internalLinkUrl, companyName);
-            console.log(`[BATCH DEBUG] Updated map description (heading) with internal link`);
+            console.log(`[BATCH DEBUG] Updated map description (heading) with internal link (created field)`);
           } else {
-            console.log(`[BATCH DEBUG] Updated map description (heading)`);
+            console.log(`[BATCH DEBUG] Updated map description (heading) (created field)`);
           }
           element.settings.title = content;
         }
         else {
-          console.log(`[BATCH DEBUG] Found map description element but no editor or title setting`);
+          console.log(`[BATCH DEBUG] Found map description element but unsupported widget type: ${element.widgetType}`);
         }
       }
 
@@ -615,7 +615,7 @@ function replaceElementorContent(
           hasLocation: !!location,
         });
 
-        if (element.settings.html && location) {
+        if (location) {
           // Generate new Google Maps embed URL for the location
           const encodedLocation = encodeURIComponent(location);
 
@@ -626,22 +626,24 @@ function replaceElementorContent(
             service || ''
           ].filter(Boolean).join(',');
 
-          // Replace iframe src and add keywords before closing tag
-          element.settings.html = element.settings.html.replace(
-            /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
-            (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
-              const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
-              console.log(`[BATCH DEBUG] Updated map iframe with location: ${location}`);
-              return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
-            }
-          );
+          const mapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
+
+          // If html exists, replace the src; otherwise create new iframe
+          if (element.settings.html) {
+            element.settings.html = element.settings.html.replace(
+              /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
+              (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
+                console.log(`[BATCH DEBUG] Replaced map iframe src with location: ${location}`);
+                return `${prefix}${mapUrl}${middle}${keywords}</iframe>`;
+              }
+            );
+          } else {
+            // Create new iframe if html field doesn't exist
+            element.settings.html = `<iframe src="${mapUrl}" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy">${keywords}</iframe>`;
+            console.log(`[BATCH DEBUG] Created new map iframe with location: ${location}`);
+          }
         } else {
-          if (!element.settings.html) {
-            console.log(`[BATCH DEBUG] Map iframe element has no html setting`);
-          }
-          if (!location) {
-            console.log(`[BATCH DEBUG] Map iframe element but no location provided`);
-          }
+          console.log(`[BATCH DEBUG] Map iframe element but no location provided`);
         }
       }
     }

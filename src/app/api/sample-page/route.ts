@@ -408,20 +408,20 @@ function replaceElementorContent(
           settingsKeys: Object.keys(element.settings),
         });
 
-        if (element.widgetType === 'text-editor' && element.settings.editor) {
+        if (element.widgetType === 'text-editor') {
           let content = generatedContent.mapDescription || '';
           if (internalLinkSection === 2 && parentPageUrl && service) {
             content = insertInternalLink(content, parentPageUrl, service);
           }
           element.settings.editor = content;
-          console.log('[DEBUG] Updated map description in text-editor widget');
-        } else if (element.widgetType === 'heading' && element.settings.title) {
+          console.log('[DEBUG] Updated map description in text-editor widget (created editor field)');
+        } else if (element.widgetType === 'heading') {
           let content = generatedContent.mapDescription || '';
           if (internalLinkSection === 2 && parentPageUrl && service) {
             content = insertInternalLink(content, parentPageUrl, service);
           }
           element.settings.title = content;
-          console.log('[DEBUG] Updated map description in heading widget');
+          console.log('[DEBUG] Updated map description in heading widget (created title field)');
         } else {
           console.log('[DEBUG] Map description element found but widget type not handled:', element.widgetType);
         }
@@ -436,7 +436,7 @@ function replaceElementorContent(
           hasLocation: !!location,
         });
 
-        if (element.settings.html && location) {
+        if (location) {
           const encodedLocation = encodeURIComponent(location);
 
           // Create keyword-stuffed iframe closing tag for SEO
@@ -446,21 +446,24 @@ function replaceElementorContent(
             service || ''
           ].filter(Boolean).join(',');
 
-          element.settings.html = element.settings.html.replace(
-            /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
-            (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
-              const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
-              console.log('[DEBUG] Updated map iframe with location:', location);
-              return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
-            }
-          );
+          const mapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
+
+          // If html exists, replace the src; otherwise create new iframe
+          if (element.settings.html) {
+            element.settings.html = element.settings.html.replace(
+              /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
+              (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
+                console.log('[DEBUG] Replaced map iframe src with location:', location);
+                return `${prefix}${mapUrl}${middle}${keywords}</iframe>`;
+              }
+            );
+          } else {
+            // Create new iframe if html field doesn't exist
+            element.settings.html = `<iframe src="${mapUrl}" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy">${keywords}</iframe>`;
+            console.log('[DEBUG] Created new map iframe with location:', location);
+          }
         } else {
-          if (!element.settings.html) {
-            console.log('[DEBUG] Map iframe element has no html setting');
-          }
-          if (!location) {
-            console.log('[DEBUG] Map iframe element but no location provided');
-          }
+          console.log('[DEBUG] Map iframe element but no location provided');
         }
       }
     }
