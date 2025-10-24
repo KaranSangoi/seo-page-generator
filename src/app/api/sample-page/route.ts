@@ -427,15 +427,40 @@ function replaceElementorContent(
         }
       }
 
-      // Replace Google Maps iframe in custom HTML widget
-      if (cssId.includes('map-iframe') && element.widgetType === 'html' && location) {
-        if (element.settings.html) {
+      // Replace Google Maps iframe - match IDs containing 'map' and 'iframe'
+      if (cssId.includes('map') && cssId.includes('iframe')) {
+        console.log('[DEBUG] Found map iframe element:', {
+          cssId,
+          widgetType: element.widgetType,
+          hasHtml: !!element.settings.html,
+          hasLocation: !!location,
+        });
+
+        if (element.settings.html && location) {
           const encodedLocation = encodeURIComponent(location);
-          const iframeRegex = /(<iframe[^>]*src=")([^"]*)(")/gi;
-          element.settings.html = element.settings.html.replace(iframeRegex, (match: string, prefix: string, oldSrc: string, suffix: string) => {
-            const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
-            return prefix + simpleMapUrl + suffix;
-          });
+
+          // Create keyword-stuffed iframe closing tag for SEO
+          const keywords = [
+            service ? `${service} in ${location}` : location,
+            service ? `${service} near me` : '',
+            service || ''
+          ].filter(Boolean).join(',');
+
+          element.settings.html = element.settings.html.replace(
+            /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
+            (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
+              const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
+              console.log('[DEBUG] Updated map iframe with location:', location);
+              return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
+            }
+          );
+        } else {
+          if (!element.settings.html) {
+            console.log('[DEBUG] Map iframe element has no html setting');
+          }
+          if (!location) {
+            console.log('[DEBUG] Map iframe element but no location provided');
+          }
         }
       }
     }

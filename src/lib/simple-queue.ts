@@ -606,26 +606,43 @@ function replaceElementorContent(
         }
       }
 
-      // Replace Google Maps iframe - match specific ID
-      else if (cssId === 'map-iframe' && element.settings.html && location) {
-        // Generate new Google Maps embed URL for the location
-        const encodedLocation = encodeURIComponent(location);
+      // Replace Google Maps iframe - match IDs containing 'map' and 'iframe'
+      else if (cssId.includes('map') && cssId.includes('iframe')) {
+        console.log(`[BATCH DEBUG] Found map iframe element:`, {
+          cssId,
+          widgetType: element.widgetType,
+          hasHtml: !!element.settings.html,
+          hasLocation: !!location,
+        });
 
-        // Create keyword-stuffed iframe closing tag for SEO
-        const keywords = [
-          service ? `${service} in ${location}` : location,
-          service ? `${service} near me` : '',
-          service || ''
-        ].filter(Boolean).join(',');
+        if (element.settings.html && location) {
+          // Generate new Google Maps embed URL for the location
+          const encodedLocation = encodeURIComponent(location);
 
-        // Replace iframe src and add keywords before closing tag
-        element.settings.html = element.settings.html.replace(
-          /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
-          (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
-            const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
-            return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
+          // Create keyword-stuffed iframe closing tag for SEO
+          const keywords = [
+            service ? `${service} in ${location}` : location,
+            service ? `${service} near me` : '',
+            service || ''
+          ].filter(Boolean).join(',');
+
+          // Replace iframe src and add keywords before closing tag
+          element.settings.html = element.settings.html.replace(
+            /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
+            (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
+              const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
+              console.log(`[BATCH DEBUG] Updated map iframe with location: ${location}`);
+              return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
+            }
+          );
+        } else {
+          if (!element.settings.html) {
+            console.log(`[BATCH DEBUG] Map iframe element has no html setting`);
           }
-        );
+          if (!location) {
+            console.log(`[BATCH DEBUG] Map iframe element but no location provided`);
+          }
+        }
       }
     }
 

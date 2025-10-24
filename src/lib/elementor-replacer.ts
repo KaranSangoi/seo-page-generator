@@ -435,33 +435,34 @@ export function replaceElementorContent(
         }
       }
 
-      // Map iframe - match specific ID
-      else if (cssId === 'map-iframe' && element.settings.html && location) {
-        // Generate new Google Maps embed URL for the location
-        const encodedLocation = encodeURIComponent(location);
+      // Map iframe - match IDs containing 'map' and 'iframe'
+      else if (cssId.includes('map') && cssId.includes('iframe')) {
+        if (element.settings.html && location) {
+          // Generate new Google Maps embed URL for the location
+          const encodedLocation = encodeURIComponent(location);
 
-        // Create keyword-stuffed iframe closing tag for SEO
-        const keywords = [
-          service ? `${service} in ${location}` : location,
-          service ? `${service} near me` : '',
-          service || ''
-        ].filter(Boolean).join(',');
+          // Create keyword-stuffed iframe closing tag for SEO
+          const keywords = [
+            service ? `${service} in ${location}` : location,
+            service ? `${service} near me` : '',
+            service || ''
+          ].filter(Boolean).join(',');
 
-        // Replace iframe src and add keywords before closing tag
-        element.settings.html = element.settings.html.replace(
-          /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
-          (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
-            const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
-            logUpdate(cssId, element.widgetType, 'map iframe', `Updated with location: ${location}`);
-            return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
+          // Replace iframe src and add keywords before closing tag
+          element.settings.html = element.settings.html.replace(
+            /(<iframe[^>]*src=")([^"]*)("[^>]*>)([^<]*)<\/iframe>/gi,
+            (match: string, prefix: string, oldSrc: string, middle: string, oldContent: string) => {
+              const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
+              logUpdate(cssId, element.widgetType, 'map iframe', `Updated with location: ${location}`);
+              return `${prefix}${simpleMapUrl}${middle}${keywords}</iframe>`;
+            }
+          );
+        } else {
+          if (!element.settings.html) {
+            logUpdate(cssId, element.widgetType, 'map iframe', 'FAILED - no html setting');
+          } else if (!location) {
+            logUpdate(cssId, element.widgetType, 'map iframe', 'FAILED - no location provided');
           }
-        );
-      }
-      else if (cssId === 'map-iframe') {
-        if (!element.settings.html) {
-          logUpdate(cssId, element.widgetType, 'map iframe', 'FAILED - no html setting');
-        } else if (!location) {
-          logUpdate(cssId, element.widgetType, 'map iframe', 'FAILED - no location provided');
         }
       }
     }
