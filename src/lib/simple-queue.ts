@@ -576,13 +576,34 @@ function replaceElementorContent(
             }
           }
         }
-      } else if (cssId === 'map-description' && element.settings.editor) {
-        // Replace map description - match specific ID, no widget type check
-        let content = generatedContent.mapDescription || '';
-        if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
-          content = insertInternalLink(content, internalLinkUrl, companyName);
+      }
+      // Map description - match IDs containing 'map' and 'description'
+      else if (cssId.includes('map') && cssId.includes('description')) {
+        // Handle text-editor widgets
+        if (element.settings.editor) {
+          let content = generatedContent.mapDescription || '';
+          if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
+            content = insertInternalLink(content, internalLinkUrl, companyName);
+            console.log(`[BATCH DEBUG] Updated map description (text-editor) with internal link`);
+          } else {
+            console.log(`[BATCH DEBUG] Updated map description (text-editor)`);
+          }
+          element.settings.editor = content;
         }
-        element.settings.editor = content;
+        // Handle heading widgets
+        else if (element.widgetType === 'heading' && element.settings.title) {
+          let content = generatedContent.mapDescription || '';
+          if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
+            content = insertInternalLink(content, internalLinkUrl, companyName);
+            console.log(`[BATCH DEBUG] Updated map description (heading) with internal link`);
+          } else {
+            console.log(`[BATCH DEBUG] Updated map description (heading)`);
+          }
+          element.settings.title = content;
+        }
+        else {
+          console.log(`[BATCH DEBUG] Found map description element but no editor or title setting`);
+        }
       }
 
       // Replace Google Maps iframe - match specific ID

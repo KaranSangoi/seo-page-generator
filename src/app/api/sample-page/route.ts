@@ -396,8 +396,10 @@ function replaceElementorContent(
             }
           }
         }
-      } else if (cssId.includes('map')) {
-        console.log('[DEBUG] Found map element:', {
+      }
+      // Map description - match IDs containing 'map' and 'description'
+      else if (cssId.includes('map') && cssId.includes('description')) {
+        console.log('[DEBUG] Found map description element:', {
           cssId: cssId,
           widgetType: element.widgetType,
           elType: element.elType,
@@ -421,7 +423,7 @@ function replaceElementorContent(
           element.settings.title = content;
           console.log('[DEBUG] Updated map description in heading widget');
         } else {
-          console.log('[DEBUG] Map element found but widget type not handled:', element.widgetType);
+          console.log('[DEBUG] Map description element found but widget type not handled:', element.widgetType);
         }
       }
 
