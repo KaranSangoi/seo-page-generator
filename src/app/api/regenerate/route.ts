@@ -7,7 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generatePageContent } from '@/lib/claude-api';
-import { validateContent, type ContentValidationParams } from '@/lib/page-generation';
+import { validateContent, type ContentValidationParams, determineLinkPlacements } from '@/lib/page-generation';
+import { replaceElementorContent } from '@/lib/elementor-replacer';
 import { randomBytes } from 'crypto';
 
 // Force dynamic rendering (uses cookies for authentication)
@@ -76,183 +77,6 @@ async function fetchElementorTemplate(wordpressUrl: string, templatePageId: stri
   }
 }
 
-// Helper function to insert internal link
-function insertInternalLink(text: string, parentPageUrl: string, service: string): string {
-  if (!text || !parentPageUrl || !service) return text;
-
-  const linkText = `<a href="${parentPageUrl}">${service}</a>`;
-  const servicePattern = new RegExp(`\\b${service}\\b`, 'i');
-
-  if (servicePattern.test(text)) {
-    return text.replace(servicePattern, linkText);
-  }
-
-  return text + ` Learn more about our <a href="${parentPageUrl}">${service}</a> services.`;
-}
-
-// Helper function to replace Elementor content
-function replaceElementorContent(
-  elementorData: any,
-  generatedContent: any,
-  location?: string,
-  parentPageUrl?: string,
-  service?: string,
-  rowNumber?: number
-): any {
-  if (!elementorData || !Array.isArray(elementorData)) return elementorData;
-
-  const clonedData = JSON.parse(JSON.stringify(elementorData));
-
-  // Determine which section gets the internal link (rotate: hero=0, faq=1, map=2)
-  const internalLinkSection = rowNumber ? rowNumber % 3 : 0;
-
-  function replaceInElement(element: any): void {
-    if (!element || typeof element !== 'object') return;
-
-    if (element.settings) {
-      const cssId = element.settings._element_id || element.settings.css_id || '';
-
-      if (cssId.includes('hero') || cssId.includes('h1')) {
-        if (element.widgetType === 'heading' || element.elType === 'widget') {
-          if (element.settings.title) {
-            element.settings.title = generatedContent.h1;
-          }
-        }
-        if (element.widgetType === 'text-editor') {
-          if (element.settings.editor) {
-            let content = generatedContent.heroDescription;
-            if (internalLinkSection === 0 && parentPageUrl && service) {
-              content = insertInternalLink(content, parentPageUrl, service);
-            }
-            element.settings.editor = content;
-          }
-        }
-      } else if (cssId.includes('benefits')) {
-        if (element.widgetType === 'heading' && element.settings.title) {
-          element.settings.title = generatedContent.benefitsHeading;
-        }
-        if (element.widgetType === 'text-editor' && element.settings.editor) {
-          if (cssId.includes('subheading')) {
-            element.settings.editor = generatedContent.benefitsSubheading;
-          } else if (cssId.includes('bullet')) {
-            const bulletIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
-            if (generatedContent.benefitsBullets[bulletIndex]) {
-              element.settings.editor = generatedContent.benefitsBullets[bulletIndex];
-            }
-          }
-        }
-      } else if (cssId.includes('why')) {
-        if (element.widgetType === 'heading' && element.settings.title) {
-          element.settings.title = generatedContent.whyHeading;
-        }
-        if (element.widgetType === 'text-editor' && element.settings.editor) {
-          if (cssId.includes('subheading')) {
-            element.settings.editor = generatedContent.whySubheading;
-          } else if (cssId.includes('bullet')) {
-            const bulletIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
-            if (generatedContent.whyBullets[bulletIndex]) {
-              element.settings.editor = generatedContent.whyBullets[bulletIndex];
-            }
-          }
-        }
-      } else if (cssId.includes('faq')) {
-        // Handle FAQ section - check by ID first, then adapt to structure
-
-        // If this is the main FAQ container (ID contains 'questions')
-        if (cssId.includes('questions')) {
-          console.log('[REGENERATE DEBUG] Found FAQ container:', {
-            cssId: cssId,
-            widgetType: element.widgetType,
-            hasSettings: !!element.settings,
-            settingsKeys: element.settings ? Object.keys(element.settings) : [],
-            hasTabs: !!element.settings.tabs,
-            hasItems: !!element.settings.items,
-          });
-
-          // Check if it uses tabs structure (classic accordion/toggle)
-          if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
-            console.log('[REGENERATE DEBUG] FAQ uses tabs structure (classic accordion), updating tabs...');
-            element.settings.tabs.forEach((tab: any, index: number) => {
-              if (generatedContent.faqs[index]) {
-                tab.tab_title = generatedContent.faqs[index].question;
-                let content = generatedContent.faqs[index].answer;
-                if (internalLinkSection === 1 && index === 0 && parentPageUrl && service) {
-                  content = insertInternalLink(content, parentPageUrl, service);
-                }
-                tab.tab_content = content;
-                console.log(`[REGENERATE DEBUG] Updated FAQ ${index} in tabs`);
-              }
-            });
-          }
-          // Check if it uses items structure (nested-accordion might use this)
-          else if (element.settings.items && Array.isArray(element.settings.items)) {
-            console.log('[REGENERATE DEBUG] FAQ uses items structure, updating items...');
-            element.settings.items.forEach((item: any, index: number) => {
-              if (generatedContent.faqs[index]) {
-                console.log(`[REGENERATE DEBUG] Item ${index} keys:`, Object.keys(item));
-                // Try different possible field names
-                if (item.item_title !== undefined) item.item_title = generatedContent.faqs[index].question;
-                if (item.item_content !== undefined) item.item_content = generatedContent.faqs[index].answer;
-                if (item.title !== undefined) item.title = generatedContent.faqs[index].question;
-                if (item.content !== undefined) item.content = generatedContent.faqs[index].answer;
-                console.log(`[REGENERATE DEBUG] Updated FAQ ${index} in items`);
-              }
-            });
-          } else {
-            console.log('[REGENERATE DEBUG] FAQ container found but unknown structure');
-            console.log('[REGENERATE DEBUG] Full settings keys:', element.settings ? Object.keys(element.settings) : 'none');
-          }
-        }
-        // Handle individual FAQ items (separate IDs for each question/answer)
-        else {
-          const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
-          if (generatedContent.faqs[faqIndex]) {
-            if (element.widgetType === 'heading' && cssId.includes('question')) {
-              console.log(`[REGENERATE DEBUG] Updating individual FAQ ${faqIndex} question`);
-              element.settings.title = generatedContent.faqs[faqIndex].question;
-            }
-            if (element.widgetType === 'text-editor' && cssId.includes('answer')) {
-              console.log(`[REGENERATE DEBUG] Updating individual FAQ ${faqIndex} answer`);
-              let content = generatedContent.faqs[faqIndex].answer;
-              if (internalLinkSection === 1 && faqIndex === 0 && parentPageUrl && service) {
-                content = insertInternalLink(content, parentPageUrl, service);
-              }
-              element.settings.editor = content;
-            }
-          }
-        }
-      } else if (cssId.includes('map')) {
-        if (element.widgetType === 'text-editor' && element.settings.editor) {
-          let content = generatedContent.mapDescription || '';
-          if (internalLinkSection === 2 && parentPageUrl && service) {
-            content = insertInternalLink(content, parentPageUrl, service);
-          }
-          element.settings.editor = content;
-        }
-      }
-
-      // Replace Google Maps iframe in custom HTML widget
-      if (cssId.includes('map-iframe') && element.widgetType === 'html' && location) {
-        if (element.settings.html) {
-          const encodedLocation = encodeURIComponent(location);
-          const iframeRegex = /(<iframe[^>]*src=")([^"]*)(")/gi;
-          element.settings.html = element.settings.html.replace(iframeRegex, (match: string, prefix: string, oldSrc: string, suffix: string) => {
-            const simpleMapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
-            return prefix + simpleMapUrl + suffix;
-          });
-        }
-      }
-    }
-
-    if (element.elements && Array.isArray(element.elements)) {
-      element.elements.forEach(replaceInElement);
-    }
-  }
-
-  clonedData.forEach(replaceInElement);
-  return clonedData;
-}
-
 // Helper function to publish to WordPress
 async function publishToWordPress(params: {
   wordpressUrl: string;
@@ -266,8 +90,12 @@ async function publishToWordPress(params: {
   generatedContent: any;
   primaryKeyword: string;
   seoPlugin: string;
+  companyName: string;
+  internalLinkPlacement?: string;
+  externalLinkPlacement?: string;
+  omitSections?: string[];
 }): Promise<string> {
-  const { wordpressUrl, wpUsername, wpAppPassword, templatePageId, pageType, service, location, parentSlug, generatedContent, primaryKeyword, seoPlugin } = params;
+  const { wordpressUrl, wpUsername, wpAppPassword, templatePageId, pageType, service, location, parentSlug, generatedContent, primaryKeyword, seoPlugin, companyName, internalLinkPlacement, externalLinkPlacement, omitSections } = params;
 
   const wpApiUrl = `${wordpressUrl}/wp-json/wp/v2/pages`;
   const credentials = Buffer.from(`${wpUsername}:${wpAppPassword}`).toString('base64');
@@ -327,14 +155,23 @@ async function publishToWordPress(params: {
 
     // If Elementor template exists, use it
     if (elementorTemplate) {
-      const updatedElementorData = replaceElementorContent(
+      const { data: updatedElementorData, log: elementorLog } = replaceElementorContent(
         elementorTemplate,
         generatedContent,
         location,
-        parentPageUrl,
+        parentPageUrl, // internalLinkUrl
+        companyName,
         service,
-        undefined // No row number for regenerated pages (internal link rotation not applicable)
+        internalLinkPlacement,
+        externalLinkPlacement,
+        omitSections || []
       );
+
+      console.log('[REGENERATE] Elementor replacement log:', {
+        sectionsFound: elementorLog.sectionsFound,
+        sectionsUpdated: elementorLog.sectionsUpdated.length,
+        totalElements: elementorLog.elementDetails.length,
+      });
 
       // Copy all template settings
       pagePayload.content = fullTemplatePage.content?.rendered || '';
@@ -560,6 +397,21 @@ export async function POST(request: NextRequest) {
       console.log(`[REGENERATE] Previously used FAQs:`, previouslyUsedFAQs.map(q => q.substring(0, 60) + '...'));
     }
 
+    // Calculate link placements based on row number and batch size
+    const totalPagesInBatch = otherPagesInBatch.length + 1; // +1 for current page
+    const omitMap = false; // TODO: Store this in DB
+    const { internalLinkPlacement, externalLinkPlacement } = determineLinkPlacements(
+      page.rowNumber || 1,
+      totalPagesInBatch,
+      omitMap
+    );
+
+    console.log(`[REGENERATE] Link placements for row ${page.rowNumber}:`, {
+      internal: internalLinkPlacement,
+      external: externalLinkPlacement,
+      batchSize: totalPagesInBatch,
+    });
+
     // Generate content
     const generatedContent = await generatePageContent({
       batchId: page.batchId,
@@ -571,6 +423,8 @@ export async function POST(request: NextRequest) {
       primaryKeyword,
       omitSections: [], // TODO: Store this in DB
       seoPlugin: client.seoPlugin,
+      internalLinkPlacement, // Tell AI where internal link will be placed
+      externalLinkPlacement, // Tell AI where external link will be placed
       previouslyUsedFAQs, // Pass previously used FAQs for uniqueness checking
     });
 
@@ -662,6 +516,10 @@ export async function POST(request: NextRequest) {
       generatedContent: finalContent,
       primaryKeyword,
       seoPlugin: client.seoPlugin,
+      companyName: client.clientName,
+      internalLinkPlacement,
+      externalLinkPlacement,
+      omitSections: [], // TODO: Store this in DB
     });
 
     // Mark as success
