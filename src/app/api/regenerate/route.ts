@@ -6,7 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { generatePageContent, validateContent } from '@/lib/claude-api';
+import { generatePageContent } from '@/lib/claude-api';
+import { validateContent, type ContentValidationParams } from '@/lib/page-generation';
 import { randomBytes } from 'crypto';
 
 // Force dynamic rendering (uses cookies for authentication)
@@ -519,6 +520,46 @@ export async function POST(request: NextRequest) {
       primaryKeyword = adjective;
     }
 
+    // Fetch all other successful pages in this batch to get their FAQs (for uniqueness checking)
+    console.log(`[REGENERATE] Fetching existing FAQs from batch ${page.batchId} for uniqueness checking...`);
+    const otherPagesInBatch = await prisma.generatedPage.findMany({
+      where: {
+        batchId: page.batchId,
+        status: 'success',
+        id: { not: pageId }, // Exclude current page
+        generatedContent: { not: null }, // Only pages with content
+      },
+      select: {
+        id: true,
+        pageName: true,
+        generatedContent: true,
+      },
+    });
+
+    // Extract FAQ questions from other pages
+    const previouslyUsedFAQs: string[] = [];
+    for (const otherPage of otherPagesInBatch) {
+      try {
+        if (otherPage.generatedContent) {
+          const content = JSON.parse(otherPage.generatedContent as string);
+          if (content.faqs && Array.isArray(content.faqs)) {
+            content.faqs.forEach((faq: any) => {
+              if (faq.question) {
+                previouslyUsedFAQs.push(faq.question);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.warn(`[REGENERATE] Failed to parse content for page ${otherPage.id}:`, e);
+      }
+    }
+
+    console.log(`[REGENERATE] Found ${previouslyUsedFAQs.length} previously used FAQs from ${otherPagesInBatch.length} pages in batch`);
+    if (previouslyUsedFAQs.length > 0) {
+      console.log(`[REGENERATE] Previously used FAQs:`, previouslyUsedFAQs.map(q => q.substring(0, 60) + '...'));
+    }
+
     // Generate content
     const generatedContent = await generatePageContent({
       batchId: page.batchId,
@@ -530,6 +571,7 @@ export async function POST(request: NextRequest) {
       primaryKeyword,
       omitSections: [], // TODO: Store this in DB
       seoPlugin: client.seoPlugin,
+      previouslyUsedFAQs, // Pass previously used FAQs for uniqueness checking
     });
 
     // Update status to validating
@@ -538,22 +580,64 @@ export async function POST(request: NextRequest) {
       data: { status: 'validating' },
     });
 
-    // Validate content (warnings only)
-    const validation = validateContent(generatedContent, []);
-    if (!validation.isValid) {
-      console.warn(`⚠️ Validation warnings for ${page.pageName}:`, validation.errors);
+    // Validate content with smart validation (includes FAQ uniqueness checking)
+    const validationParams: ContentValidationParams = {
+      batchId: page.batchId,
+      pageType: page.pageType,
+      companyName: client.clientName,
+      companyWebsite: client.clientWebsite,
+      service: page.service || '',
+      location: page.location || '',
+      primaryKeyword,
+      omitSections: [], // TODO: Store this in DB
+      seoPlugin: client.seoPlugin,
+      previouslyUsedFAQs, // Include previously used FAQs for validation
+    };
+
+    const validation = await validateContent(generatedContent, validationParams);
+
+    // Use the auto-fixed content
+    const finalContent = validation.content;
+
+    if (validation.autoFixed.length > 0) {
+      console.log(`[REGENERATE] Auto-fixed fields for ${page.pageName}:`, validation.autoFixed);
+    }
+
+    if (validation.warnings.length > 0) {
+      console.warn(`⚠️ Validation warnings for ${page.pageName}:`, validation.warnings);
       // Log warnings but continue
       await prisma.errorLog.create({
         data: {
           userId: user.id,
           clientId: client.id,
           errorType: 'validation_warning',
-          errorMessage: `Validation warnings: ${validation.errors.join(', ')}`,
+          errorMessage: `Validation warnings: ${validation.warnings.join(', ')}`,
           stackTrace: null,
           context: JSON.stringify({
             batchId: page.batchId,
             pageName: page.pageName,
             pageId: page.id,
+            autoFixed: validation.autoFixed,
+          }),
+        },
+      });
+    }
+
+    if (validation.needsRetry.length > 0) {
+      console.warn(`⚠️ Fields need retry for ${page.pageName}:`, validation.needsRetry);
+      // Log retry needs but continue (could implement retry logic here in the future)
+      await prisma.errorLog.create({
+        data: {
+          userId: user.id,
+          clientId: client.id,
+          errorType: 'validation_retry_needed',
+          errorMessage: `Fields need retry: ${validation.needsRetry.map(r => `${r.field} (${r.reason})`).join(', ')}`,
+          stackTrace: null,
+          context: JSON.stringify({
+            batchId: page.batchId,
+            pageName: page.pageName,
+            pageId: page.id,
+            retryNeeded: validation.needsRetry,
           }),
         },
       });
@@ -565,7 +649,7 @@ export async function POST(request: NextRequest) {
       data: { status: 'publishing' },
     });
 
-    // Publish to WordPress
+    // Publish to WordPress (use finalContent which has auto-fixes applied)
     const publishedUrl = await publishToWordPress({
       wordpressUrl: client.wordpressUrl,
       wpUsername: client.wpUsername,
@@ -575,7 +659,7 @@ export async function POST(request: NextRequest) {
       service: page.service || '',
       location: page.location || '',
       parentSlug: page.parentSlug || '',
-      generatedContent,
+      generatedContent: finalContent,
       primaryKeyword,
       seoPlugin: client.seoPlugin,
     });
@@ -587,7 +671,7 @@ export async function POST(request: NextRequest) {
         status: 'success',
         publishedUrl,
         primaryKeyword,
-        generatedContent: JSON.stringify(generatedContent),
+        generatedContent: JSON.stringify(finalContent),
         timeElapsed: Date.now() - startTime,
         errorMessage: null,
       },
