@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma';
 import { generatePageContent } from '@/lib/claude-api';
 import { validateContent, type ContentValidationParams, determineLinkPlacements } from '@/lib/page-generation';
 import { replaceElementorContent } from '@/lib/elementor-replacer';
+import { generateStructuredData } from '@/lib/schema-generator';
 import { randomBytes } from 'crypto';
 
 // Force dynamic rendering (uses cookies for authentication)
@@ -91,11 +92,16 @@ async function publishToWordPress(params: {
   primaryKeyword: string;
   seoPlugin: string;
   companyName: string;
+  companyWebsite: string;
+  businessPhone?: string;
+  businessAddress?: string;
+  businessType?: string;
+  gbpUrl?: string;
   internalLinkPlacement?: string;
   externalLinkPlacement?: string;
   omitSections?: string[];
 }): Promise<string> {
-  const { wordpressUrl, wpUsername, wpAppPassword, templatePageId, pageType, service, location, parentSlug, generatedContent, primaryKeyword, seoPlugin, companyName, internalLinkPlacement, externalLinkPlacement, omitSections } = params;
+  const { wordpressUrl, wpUsername, wpAppPassword, templatePageId, pageType, service, location, parentSlug, generatedContent, primaryKeyword, seoPlugin, companyName, companyWebsite, businessPhone, businessAddress, businessType, gbpUrl, internalLinkPlacement, externalLinkPlacement, omitSections } = params;
 
   const wpApiUrl = `${wordpressUrl}/wp-json/wp/v2/pages`;
   const credentials = Buffer.from(`${wpUsername}:${wpAppPassword}`).toString('base64');
@@ -172,6 +178,44 @@ async function publishToWordPress(params: {
         sectionsUpdated: elementorLog.sectionsUpdated.length,
         totalElements: elementorLog.elementDetails.length,
       });
+
+      // Generate schema.org structured data (AFTER content is finalized)
+      let schemaScript = '';
+      try {
+        const schemaData = generateStructuredData({
+          companyName,
+          companyWebsite,
+          businessPhone,
+          businessAddress,
+          businessType,
+          gbpUrl,
+          service,
+          location,
+          primaryKeyword,
+          pageType,
+          faqs: generatedContent.faqs,
+        });
+
+        schemaScript = `<script type="application/ld+json">${JSON.stringify(schemaData, null, 2)}</script>`;
+        console.log('[REGENERATE] Generated schema.org markup');
+      } catch (schemaError) {
+        console.warn('[REGENERATE] Schema generation failed:', schemaError);
+        // Continue without schema (non-blocking)
+      }
+
+      // Inject schema into first section of Elementor data
+      if (schemaScript && updatedElementorData.length > 0) {
+        const firstSection = updatedElementorData[0];
+        if (!firstSection.settings) {
+          firstSection.settings = {};
+        }
+        if (!firstSection.settings._custom_css) {
+          firstSection.settings._custom_css = '';
+        }
+        // Inject schema into custom CSS field (HTML injection trick)
+        firstSection.settings._custom_css += `\n/* Schema.org Structured Data */\n${schemaScript}`;
+        console.log('[REGENERATE] Injected schema into Elementor template');
+      }
 
       // Copy all template settings
       pagePayload.content = fullTemplatePage.content?.rendered || '';
@@ -517,6 +561,11 @@ export async function POST(request: NextRequest) {
       primaryKeyword,
       seoPlugin: client.seoPlugin,
       companyName: client.clientName,
+      companyWebsite: client.clientWebsite,
+      businessPhone: client.businessPhone || undefined,
+      businessAddress: client.businessAddress || undefined,
+      businessType: client.businessType || undefined,
+      gbpUrl: client.gbpUrl || undefined,
       internalLinkPlacement,
       externalLinkPlacement,
       omitSections: [], // TODO: Store this in DB
