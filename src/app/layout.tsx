@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { ToastProvider } from '@/components/ToastProvider';
+import AnnouncementModal from '@/components/AnnouncementModal';
 
 // Font configurations
 const inter = Inter({
@@ -38,7 +39,10 @@ export default function RootLayout({
       className={`${inter.variable} ${plusJakartaSans.variable} ${spaceGrotesk.variable}`}
     >
       <body className={`${inter.className} antialiased`}>
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          {children}
+          <AnnouncementModal />
+        </ToastProvider>
       </body>
     </html>
   );
