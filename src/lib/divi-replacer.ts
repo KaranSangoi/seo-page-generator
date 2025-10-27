@@ -190,7 +190,7 @@ ${bullets.map(bullet => `<li>${bullet}</li>`).join('\n')}
     }
 
     // Hero Description - Find ANY module with module_id="hero-description"
-    const heroDescPattern = /(\[et_pb_\w+[^\]]*module_id="hero-description"[^\]]*\])(.*?)(\[\/et_pb_\w+\])/gs;
+    const heroDescPattern = /(\[et_pb_\w+[^\]]*module_id="hero-description"[^\]]*\])([\s\S]*?)(\[\/et_pb_\w+\])/g;
     const heroDescMatches = content.match(heroDescPattern);
     console.log('[DIVI REPLACER] Hero Description pattern match:', !!heroDescMatches);
     if (heroDescMatches) {
@@ -216,7 +216,7 @@ ${bullets.map(bullet => `<li>${bullet}</li>`).join('\n')}
     console.log('[DIVI REPLACER] Processing benefits section...');
 
     // Benefits section - Find ANY module with module_id="benefits"
-    const benefitsPattern = /(\[et_pb_\w+[^\]]*module_id="benefits"[^\]]*\])(.*?)(\[\/et_pb_\w+\])/gs;
+    const benefitsPattern = /(\[et_pb_\w+[^\]]*module_id="benefits"[^\]]*\])([\s\S]*?)(\[\/et_pb_\w+\])/g;
     const benefitsMatches = content.match(benefitsPattern);
     console.log('[DIVI REPLACER] Benefits pattern match:', !!benefitsMatches);
     if (benefitsMatches) {
@@ -236,7 +236,7 @@ ${bullets.map(bullet => `<li>${bullet}</li>`).join('\n')}
     console.log('[DIVI REPLACER] Processing why section...');
 
     // Why section - Find ANY module with module_id="why"
-    const whyPattern = /(\[et_pb_\w+[^\]]*module_id="why"[^\]]*\])(.*?)(\[\/et_pb_\w+\])/gs;
+    const whyPattern = /(\[et_pb_\w+[^\]]*module_id="why"[^\]]*\])([\s\S]*?)(\[\/et_pb_\w+\])/g;
     const whyMatches = content.match(whyPattern);
     console.log('[DIVI REPLACER] Why pattern match:', !!whyMatches);
     if (whyMatches) {
@@ -259,7 +259,7 @@ ${bullets.map(bullet => `<li>${bullet}</li>`).join('\n')}
     // We need to find the whole accordion and rebuild all items inside
 
     // Pattern 1: et_pb_accordion with module_id="faq"
-    const accordionPattern = /(\[et_pb_accordion[^\]]*module_id="faq"[^\]]*\])([^\[]*(?:\[et_pb_accordion_item[^\]]*\].*?\[\/et_pb_accordion_item\][^\[]*)*)(\[\/et_pb_accordion\])/gs;
+    const accordionPattern = /(\[et_pb_accordion[^\]]*module_id="faq"[^\]]*\])([^\[]*(?:\[et_pb_accordion_item[^\]]*\][\s\S]*?\[\/et_pb_accordion_item\][^\[]*)*)(\[\/et_pb_accordion\])/g;
 
     if (accordionPattern.test(content)) {
       // Build new accordion items
@@ -275,7 +275,7 @@ ${bullets.map(bullet => `<li>${bullet}</li>`).join('\n')}
     } else {
       // Pattern 2: Container (section/row/column) with module_id="faq" containing toggles
       // Find section/row with module_id="faq" and replace all toggles inside
-      const sectionWithTogglesPattern = /(\[et_pb_(?:section|row|column)[^\]]*module_id="faq"[^\]]*\][^\[]*(?:\[et_pb_(?:row|column)[^\]]*\][^\[]*)*)(\[et_pb_toggle[^\]]*\].*?\[\/et_pb_toggle\][^\[]*)+([^\[]*\[\/et_pb_(?:column|row|section)\])/gs;
+      const sectionWithTogglesPattern = /(\[et_pb_(?:section|row|column)[^\]]*module_id="faq"[^\]]*\][^\[]*(?:\[et_pb_(?:row|column)[^\]]*\][^\[]*)*)(\[et_pb_toggle[^\]]*\][\s\S]*?\[\/et_pb_toggle\][^\[]*)+([^\[]*\[\/et_pb_(?:column|row|section)\])/g;
 
       if (sectionWithTogglesPattern.test(content)) {
         // Build new toggle items
@@ -287,7 +287,7 @@ ${bullets.map(bullet => `<li>${bullet}</li>`).join('\n')}
 
         // More specific replacement: find the FAQ container and replace just the toggles
         content = content.replace(
-          /(\[et_pb_(?:section|row|column)[^\]]*module_id="faq"[^\]]*\](?:[^\[]|\[(?!et_pb_toggle))*?)(\[et_pb_toggle[^\]]*\].*?\[\/et_pb_toggle\](?:[^\[]|\[(?!\/et_pb_(?:column|row|section)))*?)+/gs,
+          /(\[et_pb_(?:section|row|column)[^\]]*module_id="faq"[^\]]*\](?:[^\[]|\[(?!et_pb_toggle))*?)(\[et_pb_toggle[^\]]*\][\s\S]*?\[\/et_pb_toggle\](?:[^\[]|\[(?!\/et_pb_(?:column|row|section)))*?)+/g,
           `$1${newToggleItems}\n`
         );
       }
@@ -297,7 +297,7 @@ ${bullets.map(bullet => `<li>${bullet}</li>`).join('\n')}
   // ==================== MAP SECTION ====================
   if (!omit.includes('map')) {
     // Map iframe replacement - Find ANY module with module_id="map"
-    const mapPattern = /(\[et_pb_\w+[^\]]*module_id="map"[^\]]*\])(.*?)(\[\/et_pb_\w+\])/gs;
+    const mapPattern = /(\[et_pb_\w+[^\]]*module_id="map"[^\]]*\])([\s\S]*?)(\[\/et_pb_\w+\])/g;
     const mapMatches = content.match(mapPattern);
     console.log('[DIVI REPLACER] Map pattern match:', !!mapMatches);
     if (mapMatches && generatedContent.mapIframe) {

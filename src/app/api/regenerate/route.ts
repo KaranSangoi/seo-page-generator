@@ -510,6 +510,8 @@ export async function POST(request: NextRequest) {
       primaryKeyword,
       omitSections: [], // TODO: Store this in DB
       seoPlugin: client.seoPlugin,
+      internalLinkPlacement,
+      externalLinkPlacement,
       previouslyUsedFAQs, // Include previously used FAQs for validation
     };
 
