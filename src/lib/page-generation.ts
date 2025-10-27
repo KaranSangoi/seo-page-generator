@@ -9,6 +9,7 @@
 
 import { generatePageContent, validateAndFixContent, regenerateField } from './claude-api';
 import { replaceElementorContent } from './elementor-replacer';
+import { replaceDiviContent } from './divi-replacer';
 import { generateStructuredData } from './schema-generator';
 
 // ============================================================================
@@ -137,14 +138,21 @@ export async function fetchElementorTemplate(
 
     const templatePage = await response.json();
 
-    // Elementor data is stored in meta._elementor_data
-    const elementorData = templatePage.meta?._elementor_data;
-    if (!elementorData) {
-      console.error('No Elementor data found in template page');
+    // Check for Elementor data (stored in meta._elementor_data)
+    const hasElementorData = !!templatePage.meta?._elementor_data;
+
+    // Check for Divi data (stored in meta._et_pb_use_builder)
+    const hasDiviData = templatePage.meta?._et_pb_use_builder === 'on' ||
+                        (typeof templatePage.content === 'object' && templatePage.content?.raw?.includes('[et_pb_'));
+
+    if (!hasElementorData && !hasDiviData) {
+      console.error('No Elementor or Divi data found in template page');
       return null;
     }
 
-    // Return full template page (not just Elementor data) for publishing
+    console.log(`[FETCH TEMPLATE] Detected builder: ${hasElementorData ? 'Elementor' : 'Divi'}`);
+
+    // Return full template page for publishing
     return templatePage;
   } catch (error) {
     console.error('Error fetching Elementor template:', error);
@@ -449,11 +457,18 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     throw new Error('Failed to fetch template page');
   }
 
-  // Get Elementor data
-  const elementorData = templatePage.meta?._elementor_data;
-  if (!elementorData) {
-    throw new Error('No Elementor data found in template page');
+  // Detect which builder is being used
+  const hasElementorData = !!templatePage.meta?._elementor_data;
+  const hasDiviData = templatePage.meta?._et_pb_use_builder === 'on' ||
+                      (typeof templatePage.content === 'object' && templatePage.content?.raw?.includes('[et_pb_'));
+
+  const builderType = hasElementorData ? 'elementor' : hasDiviData ? 'divi' : null;
+
+  if (!builderType) {
+    throw new Error('No Elementor or Divi data found in template page');
   }
+
+  console.log(`[Publishing] Detected ${builderType} builder`);
 
   // Fetch sitemap for intelligent internal linking
   const sitemap = await fetchSitemap(params.clientWebsite);
@@ -474,35 +489,64 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
 
   // Calculate link placements for this page
   const omitMap = params.pageData.omitSections.includes('Map');
-  const { internalLinkPlacement, externalLinkPlacement } = determineLinkPlacements(
+  const { internalLinkPlacement, externalLinkPlacement} = determineLinkPlacements(
     params.pageData.rowNumber,
     params.batchSize,
     omitMap
   );
 
-  // Parse and replace content
-  const parsedElementorData = typeof elementorData === 'string' ? JSON.parse(elementorData) : elementorData;
-  const { data: updatedElementorData, log: elementorLog } = replaceElementorContent(
-    parsedElementorData,
-    params.generatedContent,
-    params.pageData.location,
-    internalLinkUrl,
-    params.clientName,
-    params.pageData.service,
-    internalLinkPlacement,
-    externalLinkPlacement,
-    params.pageData.omitSections
-  );
+  // Parse and replace content based on builder type
+  let updatedContent: any;
+  let replacementLog: any;
 
-  // Log element replacement details
-  console.log('[Publishing] Elementor replacement summary:', {
-    sectionsFound: elementorLog.sectionsFound,
-    sectionsUpdated: elementorLog.sectionsUpdated,
-    totalElements: elementorLog.elementDetails.length,
-  });
+  if (builderType === 'elementor') {
+    const elementorData = templatePage.meta?._elementor_data;
+    const parsedElementorData = typeof elementorData === 'string' ? JSON.parse(elementorData) : elementorData;
+    const { data, log } = replaceElementorContent(
+      parsedElementorData,
+      params.generatedContent,
+      params.pageData.location,
+      internalLinkUrl,
+      params.clientName,
+      params.pageData.service,
+      internalLinkPlacement,
+      externalLinkPlacement,
+      params.pageData.omitSections
+    );
+    updatedContent = data;
+    replacementLog = log;
 
-  // Inject meta description tag directly (fallback if SEO plugin doesn't output it)
-  injectMetaDescriptionTag(updatedElementorData, params.generatedContent.metaDescription);
+    // Inject meta description tag directly (fallback if SEO plugin doesn't output it)
+    injectMetaDescriptionTag(updatedContent, params.generatedContent.metaDescription);
+
+    console.log('[Publishing] Elementor replacement summary:', {
+      sectionsFound: replacementLog.sectionsFound,
+      sectionsUpdated: replacementLog.sectionsUpdated,
+      totalElements: replacementLog.elementDetails.length,
+    });
+  } else {
+    // Divi builder
+    const diviContent = templatePage.content?.raw || '';
+    const { data, log } = replaceDiviContent(
+      diviContent,
+      params.generatedContent,
+      params.pageData.location,
+      internalLinkUrl,
+      params.clientName,
+      params.pageData.service,
+      internalLinkPlacement,
+      externalLinkPlacement,
+      params.pageData.omitSections
+    );
+    updatedContent = data;
+    replacementLog = log;
+
+    console.log('[Publishing] Divi replacement summary:', {
+      sectionsFound: replacementLog.sectionsFound,
+      sectionsUpdated: replacementLog.sectionsUpdated,
+      totalElements: replacementLog.elementDetails.length,
+    });
+  }
 
   // Generate schema.org structured data
   let schemaScript = '';
@@ -533,7 +577,6 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     title: params.primaryKeyword, // Use primaryKeyword only - WordPress/theme will append site name via title template
     slug: slug,
     status: 'publish',
-    content: schemaScript + (templatePage.content?.rendered || ''), // CHANGED: Inject schema at top of content
     excerpt: params.generatedContent.metaDescription,
     featured_media: templatePage.featured_media || 0,
     comment_status: templatePage.comment_status || 'closed',
@@ -541,13 +584,23 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     template: templatePage.template || '',
     meta: {
       ...templatePage.meta,
-      _elementor_data: JSON.stringify(updatedElementorData),
-      _elementor_edit_mode: 'builder',
-      _elementor_template_type: 'wp-page',
-      _elementor_version: templatePage.meta?._elementor_version || '3.25.0',
-      _wp_page_template: templatePage.meta?._wp_page_template || 'elementor_canvas',
     },
   };
+
+  // Add builder-specific fields
+  if (builderType === 'elementor') {
+    pagePayload.content = schemaScript + (templatePage.content?.rendered || '');
+    pagePayload.meta._elementor_data = JSON.stringify(updatedContent);
+    pagePayload.meta._elementor_edit_mode = 'builder';
+    pagePayload.meta._elementor_template_type = 'wp-page';
+    pagePayload.meta._elementor_version = templatePage.meta?._elementor_version || '3.25.0';
+    pagePayload.meta._wp_page_template = templatePage.meta?._wp_page_template || 'elementor_canvas';
+  } else {
+    // Divi: content goes directly into the content field
+    pagePayload.content = schemaScript + updatedContent;
+    pagePayload.meta._et_pb_use_builder = 'on';
+    pagePayload.meta._et_pb_old_content = '';
+  }
 
   // Add SEO plugin fields
   // NOTE: Use primaryKeyword only (not full metaTitle) to avoid duplicate company names
