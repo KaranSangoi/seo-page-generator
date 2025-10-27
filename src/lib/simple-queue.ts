@@ -6,6 +6,7 @@
 import { generatePageContent, validateContent, validateAndFixContent, regenerateField, generateAdjectives, clearBatchContext } from './claude-api';
 import { prisma } from './prisma';
 import { generateStructuredData } from './schema-generator';
+import { replaceDiviContent } from './divi-replacer';
 
 interface PageJob {
   batchId: string;
@@ -737,11 +738,17 @@ async function duplicateTemplateAndPublish(params: {
 
     const templatePage = await templateResponse.json();
 
-    // Get Elementor data
-    const elementorData = templatePage.meta?._elementor_data;
-    if (!elementorData) {
-      throw new Error('No Elementor data found in template page');
+    // Detect page builder
+    const isElementor = !!templatePage.meta?._elementor_data;
+    const isDivi = templatePage.meta?._et_pb_use_builder === 'on' ||
+                   (templatePage.content?.rendered && templatePage.content.rendered.includes('[et_pb_'));
+
+    if (!isElementor && !isDivi) {
+      throw new Error('Template page must use either Elementor or Divi page builder');
     }
+
+    const builderName = isElementor ? 'Elementor' : 'Divi';
+    console.log(`[Publishing] Detected ${builderName} page builder`);
 
     // Fetch sitemap for intelligent internal linking
     const sitemap = await fetchSitemap(clientData.wordpressUrl);
@@ -769,19 +776,45 @@ async function duplicateTemplateAndPublish(params: {
       omitMap
     );
 
-    // Parse and replace content
-    const parsedElementorData = typeof elementorData === 'string' ? JSON.parse(elementorData) : elementorData;
-    const updatedElementorData = replaceElementorContent(
-      parsedElementorData,
-      generatedContent,
-      pageData.location,
-      internalLinkUrl,
-      clientData.clientName,
-      pageData.service,
-      internalLinkPlacement,
-      externalLinkPlacement,
-      pageData.omitSections
-    );
+    // Parse and replace content based on builder
+    let updatedElementorData: any = null;
+    let updatedDiviContent: string | null = null;
+    let replacementLog: any = null;
+
+    if (isElementor) {
+      // ELEMENTOR: Use existing Elementor replacer (UNCHANGED)
+      const elementorData = templatePage.meta._elementor_data;
+      const parsedElementorData = typeof elementorData === 'string' ? JSON.parse(elementorData) : elementorData;
+      const result = replaceElementorContent(
+        parsedElementorData,
+        generatedContent,
+        pageData.location,
+        internalLinkUrl,
+        clientData.clientName,
+        pageData.service,
+        internalLinkPlacement,
+        externalLinkPlacement,
+        pageData.omitSections
+      );
+      updatedElementorData = result.data;
+      replacementLog = result.log;
+    } else if (isDivi) {
+      // DIVI: Use new Divi replacer
+      const diviContent = templatePage.content?.rendered || '';
+      const result = replaceDiviContent(
+        diviContent,
+        generatedContent,
+        pageData.location,
+        internalLinkUrl,
+        clientData.clientName,
+        pageData.service,
+        internalLinkPlacement,
+        externalLinkPlacement,
+        pageData.omitSections
+      );
+      updatedDiviContent = result.data;
+      replacementLog = result.log;
+    }
 
     // Inject meta description tag directly (fallback if SEO plugin doesn't output it)
     const metaDescriptionScript = `<script>
@@ -795,11 +828,11 @@ async function duplicateTemplateAndPublish(params: {
 })();
 </script>`;
 
-    // Add invisible HTML widget at the beginning of the first section for meta tag injection
-    if (updatedElementorData && updatedElementorData.length > 0 && updatedElementorData[0].elements) {
+    // Add invisible HTML widget for meta tag injection (builder-specific)
+    if (isElementor && updatedElementorData && updatedElementorData.length > 0 && updatedElementorData[0].elements) {
+      // ELEMENTOR: Add HTML widget at the beginning of first section
       const firstSection = updatedElementorData[0];
       if (firstSection.elements.length > 0 && firstSection.elements[0].elements) {
-        // Add HTML widget at the beginning of first column
         firstSection.elements[0].elements.unshift({
           id: 'meta-injection-' + Date.now(),
           elType: 'widget',
@@ -812,6 +845,9 @@ async function duplicateTemplateAndPublish(params: {
           widgetType: 'html',
         });
       }
+    } else if (isDivi && updatedDiviContent) {
+      // DIVI: Inject script at the beginning of content
+      updatedDiviContent = metaDescriptionScript + '\n\n' + updatedDiviContent;
     }
 
     // Generate schema.org structured data
@@ -843,23 +879,32 @@ async function duplicateTemplateAndPublish(params: {
       title: primaryKeyword, // Use primaryKeyword only - WordPress/theme will append site name via title template
       slug: slug,
       status: 'publish',
-      content: schemaScript + (templatePage.content?.rendered || ''), // CHANGED: Inject schema at top of content
       excerpt: generatedContent.metaDescription, // Set excerpt to meta description
       featured_media: templatePage.featured_media || 0,
       comment_status: templatePage.comment_status || 'closed',
       ping_status: templatePage.ping_status || 'closed',
       template: templatePage.template || '',
       meta: {
-        // Copy all existing meta from template (but we'll override SEO fields)
+        // Copy all existing meta from template
         ...templatePage.meta,
-        // Update Elementor data with new content
-        _elementor_data: JSON.stringify(updatedElementorData),
-        _elementor_edit_mode: 'builder',
-        _elementor_template_type: 'wp-page',
-        _elementor_version: templatePage.meta?._elementor_version || '3.25.0',
-        _wp_page_template: templatePage.meta?._wp_page_template || 'elementor_canvas',
       },
     };
+
+    // Add builder-specific fields
+    if (isElementor) {
+      // ELEMENTOR: Update Elementor meta fields
+      pagePayload.content = schemaScript + (templatePage.content?.rendered || ''); // Inject schema at top
+      pagePayload.meta._elementor_data = JSON.stringify(updatedElementorData);
+      pagePayload.meta._elementor_edit_mode = 'builder';
+      pagePayload.meta._elementor_template_type = 'wp-page';
+      pagePayload.meta._elementor_version = templatePage.meta?._elementor_version || '3.25.0';
+      pagePayload.meta._wp_page_template = templatePage.meta?._wp_page_template || 'elementor_canvas';
+    } else if (isDivi) {
+      // DIVI: Update content with modified shortcodes and inject schema
+      pagePayload.content = schemaScript + updatedDiviContent;
+      pagePayload.meta._et_pb_use_builder = 'on';
+      pagePayload.meta._et_pb_old_content = ''; // Clear old content
+    }
 
     // Add SEO plugin fields - ONLY meta title and meta description
     // NOTE: Use primaryKeyword only (not full metaTitle) to avoid duplicate company names
