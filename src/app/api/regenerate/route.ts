@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma';
 import { generatePageContent } from '@/lib/claude-api';
 import { validateContent, type ContentValidationParams, determineLinkPlacements } from '@/lib/page-generation';
 import { replaceElementorContent } from '@/lib/elementor-replacer';
+import { replaceDiviContent } from '@/lib/divi-replacer';
 import { generateStructuredData } from '@/lib/schema-generator';
 import { randomBytes } from 'crypto';
 
@@ -47,8 +48,16 @@ async function getParentPageId(wordpressUrl: string, parentSlug: string, credent
   }
 }
 
-// Helper function to fetch Elementor template
-async function fetchElementorTemplate(wordpressUrl: string, templatePageId: string, credentials: string): Promise<any | null> {
+// Helper function to fetch template page (supports both Elementor and Divi)
+async function fetchTemplatePage(
+  wordpressUrl: string,
+  templatePageId: string,
+  credentials: string
+): Promise<{
+  fullPage: any;
+  builder: 'elementor' | 'divi';
+  templateData: any;
+} | null> {
   if (!templatePageId) return null;
 
   try {
@@ -65,15 +74,34 @@ async function fetchElementorTemplate(wordpressUrl: string, templatePageId: stri
     }
 
     const templatePage = await response.json();
-    const elementorData = templatePage.meta?._elementor_data;
-    if (!elementorData) {
-      console.error('No Elementor data found in template page');
+
+    // Detect builder
+    const isElementor = !!templatePage.meta?._elementor_data;
+    const isDivi = templatePage.meta?._et_pb_use_builder === 'on' ||
+                   (templatePage.content?.rendered && templatePage.content.rendered.includes('[et_pb_'));
+
+    if (isElementor) {
+      const elementorData = templatePage.meta._elementor_data;
+      const parsedData = typeof elementorData === 'string' ? JSON.parse(elementorData) : elementorData;
+      console.log('[REGENERATE] Detected Elementor page builder');
+      return {
+        fullPage: templatePage,
+        builder: 'elementor',
+        templateData: parsedData,
+      };
+    } else if (isDivi) {
+      console.log('[REGENERATE] Detected Divi page builder');
+      return {
+        fullPage: templatePage,
+        builder: 'divi',
+        templateData: templatePage.content?.rendered || '',
+      };
+    } else {
+      console.error('Template page must use either Elementor or Divi page builder');
       return null;
     }
-
-    return typeof elementorData === 'string' ? JSON.parse(elementorData) : elementorData;
   } catch (error) {
-    console.error('Error fetching Elementor template:', error);
+    console.error('Error fetching template page:', error);
     return null;
   }
 }
@@ -115,43 +143,36 @@ async function publishToWordPress(params: {
   // Generate slug based on page type
   const slug = generateSlug(pageType, service, location);
 
-  // Fetch Elementor template
-  const elementorTemplate = await fetchElementorTemplate(wordpressUrl, templatePageId, credentials);
+  // Fetch template page (supports both Elementor and Divi)
+  const templateInfo = await fetchTemplatePage(wordpressUrl, templatePageId, credentials);
+
+  if (!templateInfo) {
+    throw new Error('Failed to fetch template page or unsupported page builder');
+  }
+
+  const { fullPage: fullTemplatePage, builder, templateData } = templateInfo;
 
   // Build page payload
-  // NOTE: Use primaryKeyword for both page title and SEO title to avoid duplicate company names
-  // WordPress/SEO plugins have title templates that append site name automatically
+  // NOTE: WordPress page title uses primaryKeyword, SEO meta title uses AI-generated metaTitle
   const pagePayload: any = {
-    title: primaryKeyword,
+    title: primaryKeyword, // WordPress page title (shown in admin)
     slug: slug,
     status: 'publish',
     meta: {
       ...(seoPlugin === 'yoast' ? {
-        _yoast_wpseo_title: primaryKeyword,
+        _yoast_wpseo_title: generatedContent.metaTitle, // SEO meta title (shown in search results)
         _yoast_wpseo_metadesc: generatedContent.metaDescription,
         _yoast_wpseo_focuskw: primaryKeyword,
       } : {
-        rank_math_title: primaryKeyword,
+        rank_math_title: generatedContent.metaTitle, // SEO meta title (shown in search results)
         rank_math_description: generatedContent.metaDescription,
         rank_math_focus_keyword: primaryKeyword,
       }),
     },
   };
 
-  // Fetch full template page to duplicate it properly
+  // Process content based on builder
   try {
-    const fullTemplateUrl = `${wordpressUrl}/wp-json/wp/v2/pages/${templatePageId}?context=edit`;
-    const fullTemplateResponse = await fetch(fullTemplateUrl, {
-      headers: {
-        Authorization: `Basic ${credentials}`,
-      },
-    });
-
-    if (!fullTemplateResponse.ok) {
-      throw new Error('Failed to fetch full template page');
-    }
-
-    const fullTemplatePage = await fullTemplateResponse.json();
 
     // Get parent page URL for internal linking
     let parentPageUrl = '';
@@ -159,10 +180,14 @@ async function publishToWordPress(params: {
       parentPageUrl = `${wordpressUrl}/${parentSlug}`;
     }
 
-    // If Elementor template exists, use it
-    if (elementorTemplate) {
-      const { data: updatedElementorData, log: elementorLog } = replaceElementorContent(
-        elementorTemplate,
+    // Replace content based on builder
+    let updatedData: any = null;
+    let replacementLog: any = null;
+
+    if (builder === 'elementor') {
+      // ELEMENTOR: Use Elementor replacer
+      const { data, log } = replaceElementorContent(
+        templateData,
         generatedContent,
         location,
         parentPageUrl, // internalLinkUrl
@@ -172,40 +197,79 @@ async function publishToWordPress(params: {
         externalLinkPlacement,
         omitSections || []
       );
+      updatedData = data;
+      replacementLog = log;
 
       console.log('[REGENERATE] Elementor replacement log:', {
-        sectionsFound: elementorLog.sectionsFound,
-        sectionsUpdated: elementorLog.sectionsUpdated.length,
-        totalElements: elementorLog.elementDetails.length,
+        sectionsFound: replacementLog.sectionsFound,
+        sectionsUpdated: replacementLog.sectionsUpdated.length,
+        totalElements: replacementLog.elementDetails.length,
+      });
+    } else if (builder === 'divi') {
+      // DIVI: Use Divi replacer
+      const { data, log } = replaceDiviContent(
+        templateData,
+        generatedContent,
+        location,
+        parentPageUrl, // internalLinkUrl
+        companyName,
+        service,
+        internalLinkPlacement,
+        externalLinkPlacement,
+        omitSections || []
+      );
+      updatedData = data;
+      replacementLog = log;
+
+      console.log('[REGENERATE] Divi replacement log:', {
+        sectionsFound: replacementLog.sectionsFound,
+        sectionsUpdated: replacementLog.sectionsUpdated.length,
+        totalElements: replacementLog.elementDetails.length,
+      });
+    }
+
+    // Generate schema.org structured data (AFTER content is finalized)
+    let schemaScript = '';
+    try {
+      const schemaData = generateStructuredData({
+        companyName,
+        companyWebsite,
+        businessPhone,
+        businessAddress,
+        businessType,
+        gbpUrl,
+        service,
+        location,
+        primaryKeyword,
+        pageType,
+        faqs: generatedContent.faqs,
       });
 
-      // Generate schema.org structured data (AFTER content is finalized)
-      let schemaScript = '';
-      try {
-        const schemaData = generateStructuredData({
-          companyName,
-          companyWebsite,
-          businessPhone,
-          businessAddress,
-          businessType,
-          gbpUrl,
-          service,
-          location,
-          primaryKeyword,
-          pageType,
-          faqs: generatedContent.faqs,
-        });
+      schemaScript = `<script type="application/ld+json">${JSON.stringify(schemaData, null, 2)}</script>`;
+      console.log('[REGENERATE] Generated schema.org markup');
+    } catch (schemaError) {
+      console.warn('[REGENERATE] Schema generation failed:', schemaError);
+      // Continue without schema (non-blocking)
+    }
 
-        schemaScript = `<script type="application/ld+json">${JSON.stringify(schemaData, null, 2)}</script>`;
-        console.log('[REGENERATE] Generated schema.org markup');
-      } catch (schemaError) {
-        console.warn('[REGENERATE] Schema generation failed:', schemaError);
-        // Continue without schema (non-blocking)
-      }
+    // Copy common template settings
+    pagePayload.excerpt = generatedContent.metaDescription; // Set excerpt to meta description for WordPress SEO
+    pagePayload.featured_media = fullTemplatePage.featured_media || 0;
+    pagePayload.comment_status = fullTemplatePage.comment_status || 'closed';
+    pagePayload.ping_status = fullTemplatePage.ping_status || 'closed';
+    pagePayload.template = fullTemplatePage.template || '';
 
-      // Inject schema into first section of Elementor data
-      if (schemaScript && updatedElementorData.length > 0) {
-        const firstSection = updatedElementorData[0];
+    // Copy existing meta
+    pagePayload.meta = {
+      ...fullTemplatePage.meta,
+      ...pagePayload.meta,
+    };
+
+    // Builder-specific payload
+    if (builder === 'elementor') {
+      // ELEMENTOR: Inject schema into first section
+      if (schemaScript && updatedData.length > 0) {
+        const firstSection = updatedData[0];
         if (!firstSection.settings) {
           firstSection.settings = {};
         }
@@ -217,67 +281,24 @@ async function publishToWordPress(params: {
         console.log('[REGENERATE] Injected schema into Elementor template');
       }
 
-      // Copy all template settings
+      // Set Elementor-specific fields
       pagePayload.content = fullTemplatePage.content?.rendered || '';
-      pagePayload.excerpt = generatedContent.metaDescription; // Set excerpt to meta description for WordPress SEO
-      pagePayload.featured_media = fullTemplatePage.featured_media || 0;
-      pagePayload.comment_status = fullTemplatePage.comment_status || 'closed';
-      pagePayload.ping_status = fullTemplatePage.ping_status || 'closed';
-      pagePayload.template = fullTemplatePage.template || '';
-
-      // Copy all meta and update Elementor data
-      pagePayload.meta = {
-        ...fullTemplatePage.meta,
-        ...pagePayload.meta,
-        _elementor_data: JSON.stringify(updatedElementorData),
-        _elementor_edit_mode: 'builder',
-        _elementor_template_type: 'wp-page',
-        _elementor_version: fullTemplatePage.meta?._elementor_version || '3.25.0',
-        _wp_page_template: fullTemplatePage.meta?._wp_page_template || 'elementor_canvas',
-      };
-    } else {
-      // Fallback to plain HTML
-      console.warn('No Elementor template found, using plain HTML');
-      pagePayload.content = `
-      <div class="hero">
-        <h1>${generatedContent.h1}</h1>
-        <p>${generatedContent.heroDescription}</p>
-      </div>
-      ${generatedContent.benefitsHeading ? `
-      <div class="benefits">
-        <h2>${generatedContent.benefitsHeading}</h2>
-        <p>${generatedContent.benefitsSubheading}</p>
-        <ul>
-          ${generatedContent.benefitsBullets.map((bullet: string) => `<li>${bullet}</li>`).join('\n')}
-        </ul>
-      </div>` : ''}
-      ${generatedContent.whyHeading ? `
-      <div class="why">
-        <h2>${generatedContent.whyHeading}</h2>
-        <p>${generatedContent.whySubheading}</p>
-        <ul>
-          ${generatedContent.whyBullets.map((bullet: string) => `<li>${bullet}</li>`).join('\n')}
-        </ul>
-      </div>` : ''}
-      ${generatedContent.faqs && generatedContent.faqs.length > 0 ? `
-      <div class="faqs">
-        <h2>Frequently Asked Questions</h2>
-        ${generatedContent.faqs.map((faq: any) => `
-          <div class="faq">
-            <h3>${faq.question}</h3>
-            <p>${faq.answer}</p>
-          </div>
-        `).join('\n')}
-      </div>` : ''}
-      ${generatedContent.mapDescription ? `
-      <div class="map">
-        <p>${generatedContent.mapDescription}</p>
-      </div>` : ''}
-    `;
+      pagePayload.meta._elementor_data = JSON.stringify(updatedData);
+      pagePayload.meta._elementor_edit_mode = 'builder';
+      pagePayload.meta._elementor_template_type = 'wp-page';
+      pagePayload.meta._elementor_version = fullTemplatePage.meta?._elementor_version || '3.25.0';
+      pagePayload.meta._wp_page_template = fullTemplatePage.meta?._wp_page_template || 'elementor_canvas';
+    } else if (builder === 'divi') {
+      // DIVI: Inject schema at the beginning of content
+      pagePayload.content = schemaScript + '\n\n' + updatedData;
+      pagePayload.meta._et_pb_use_builder = 'on';
+      pagePayload.meta._et_pb_old_content = ''; // Clear old content
+      console.log('[REGENERATE] Injected schema into Divi content');
     }
+
   } catch (fetchError) {
-    console.error('Error fetching full template page:', fetchError);
-    // Continue with basic pagePayload already defined
+    console.error('Error processing template:', fetchError);
+    throw fetchError;
   }
 
   // Add parent if found

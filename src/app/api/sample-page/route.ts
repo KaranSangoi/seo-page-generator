@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 // Sample content for test page
 const SAMPLE_CONTENT = {
   h1: 'Professional Service Provider in Your Location',
-  heroDescription: 'This is a sample page generated from your Elementor template. Review the styling, layout, and design to ensure it meets your needs before generating pages at scale. This content is for demonstration purposes only and showcases how your actual pages will look with proper formatting and structure.',
+  heroDescription: 'This is a sample page generated from your template. Review the styling, layout, and design to ensure it meets your needs before generating pages at scale. This content is for demonstration purposes only and showcases how your actual pages will look with proper formatting and structure.',
   metaTitle: 'Professional Service Provider in Your Location | Company Name',
   metaDescription: 'Company Name offers professional service in your location. Quality work, expert team, and reliable results. Call now!',
   benefitsHeading: 'Experience Excellence with Company Name',
@@ -33,7 +33,7 @@ const SAMPLE_CONTENT = {
   faqs: [
     {
       question: 'What is this sample page for?',
-      answer: 'This sample page allows you to preview how your Elementor template will look with generated content. Check the styling, fonts, colors, and layout to ensure everything appears as expected before generating pages at scale.',
+      answer: 'This sample page allows you to preview how your template will look with generated content. Check the styling, fonts, colors, and layout to ensure everything appears as expected before generating pages at scale.',
     },
     {
       question: 'Will my actual pages look exactly like this?',
@@ -41,7 +41,7 @@ const SAMPLE_CONTENT = {
     },
     {
       question: 'Can I modify the template after seeing this sample?',
-      answer: 'Absolutely! If you notice any styling issues or want to make changes, simply update your Elementor template page in WordPress, then generate a new sample page to preview the changes.',
+      answer: 'Absolutely! If you notice any styling issues or want to make changes, simply update your template page in WordPress, then generate a new sample page to preview the changes.',
     },
   ],
   mapDescription: 'This is the map section description demonstrating how location-specific content appears on your pages. Your actual pages will include relevant local information, service coverage details, and geographic specifics tailored to each target area. This helps establish local relevance and improves your search visibility in specific markets.',
@@ -509,6 +509,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No template page configured for this client' }, { status: 400 });
     }
 
+    // Check page builder support
+    const pageBuilder = client.pageBuilder || 'elementor';
+    console.log(`[SAMPLE PAGE] Client page builder: ${pageBuilder}`);
+
+    // Check if builder is supported
+    const { isBuilderSupported } = await import('@/lib/builders/detector');
+    if (!isBuilderSupported(pageBuilder as any)) {
+      return NextResponse.json(
+        {
+          error: `Sample page generation is not yet available for ${pageBuilder} templates.\n\nCurrently supported: Elementor, Divi\n\nDetected builder: ${pageBuilder}`
+        },
+        { status: 400 }
+      );
+    }
+
     // WordPress credentials
     const wpApiUrl = `${client.wordpressUrl}/wp-json/wp/v2/pages`;
     const credentials = Buffer.from(`${client.wpUsername}:${client.wpAppPassword}`).toString('base64');
@@ -539,60 +554,76 @@ export async function POST(request: NextRequest) {
       yoastDesc: templatePage.meta?._yoast_wpseo_metadesc,
       yoastFocus: templatePage.meta?._yoast_wpseo_focuskw,
       allYoastFields: Object.keys(templatePage.meta || {}).filter(k => k.includes('yoast')),
+      hasYoastHeadJson: !!templatePage.yoast_head_json,
+      yoastHeadJsonTitle: templatePage.yoast_head_json?.title,
+      yoastHeadJsonDesc: templatePage.yoast_head_json?.description,
     });
 
-    // Get Elementor data
-    const elementorData = templatePage.meta?._elementor_data;
-    if (!elementorData) {
-      return NextResponse.json(
-        { error: 'No Elementor data found in template page' },
-        { status: 400 }
-      );
-    }
+    // Prepare updated content based on builder type
+    let updatedContent: any;
+    let updatedMeta: any = {};
 
-    // Parse and replace content
-    const parsedElementorData = typeof elementorData === 'string' ? JSON.parse(elementorData) : elementorData;
+    console.log('[BUILDER PATH] About to process builder:', pageBuilder);
+    console.log('[BUILDER PATH] Has Elementor data?', !!templatePage.meta?._elementor_data);
+    console.log('[BUILDER PATH] Has Divi meta?', templatePage.meta?._et_pb_use_builder);
+    console.log('[BUILDER PATH] Content keys:', Object.keys(templatePage.content || {}));
 
-    // Log element structure to help debug FAQ issue
-    console.log('[TEMPLATE ANALYSIS] Analyzing template structure...');
-    const analyzedElements = {
-      faqElements: [] as string[],
-      allCssIds: [] as string[],
-    };
+    if (pageBuilder === 'elementor') {
+      // ==================== ELEMENTOR PATH ====================
+      console.log('[SAMPLE PAGE] Using Elementor builder path');
 
-    const analyzeElement = (element: any): void => {
-      if (element?.settings) {
-        const cssId = element.settings._element_id || element.settings.css_id || '';
-        if (cssId) {
-          analyzedElements.allCssIds.push(`${cssId} (${element.widgetType || element.elType})`);
-          if (cssId.includes('faq')) {
-            analyzedElements.faqElements.push(`${cssId} - type: ${element.widgetType || element.elType}`);
+      // Get Elementor data
+      const elementorData = templatePage.meta?._elementor_data;
+      if (!elementorData) {
+        return NextResponse.json(
+          { error: 'No Elementor data found in template page.\n\nPlease ensure your template page is built with Elementor.' },
+          { status: 400 }
+        );
+      }
+
+      // Parse and replace content
+      const parsedElementorData = typeof elementorData === 'string' ? JSON.parse(elementorData) : elementorData;
+
+      // Log element structure to help debug FAQ issue
+      console.log('[TEMPLATE ANALYSIS] Analyzing template structure...');
+      const analyzedElements = {
+        faqElements: [] as string[],
+        allCssIds: [] as string[],
+      };
+
+      const analyzeElement = (element: any): void => {
+        if (element?.settings) {
+          const cssId = element.settings._element_id || element.settings.css_id || '';
+          if (cssId) {
+            analyzedElements.allCssIds.push(`${cssId} (${element.widgetType || element.elType})`);
+            if (cssId.includes('faq')) {
+              analyzedElements.faqElements.push(`${cssId} - type: ${element.widgetType || element.elType}`);
+            }
           }
         }
+        if (element?.elements && Array.isArray(element.elements)) {
+          element.elements.forEach(analyzeElement);
+        }
+      };
+
+      parsedElementorData.forEach(analyzeElement);
+      console.log('[TEMPLATE ANALYSIS] FAQ elements found:', analyzedElements.faqElements.length > 0 ? analyzedElements.faqElements : 'NONE');
+      console.log('[TEMPLATE ANALYSIS] Total elements with CSS IDs:', analyzedElements.allCssIds.length);
+      if (analyzedElements.faqElements.length === 0) {
+        console.warn('[WARNING] No FAQ elements found in template! Check template CSS IDs.');
       }
-      if (element?.elements && Array.isArray(element.elements)) {
-        element.elements.forEach(analyzeElement);
-      }
-    };
 
-    parsedElementorData.forEach(analyzeElement);
-    console.log('[TEMPLATE ANALYSIS] FAQ elements found:', analyzedElements.faqElements.length > 0 ? analyzedElements.faqElements : 'NONE');
-    console.log('[TEMPLATE ANALYSIS] Total elements with CSS IDs:', analyzedElements.allCssIds.length);
-    if (analyzedElements.faqElements.length === 0) {
-      console.warn('[WARNING] No FAQ elements found in template! Check template CSS IDs.');
-    }
+      const updatedElementorData = replaceElementorContent(
+        parsedElementorData,
+        SAMPLE_CONTENT,
+        'Phoenix, AZ',
+        undefined, // no parent page for sample
+        undefined, // no service for sample
+        1 // use rotation 1 for sample (will add internal link to FAQ)
+      );
 
-    const updatedElementorData = replaceElementorContent(
-      parsedElementorData,
-      SAMPLE_CONTENT,
-      'Phoenix, AZ',
-      undefined, // no parent page for sample
-      undefined, // no service for sample
-      1 // use rotation 1 for sample (will add internal link to FAQ)
-    );
-
-    // Inject meta description directly into page (fallback if Yoast doesn't output it)
-    const metaDescriptionScript = `<script>
+      // Inject meta description directly into page (fallback if Yoast doesn't output it)
+      const metaDescriptionScript = `<script>
 (function() {
   if (!document.querySelector('meta[name="description"]')) {
     var meta = document.createElement('meta');
@@ -603,23 +634,106 @@ export async function POST(request: NextRequest) {
 })();
 </script>`;
 
-    // Add invisible HTML widget at the beginning of the first section for meta tag injection
-    if (updatedElementorData && updatedElementorData.length > 0 && updatedElementorData[0].elements) {
-      const firstSection = updatedElementorData[0];
-      if (firstSection.elements.length > 0 && firstSection.elements[0].elements) {
-        // Add HTML widget at the beginning of first column
-        firstSection.elements[0].elements.unshift({
-          id: 'meta-injection-' + Date.now(),
-          elType: 'widget',
-          settings: {
-            html: metaDescriptionScript,
-            _margin: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0' },
-            _padding: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0' },
-          },
-          elements: [],
-          widgetType: 'html',
-        });
+      // Add invisible HTML widget at the beginning of the first section for meta tag injection
+      if (updatedElementorData && updatedElementorData.length > 0 && updatedElementorData[0].elements) {
+        const firstSection = updatedElementorData[0];
+        if (firstSection.elements.length > 0 && firstSection.elements[0].elements) {
+          // Add HTML widget at the beginning of first column
+          firstSection.elements[0].elements.unshift({
+            id: 'meta-injection-' + Date.now(),
+            elType: 'widget',
+            settings: {
+              html: metaDescriptionScript,
+              _margin: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0' },
+              _padding: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0' },
+            },
+            elements: [],
+            widgetType: 'html',
+          });
+        }
       }
+
+      // Store Elementor-specific data
+      updatedContent = updatedElementorData;
+      updatedMeta = {
+        _elementor_data: JSON.stringify(updatedElementorData),
+        _elementor_edit_mode: 'builder',
+        _elementor_template_type: 'wp-page',
+        _elementor_version: templatePage.meta?._elementor_version || '3.25.0',
+        _wp_page_template: templatePage.meta?._wp_page_template || 'elementor_canvas',
+      };
+
+    } else if (pageBuilder === 'divi') {
+      // ==================== DIVI PATH ====================
+      console.log('[SAMPLE PAGE] Using Divi builder path');
+
+      // Import Divi replacer
+      const { replaceDiviContent } = await import('@/lib/divi-replacer');
+
+      // Get Divi content from post_content (RAW, not rendered)
+      // The REST API with context=edit gives us content.raw which contains the actual shortcodes
+      const diviContent = templatePage.content?.raw || '';
+
+      console.log('[DIVI DEBUG] Full content object keys:', Object.keys(templatePage.content || {}));
+      console.log('[DIVI DEBUG] Content available:', {
+        hasRaw: !!templatePage.content?.raw,
+        hasRendered: !!templatePage.content?.rendered,
+        rawLength: templatePage.content?.raw?.length || 0,
+        renderedLength: templatePage.content?.rendered?.length || 0,
+        rawPreview: templatePage.content?.raw?.substring(0, 300) || 'none',
+        renderedPreview: templatePage.content?.rendered?.substring(0, 300) || 'none',
+        containsShortcodesInRaw: templatePage.content?.raw?.includes('[et_pb_') || false,
+        containsShortcodesInRendered: templatePage.content?.rendered?.includes('[et_pb_') || false,
+      });
+
+      if (!diviContent || !diviContent.includes('[et_pb_')) {
+        return NextResponse.json(
+          { error: 'No Divi shortcodes found in template page.\n\nPlease ensure your template page is built with Divi Builder.\n\nDebug info:\n- Has raw content: ' + !!templatePage.content?.raw + '\n- Content length: ' + (templatePage.content?.raw?.length || 0) + '\n- Contains [et_pb_: ' + (templatePage.content?.raw?.includes('[et_pb_') || false) },
+          { status: 400 }
+        );
+      }
+
+      // Replace Divi content
+      const { data: updatedDiviContent } = replaceDiviContent(
+        diviContent,
+        SAMPLE_CONTENT,
+        'Phoenix, AZ',
+        undefined, // no parent page for sample
+        undefined, // no company name for sample
+        undefined, // no service for sample
+        undefined, // no internal link placement
+        undefined, // no external link placement
+        []         // no omit sections
+      );
+
+      // Add Schema.org JSON-LD for SEO (helps if Yoast doesn't load properly)
+      const sampleTitle = SAMPLE_CONTENT.metaTitle.split('|')[0].trim();
+      const schemaData = {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": sampleTitle,
+        "description": SAMPLE_CONTENT.metaDescription,
+        "url": client.clientWebsite
+      };
+      const schemaScript = `<!-- Schema.org JSON-LD for SEO -->\n<script type="application/ld+json">\n${JSON.stringify(schemaData, null, 2)}\n</script>\n\n`;
+
+      // Add HTML meta tags as comment for reference (and potential extraction by theme/plugin)
+      const metaTags = `<!-- SEO Meta Tags (for theme/plugin extraction or manual addition to head)
+<meta name="description" content="${SAMPLE_CONTENT.metaDescription}">
+<meta property="og:title" content="${sampleTitle}">
+<meta property="og:description" content="${SAMPLE_CONTENT.metaDescription}">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${sampleTitle}">
+<meta name="twitter:description" content="${SAMPLE_CONTENT.metaDescription}">
+-->\n\n`;
+
+      // Prepend meta tags and schema to content
+      updatedContent = metaTags + schemaScript + updatedDiviContent;
+      updatedMeta = {
+        _et_pb_use_builder: 'on',
+        _et_pb_old_content: '',
+      };
     }
 
     // Generate unique slug
@@ -630,37 +744,64 @@ export async function POST(request: NextRequest) {
     // WordPress/SEO plugins have title templates that append site name automatically
     const sampleKeywordOnly = SAMPLE_CONTENT.metaTitle.split('|')[0].trim();
 
-    // Build page payload
+    // Build page payload (works for both Elementor and Divi)
     const pagePayload: any = {
       title: sampleKeywordOnly, // Use keyword only, let WordPress/theme append site name
       slug: slug,
       status: 'publish',
-      content: templatePage.content?.rendered || '',
+      content: pageBuilder === 'divi' ? updatedContent : (templatePage.content?.rendered || ''),
       excerpt: SAMPLE_CONTENT.metaDescription, // Set excerpt to meta description for WordPress SEO
       featured_media: templatePage.featured_media || 0,
       comment_status: 'closed',
       ping_status: 'closed',
       template: templatePage.template || '',
+      menu_order: 0, // Don't add to navigation menus
       meta: {
         ...templatePage.meta,
-        _elementor_data: JSON.stringify(updatedElementorData),
-        _elementor_edit_mode: 'builder',
-        _elementor_template_type: 'wp-page',
-        _elementor_version: templatePage.meta?._elementor_version || '3.25.0',
-        _wp_page_template: templatePage.meta?._wp_page_template || 'elementor_canvas',
+        ...updatedMeta,
       },
     };
 
     // Add SEO plugin fields - ONLY meta title and meta description
     // NOTE: Use keyword only to avoid duplicate company names
-    const seoPlugin = client.seoPlugin?.toLowerCase();
+    const seoPlugin = client.seoPlugin?.toLowerCase().trim();
     console.log('[SEO PLUGIN] Client SEO plugin setting:', client.seoPlugin, '(normalized:', seoPlugin, ')');
+
+    // Add common meta fields that themes and plugins use
+    pagePayload.meta.description = String(SAMPLE_CONTENT.metaDescription);
+    pagePayload.meta._genesis_description = String(SAMPLE_CONTENT.metaDescription);
+    pagePayload.meta._aioseop_description = String(SAMPLE_CONTENT.metaDescription);
+    pagePayload.meta._aioseop_title = String(sampleKeywordOnly);
+
+    console.log('[META FIELDS] Adding common meta fields for theme/plugin fallback:', {
+      description: pagePayload.meta.description,
+      _genesis_description: pagePayload.meta._genesis_description,
+      _aioseop_description: pagePayload.meta._aioseop_description,
+      _aioseop_title: pagePayload.meta._aioseop_title,
+    });
+
     if (seoPlugin === 'yoast') {
       console.log('[SEO PLUGIN] Using Yoast SEO fields');
-      // Yoast SEO fields
+
+      // First, copy ALL existing Yoast fields from template (preserves schema, breadcrumbs, etc.)
+      if (templatePage.meta) {
+        Object.keys(templatePage.meta).forEach(key => {
+          if (key.startsWith('_yoast_wpseo_')) {
+            pagePayload.meta[key] = templatePage.meta[key];
+          }
+        });
+        console.log('[SEO PLUGIN] Copied Yoast fields from template:',
+          Object.keys(pagePayload.meta).filter(k => k.startsWith('_yoast_wpseo_')));
+      }
+
+      // Then override title and description with generated content
       pagePayload.meta._yoast_wpseo_title = String(sampleKeywordOnly);
       pagePayload.meta._yoast_wpseo_metadesc = String(SAMPLE_CONTENT.metaDescription);
       pagePayload.meta._yoast_wpseo_focuskw = String(sampleKeywordOnly);
+      pagePayload.meta._yoast_wpseo_opengraph_title = String(sampleKeywordOnly);
+      pagePayload.meta._yoast_wpseo_opengraph_description = String(SAMPLE_CONTENT.metaDescription);
+      pagePayload.meta._yoast_wpseo_twitter_title = String(sampleKeywordOnly);
+      pagePayload.meta._yoast_wpseo_twitter_description = String(SAMPLE_CONTENT.metaDescription);
       console.log('[SEO PAYLOAD] Yoast fields being sent:', {
         title: pagePayload.meta._yoast_wpseo_title,
         metadesc: pagePayload.meta._yoast_wpseo_metadesc,
@@ -702,13 +843,14 @@ export async function POST(request: NextRequest) {
     console.log('[REST API] WordPress page created successfully:', {
       pageId: result.id,
       pageUrl: result.link,
-      hasElementorData: !!result.meta?._elementor_data,
+      builderType: pageBuilder,
+      hasBuilderData: pageBuilder === 'elementor' ? !!result.meta?._elementor_data : pageBuilder === 'divi' ? !!result.meta?._et_pb_use_builder : false,
     });
     const pageId = result.id;
     const pageUrl = result.link || result.guid?.rendered || 'Unknown URL';
 
     // WORKAROUND: Update the page again immediately to force Yoast/Rank Math to refresh
-    // This helps Elementor's SEO UI display the fields correctly
+    // This helps the builder's SEO UI display the fields correctly
     try {
       const updatePayload: any = {
         meta: {},
@@ -739,6 +881,32 @@ export async function POST(request: NextRequest) {
         if (!updateResponse.ok) {
           const errorText = await updateResponse.text();
           console.error('[SEO UPDATE ERROR]:', errorText);
+        }
+
+        // THIRD UPDATE: Force Yoast to reindex by triggering WordPress save hooks
+        // This makes Yoast rebuild its indexables table
+        if (seoPlugin === 'yoast') {
+          try {
+            console.log('[YOAST REINDEX] Triggering third update to force Yoast indexing...');
+            await new Promise(resolve => setTimeout(resolve, 500)); // Small delay to let WordPress finish processing
+            const reindexPayload = {
+              status: 'publish', // Triggering a "save" with same status forces hooks to run
+              meta: {
+                ...updatePayload.meta,
+              },
+            };
+            const reindexResponse = await fetch(`${wpApiUrl}/${pageId}`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Basic ${credentials}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(reindexPayload),
+            });
+            console.log('[YOAST REINDEX] Response status:', reindexResponse.status, reindexResponse.statusText);
+          } catch (reindexError) {
+            console.error('[YOAST REINDEX] Error:', reindexError);
+          }
         }
       } else {
         console.log('[SEO UPDATE] Skipped - no SEO plugin configured or no fields to update');
