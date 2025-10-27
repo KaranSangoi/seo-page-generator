@@ -311,44 +311,64 @@ export default function MetadataTab({ client }: MetadataTabProps) {
                 <InfoIcon content="Detected page builder used by your template page" />
               </label>
               <div className="flex items-center gap-3 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <span className="text-2xl">
-                  {client.pageBuilder === 'elementor' && '🎨'}
-                  {client.pageBuilder === 'divi' && '🔷'}
-                  {client.pageBuilder === 'wpbakery' && '📦'}
-                  {client.pageBuilder === 'gutenberg' && '🧱'}
-                  {client.pageBuilder === 'beaver-builder' && '🦫'}
-                  {client.pageBuilder === 'oxygen' && '💨'}
-                  {client.pageBuilder === 'html' && '📄'}
-                  {!client.pageBuilder && '❓'}
-                </span>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {client.pageBuilder === 'elementor' && 'Elementor'}
-                      {client.pageBuilder === 'divi' && 'Divi Builder'}
-                      {client.pageBuilder === 'wpbakery' && 'WPBakery Page Builder'}
-                      {client.pageBuilder === 'gutenberg' && 'Gutenberg (Block Editor)'}
-                      {client.pageBuilder === 'beaver-builder' && 'Beaver Builder'}
-                      {client.pageBuilder === 'oxygen' && 'Oxygen Builder'}
-                      {client.pageBuilder === 'html' && 'Plain HTML'}
-                      {!client.pageBuilder && 'Not Detected'}
-                    </span>
-                    {client.pageBuilder === 'elementor' ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent-100 dark:bg-accent-900/40 text-accent-800 dark:text-accent-300">
-                        Supported
+                {(() => {
+                  // Use detected builder from connection test if available, otherwise use saved value
+                  const displayBuilder = connectionResult?.detectedBuilder || client.pageBuilder;
+                  const isDetectedNew = connectionResult?.detectedBuilder && connectionResult.detectedBuilder !== client.pageBuilder;
+
+                  return (
+                    <>
+                      <span className="text-2xl">
+                        {displayBuilder === 'elementor' && '🎨'}
+                        {displayBuilder === 'divi' && '🔷'}
+                        {displayBuilder === 'wpbakery' && '📦'}
+                        {displayBuilder === 'gutenberg' && '🧱'}
+                        {displayBuilder === 'beaver-builder' && '🦫'}
+                        {displayBuilder === 'oxygen' && '💨'}
+                        {displayBuilder === 'html' && '📄'}
+                        {!displayBuilder && '❓'}
                       </span>
-                    ) : client.pageBuilder && client.pageBuilder !== 'html' ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300">
-                        Coming Soon
-                      </span>
-                    ) : null}
-                  </div>
-                  {client.builderDetected && (
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                      Auto-detected from template page
-                    </p>
-                  )}
-                </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            {displayBuilder === 'elementor' && 'Elementor'}
+                            {displayBuilder === 'divi' && 'Divi Builder'}
+                            {displayBuilder === 'wpbakery' && 'WPBakery Page Builder'}
+                            {displayBuilder === 'gutenberg' && 'Gutenberg (Block Editor)'}
+                            {displayBuilder === 'beaver-builder' && 'Beaver Builder'}
+                            {displayBuilder === 'oxygen' && 'Oxygen Builder'}
+                            {displayBuilder === 'html' && 'Plain HTML'}
+                            {!displayBuilder && 'Not Detected'}
+                          </span>
+                          {displayBuilder === 'elementor' || displayBuilder === 'divi' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent-100 dark:bg-accent-900/40 text-accent-800 dark:text-accent-300">
+                              Supported
+                            </span>
+                          ) : displayBuilder && displayBuilder !== 'html' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300">
+                              Coming Soon
+                            </span>
+                          ) : null}
+                          {isDetectedNew && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
+                              New Detection
+                            </span>
+                          )}
+                        </div>
+                        {client.builderDetected && !isDetectedNew && (
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                            Auto-detected from template page
+                          </p>
+                        )}
+                        {isDetectedNew && (
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                            Newly detected - click Save Changes to update
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
