@@ -17,41 +17,6 @@ import { generateStructuredData } from './schema-generator';
 // ============================================================================
 
 /**
- * Inject meta description tag directly into page HTML (fallback if SEO plugin doesn't output it)
- */
-function injectMetaDescriptionTag(elementorData: any[], metaDescription: string): void {
-  const metaDescriptionScript = `<script>
-(function() {
-  if (!document.querySelector('meta[name="description"]')) {
-    var meta = document.createElement('meta');
-    meta.name = 'description';
-    meta.content = '${metaDescription.replace(/'/g, "\\'")}';
-    document.head.appendChild(meta);
-  }
-})();
-</script>`;
-
-  // Add invisible HTML widget at the beginning of the first section for meta tag injection
-  if (elementorData && elementorData.length > 0 && elementorData[0].elements) {
-    const firstSection = elementorData[0];
-    if (firstSection.elements.length > 0 && firstSection.elements[0].elements) {
-      // Add HTML widget at the beginning of first column
-      firstSection.elements[0].elements.unshift({
-        id: 'meta-injection-' + Date.now(),
-        elType: 'widget',
-        settings: {
-          html: metaDescriptionScript,
-          _margin: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0' },
-          _padding: { unit: 'px', top: '0', right: '0', bottom: '0', left: '0' },
-        },
-        elements: [],
-        widgetType: 'html',
-      });
-    }
-  }
-}
-
-/**
  * Get page name based on page type
  */
 export function getPageName(pageType: string, service: string, location: string): string {
@@ -516,8 +481,8 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     updatedContent = data;
     replacementLog = log;
 
-    // Inject meta description tag directly (fallback if SEO plugin doesn't output it)
-    injectMetaDescriptionTag(updatedContent, params.generatedContent.metaDescription);
+    // Meta description is handled by SEO plugins (Yoast, RankMath, All in One SEO)
+    // via the meta fields we set below, no need to inject into page content
 
     console.log('[Publishing] Elementor replacement summary:', {
       sectionsFound: replacementLog.sectionsFound,
