@@ -54,7 +54,7 @@ For the best results, install these plugins:
 
 ### Required Plugin:
 
-- **Yoast SEO** (recommended) or **All in One SEO Pack**
+- **Yoast SEO** (recommended) or **Rank Math**
   - Why? These plugins help search engines understand your pages better
 
 ### For Divi Users:
@@ -64,6 +64,101 @@ For the best results, install these plugins:
 ### For Elementor Users:
 
 - Make sure **Elementor** is installed and active
+
+---
+
+## Step 2.5: Enable Yoast/Rank Math REST API Support ⚠️ CRITICAL
+
+> **🚨 IMPORTANT:** This step is REQUIRED for SEO meta titles and descriptions to work!
+
+By default, Yoast SEO and Rank Math don't allow updates via REST API. You need to add a small piece of code to your WordPress site.
+
+### Option A: Using Code Snippets Plugin (Recommended - Safest)
+
+1. **Install Code Snippets Plugin:**
+   - Go to **Plugins → Add New**
+   - Search for "Code Snippets"
+   - Install and activate "Code Snippets by Code Snippets Pro"
+
+2. **Add the Code:**
+   - Go to **Snippets → Add New**
+   - Give it a name: "Enable Yoast REST API"
+   - Paste the code below:
+
+**For Yoast SEO:**
+```php
+add_action('rest_api_init', function() {
+    register_post_meta('page', '_yoast_wpseo_title', [
+        'show_in_rest' => true,
+        'single' => true,
+        'type' => 'string',
+        'auth_callback' => function() { return current_user_can('edit_pages'); }
+    ]);
+    register_post_meta('page', '_yoast_wpseo_metadesc', [
+        'show_in_rest' => true,
+        'single' => true,
+        'type' => 'string',
+        'auth_callback' => function() { return current_user_can('edit_pages'); }
+    ]);
+    register_post_meta('page', '_yoast_wpseo_focuskw', [
+        'show_in_rest' => true,
+        'single' => true,
+        'type' => 'string',
+        'auth_callback' => function() { return current_user_can('edit_pages'); }
+    ]);
+});
+```
+
+**For Rank Math:**
+```php
+add_action('rest_api_init', function() {
+    register_post_meta('page', 'rank_math_title', [
+        'show_in_rest' => true,
+        'single' => true,
+        'type' => 'string',
+        'auth_callback' => function() { return current_user_can('edit_pages'); }
+    ]);
+    register_post_meta('page', 'rank_math_description', [
+        'show_in_rest' => true,
+        'single' => true,
+        'type' => 'string',
+        'auth_callback' => function() { return current_user_can('edit_pages'); }
+    ]);
+    register_post_meta('page', 'rank_math_focus_keyword', [
+        'show_in_rest' => true,
+        'single' => true,
+        'type' => 'string',
+        'auth_callback' => function() { return current_user_can('edit_pages'); }
+    ]);
+});
+```
+
+3. **Set to run "Everywhere"**
+4. **Click "Save Changes and Activate"**
+
+### Option B: Add to Child Theme functions.php
+
+1. **Go to:** Appearance → Theme File Editor
+2. **Select your Child Theme** (if you don't have one, use Option A instead!)
+3. **Click on** `functions.php`
+4. **Add the code** (from above) at the end of the file
+5. **Click "Update File"**
+
+> ⚠️ **Warning:** Only use this method if you have a child theme! Theme updates will overwrite your changes otherwise.
+
+### Why is this needed?
+
+WordPress REST API doesn't expose Yoast/Rank Math fields by default for security reasons. This code safely enables them so the SEO Page Generator can update your meta titles and descriptions.
+
+### How to verify it's working?
+
+After adding the code:
+1. Generate a test page
+2. View the page source (Right-click → View Page Source)
+3. Search for `<title>` - you should see your SEO title
+4. Search for `<meta name="description"` - you should see your SEO description
+
+📖 **Need more details?** See the complete guide: [YOAST_REST_API_FIX.md](./YOAST_REST_API_FIX.md)
 
 ---
 
