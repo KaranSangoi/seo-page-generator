@@ -11,6 +11,7 @@ import { generatePageContent, validateAndFixContent, regenerateField } from './c
 import { replaceElementorContent } from './elementor-replacer';
 import { replaceDiviContent } from './divi-replacer';
 import { replaceWPBakeryContent } from './wpbakery-replacer';
+import { replaceClassicEditorContent } from './classic-editor-replacer';
 import { generateStructuredData } from './schema-generator';
 
 // ============================================================================
@@ -115,12 +116,17 @@ export async function fetchElementorTemplate(
     const hasWPBakeryData = templatePage.meta?._wpb_vc_js_status === 'true' ||
                             (typeof templatePage.content === 'object' && templatePage.content?.raw?.includes('[vc_'));
 
-    if (!hasElementorData && !hasDiviData && !hasWPBakeryData) {
-      console.error('No Elementor, Divi, or WPBakery data found in template page');
+    // Check for Classic Editor (SEO_GEN markers in content)
+    const rawContent = typeof templatePage.content === 'object' ? templatePage.content?.raw || '' : '';
+    const hasClassicEditorMarkers = rawContent.includes('<!-- SEO_GEN_START:') || rawContent.includes('<!-- SEO_GEN_END:');
+
+    if (!hasElementorData && !hasDiviData && !hasWPBakeryData && !hasClassicEditorMarkers) {
+      console.error('No Elementor, Divi, WPBakery, or Classic Editor data found in template page');
       return null;
     }
 
-    console.log(`[FETCH TEMPLATE] Detected builder: ${hasElementorData ? 'Elementor' : hasWPBakeryData ? 'WPBakery' : 'Divi'}`);
+    const detectedBuilder = hasElementorData ? 'Elementor' : hasWPBakeryData ? 'WPBakery' : hasClassicEditorMarkers ? 'Classic Editor' : 'Divi';
+    console.log(`[FETCH TEMPLATE] Detected builder: ${detectedBuilder}`);
 
     // Return full template page for publishing
     return templatePage;
@@ -433,11 +439,13 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
                       (typeof templatePage.content === 'object' && templatePage.content?.raw?.includes('[et_pb_'));
   const hasWPBakeryData = templatePage.meta?._wpb_vc_js_status === 'true' ||
                           (typeof templatePage.content === 'object' && templatePage.content?.raw?.includes('[vc_'));
+  const rawContentCheck = typeof templatePage.content === 'object' ? templatePage.content?.raw || '' : '';
+  const hasClassicEditor = rawContentCheck.includes('<!-- SEO_GEN_START:') || rawContentCheck.includes('<!-- SEO_GEN_END:');
 
-  const builderType = hasElementorData ? 'elementor' : hasWPBakeryData ? 'wpbakery' : hasDiviData ? 'divi' : null;
+  const builderType = hasElementorData ? 'elementor' : hasWPBakeryData ? 'wpbakery' : hasClassicEditor ? 'classic-editor' : hasDiviData ? 'divi' : null;
 
   if (!builderType) {
-    throw new Error('No Elementor, WPBakery, or Divi data found in template page');
+    throw new Error('No Elementor, WPBakery, Classic Editor, or Divi data found in template page');
   }
 
   console.log(`[Publishing] Detected ${builderType} builder`);
@@ -518,6 +526,28 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
       sectionsUpdated: replacementLog.sectionsUpdated,
       totalElements: replacementLog.elementDetails.length,
     });
+  } else if (builderType === 'classic-editor') {
+    // Classic Editor (TinyMCE)
+    const classicEditorContent = templatePage.content?.raw || '';
+    const { data, log } = replaceClassicEditorContent(
+      classicEditorContent,
+      params.generatedContent,
+      params.pageData.location,
+      internalLinkUrl,
+      params.clientName,
+      params.pageData.service,
+      internalLinkPlacement,
+      externalLinkPlacement,
+      params.pageData.omitSections
+    );
+    updatedContent = data;
+    replacementLog = log;
+
+    console.log('[Publishing] Classic Editor replacement summary:', {
+      sectionsFound: replacementLog.sectionsFound,
+      sectionsUpdated: replacementLog.sectionsUpdated,
+      errors: replacementLog.errors.length,
+    });
   } else {
     // Divi builder
     const diviContent = templatePage.content?.raw || '';
@@ -593,6 +623,10 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     // WPBakery: content goes directly into the content field (raw shortcodes)
     pagePayload.content = schemaScript + updatedContent;
     pagePayload.meta._wpb_vc_js_status = 'true'; // Enable WPBakery editor
+  } else if (builderType === 'classic-editor') {
+    // Classic Editor: content goes directly into the content field (HTML)
+    pagePayload.content = schemaScript + updatedContent;
+    // No special meta fields needed for Classic Editor
   } else {
     // Divi: content goes directly into the content field
     pagePayload.content = schemaScript + updatedContent;

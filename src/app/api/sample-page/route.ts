@@ -553,7 +553,7 @@ export async function POST(request: NextRequest) {
     if (!isBuilderSupported(pageBuilder as any)) {
       return NextResponse.json(
         {
-          error: `Sample page generation is not yet available for ${pageBuilder} templates.\n\nCurrently supported: Elementor, Divi, WPBakery\n\nDetected builder: ${pageBuilder}`
+          error: `Sample page generation is not yet available for ${pageBuilder} templates.\n\nCurrently supported: Elementor, Divi, WPBakery, Classic Editor\n\nDetected builder: ${pageBuilder}`
         },
         { status: 400 }
       );
@@ -839,6 +839,47 @@ export async function POST(request: NextRequest) {
       updatedMeta = {
         _wpb_vc_js_status: 'true', // Enable WPBakery editor
       };
+    } else if (pageBuilder === 'classic-editor') {
+      // ==================== CLASSIC EDITOR PATH ====================
+      console.log('[SAMPLE PAGE] Using Classic Editor path');
+
+      // Import Classic Editor replacer
+      const { replaceClassicEditorContent } = await import('@/lib/classic-editor-replacer');
+
+      // Get HTML content from post_content (RAW, not rendered)
+      const htmlContent = templatePage.content?.raw || '';
+
+      console.log('[CLASSIC EDITOR DEBUG] Content available:', {
+        hasRaw: !!templatePage.content?.raw,
+        hasRendered: !!templatePage.content?.rendered,
+        rawLength: templatePage.content?.raw?.length || 0,
+        hasSEOMarkers: htmlContent.includes('<!-- SEO_GEN_START:'),
+      });
+
+      if (!htmlContent || !htmlContent.includes('<!-- SEO_GEN_START:')) {
+        return NextResponse.json(
+          { error: 'No Classic Editor markers found in template page.\n\nPlease ensure your template page contains HTML comment markers like:\n<!-- SEO_GEN_START:HERO -->\n<!-- SEO_GEN_END:HERO -->\n\nDebug info:\n- Has raw content: ' + !!templatePage.content?.raw + '\n- Content length: ' + (templatePage.content?.raw?.length || 0) + '\n- Contains markers: ' + (htmlContent.includes('<!-- SEO_GEN_START:') || false) },
+          { status: 400 }
+        );
+      }
+
+      // Replace Classic Editor content
+      const { data: updatedHtmlContent } = replaceClassicEditorContent(
+        htmlContent,
+        SAMPLE_CONTENT,
+        'Your Location', // location - sample only
+        null, // internalLinkUrl - not needed for sample page
+        'Company Name', // companyName - sample only
+        'Professional Service', // service - sample only
+        null, // internalLinkPlacement
+        null, // externalLinkPlacement
+        [] // omitSections
+      );
+
+      updatedContent = updatedHtmlContent;
+      updatedMeta = {
+        // No special meta fields needed for Classic Editor
+      };
     }
 
     // Generate unique slug
@@ -854,7 +895,7 @@ export async function POST(request: NextRequest) {
       title: sampleKeywordOnly, // Use keyword only, let WordPress/theme append site name
       slug: slug,
       status: 'publish',
-      content: (pageBuilder === 'divi' || pageBuilder === 'wpbakery') ? updatedContent : (templatePage.content?.rendered || ''),
+      content: (pageBuilder === 'divi' || pageBuilder === 'wpbakery' || pageBuilder === 'classic-editor') ? updatedContent : (templatePage.content?.rendered || ''),
       excerpt: SAMPLE_CONTENT.metaDescription, // Set excerpt to meta description for WordPress SEO
       featured_media: templatePage.featured_media || 0,
       comment_status: 'closed',
@@ -951,7 +992,9 @@ export async function POST(request: NextRequest) {
       builderType: pageBuilder,
       hasBuilderData: pageBuilder === 'elementor' ? !!result.meta?._elementor_data :
                      pageBuilder === 'divi' ? !!result.meta?._et_pb_use_builder :
-                     pageBuilder === 'wpbakery' ? !!result.meta?._wpb_vc_js_status : false,
+                     pageBuilder === 'wpbakery' ? !!result.meta?._wpb_vc_js_status :
+                     pageBuilder === 'classic-editor' ? true : // Classic Editor doesn't need special meta
+                     false,
     });
     const pageId = result.id;
     const pageUrl = result.link || result.guid?.rendered || 'Unknown URL';
