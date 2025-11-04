@@ -6,6 +6,81 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.5.0] - 2025-01-04
+
+### 🎉 NEW: WordPress Classic Editor Support
+
+**Major Feature Addition:**
+The SEO Page Generator now supports **WordPress Classic Editor (TinyMCE)**, WordPress's original WYSIWYG editor. This expands compatibility to sites not using modern page builders.
+
+**Supported Page Builders:**
+- ✅ Elementor
+- ✅ Divi Builder
+- ✅ WPBakery Page Builder
+- ✅ **Classic Editor (TinyMCE) (NEW)**
+
+### Added
+
+#### Classic Editor (TinyMCE) Integration
+- **HTML comment marker system** for identifying replaceable content sections
+- **Marker format:** `<!-- SEO_GEN_START:SECTION_NAME -->` ... `<!-- SEO_GEN_END:SECTION_NAME -->`
+- **Builder auto-detection** recognizes Classic Editor templates via SEO_GEN markers in page content
+- **Sample page generation** for Classic Editor templates (preview before batch generation)
+- **Batch publishing support** for Classic Editor sites
+- **Supported sections:**
+  - HERO: H1 title + hero description
+  - BENEFITS: Heading, subheading, bullet points
+  - WHY: Heading, subheading, bullet points
+  - FAQ: Multiple question/answer pairs
+  - MAP: Heading, description, map placeholder
+- **Documentation:** See `CLASSIC-EDITOR-SUPPORT.md` for complete setup guide and template examples
+
+**Files Added:**
+- `src/lib/classic-editor-replacer.ts` - HTML comment marker parser and content replacement logic
+- `src/lib/builders/strategies/classic-editor-strategy.ts` - Strategy pattern implementation
+- `CLASSIC-EDITOR-SUPPORT.md` - Comprehensive setup and technical documentation
+
+**Files Enhanced:**
+- `src/lib/page-generation.ts` - Publishing support for Classic Editor
+- `src/app/api/sample-page/route.ts` - Sample generation for Classic Editor
+- `src/lib/builders/detector.ts` - Enhanced builder detection with Classic Editor support
+- `src/lib/builders/builder-factory.ts` - Added Classic Editor strategy
+
+### Improved
+
+#### WPBakery Type Safety
+- **Fixed TypeScript error** in WPBakery replacement log early return
+- **Problem:** Missing `warnings` and `errors` properties in empty log object
+- **Solution:** Added all required properties to match `WPBakeryReplacementLog` interface
+- **File:** `src/lib/wpbakery-replacer.ts`
+
+### Technical Details
+
+**Classic Editor Implementation:**
+- Uses WordPress REST API `context=edit` to fetch raw HTML content
+- Parses HTML to find comment markers using regex pattern matching
+- Replaces content between START and END markers with generated content
+- No special meta fields needed (unlike Elementor/Divi/WPBakery)
+- Direct content insertion into `post_content` field
+- Schema.org script injection for structured data
+- Internal/external link placement support
+
+**Template Setup:**
+1. Create page in WordPress Classic Editor (Text/HTML mode)
+2. Add HTML comment markers around each section
+3. Configure client with template page ID
+4. Set page builder to "classic-editor"
+5. Generate sample page to verify
+6. Batch generate pages
+
+**CSS Classes Generated:**
+- `hero-section`, `benefits-section`, `benefits-list`
+- `why-section`, `why-list`
+- `faq-section`, `faq-list`, `faq-item`, `faq-question`, `faq-answer`
+- `map-section`, `map-placeholder`
+
+---
+
 ## [1.4.0] - 2025-01-04
 
 ### 🎉 NEW: WPBakery Page Builder Support
