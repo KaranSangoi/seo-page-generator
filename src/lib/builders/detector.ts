@@ -7,6 +7,7 @@ export type PageBuilder =
   | 'elementor'
   | 'divi'
   | 'wpbakery'
+  | 'classic-editor'
   | 'gutenberg'
   | 'beaver-builder'
   | 'oxygen'
@@ -109,7 +110,17 @@ export async function detectPageBuilder(
       };
     }
 
-    // 6. Gutenberg - Check for block comments
+    // 6. Classic Editor - Check for SEO_GEN markers
+    const rawContent = page.content?.raw || '';
+    if (rawContent.includes('<!-- SEO_GEN_START:') || rawContent.includes('<!-- SEO_GEN_END:')) {
+      return {
+        builder: 'classic-editor',
+        confidence: 'high',
+        details: 'Detected Classic Editor with SEO_GEN markers',
+      };
+    }
+
+    // 7. Gutenberg - Check for block comments
     if (content.includes('<!-- wp:')) {
       return {
         builder: 'gutenberg',
@@ -118,7 +129,7 @@ export async function detectPageBuilder(
       };
     }
 
-    // 7. Fallback - Plain HTML
+    // 8. Fallback - Plain HTML
     return {
       builder: 'html',
       confidence: 'low',
@@ -149,6 +160,7 @@ export function getBuilderDisplayName(builder: PageBuilder): string {
     'elementor': 'Elementor',
     'divi': 'Divi Builder',
     'wpbakery': 'WPBakery Page Builder',
+    'classic-editor': 'Classic Editor (TinyMCE)',
     'gutenberg': 'Gutenberg (Block Editor)',
     'beaver-builder': 'Beaver Builder',
     'oxygen': 'Oxygen Builder',
@@ -165,6 +177,7 @@ export function getBuilderIcon(builder: PageBuilder): string {
     'elementor': '🎨',
     'divi': '🔷',
     'wpbakery': '📦',
+    'classic-editor': '📝',
     'gutenberg': '🧱',
     'beaver-builder': '🦫',
     'oxygen': '💨',
@@ -177,15 +190,15 @@ export function getBuilderIcon(builder: PageBuilder): string {
  * Check if builder is supported
  */
 export function isBuilderSupported(builder: PageBuilder): boolean {
-  // Elementor, Divi, and WPBakery are fully implemented
-  return builder === 'elementor' || builder === 'divi' || builder === 'wpbakery';
+  // Elementor, Divi, WPBakery, and Classic Editor are fully implemented
+  return builder === 'elementor' || builder === 'divi' || builder === 'wpbakery' || builder === 'classic-editor';
 }
 
 /**
  * Get support status message
  */
 export function getBuilderSupportStatus(builder: PageBuilder): string {
-  if (builder === 'elementor' || builder === 'divi' || builder === 'wpbakery') {
+  if (builder === 'elementor' || builder === 'divi' || builder === 'wpbakery' || builder === 'classic-editor') {
     return '✅ Fully supported';
   }
   if (builder === 'gutenberg' || builder === 'beaver-builder') {

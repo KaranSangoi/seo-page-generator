@@ -9,6 +9,7 @@ import { PageBuilderStrategy, WordPressCredentials } from './universal-interface
 import { ElementorStrategy } from './strategies/elementor-strategy';
 import { DiviStrategy } from './strategies/divi-strategy';
 import { WPBakeryStrategy } from './strategies/wpbakery-strategy';
+import { ClassicEditorStrategy } from './strategies/classic-editor-strategy';
 import { detectPageBuilder } from './detector';
 
 /**
@@ -45,6 +46,9 @@ export async function getBuilderStrategy(
 
     case 'wpbakery':
       return new WPBakeryStrategy();
+
+    case 'classic-editor':
+      throw new Error('Classic Editor is handled directly in page-generation.ts, not through the universal interface yet.');
 
     case 'gutenberg':
       throw new Error('Gutenberg support coming soon!');
