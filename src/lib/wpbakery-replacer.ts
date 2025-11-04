@@ -200,6 +200,8 @@ export function replaceWPBakeryContent(
         sectionsFound: [],
         sectionsUpdated: [],
         elementDetails: [],
+        warnings: [],
+        errors: [],
       },
     };
   }
