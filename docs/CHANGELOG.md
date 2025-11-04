@@ -6,6 +6,79 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.4.0] - 2025-01-04
+
+### 🎉 NEW: WPBakery Page Builder Support
+
+**Major Feature Addition:**
+The SEO Page Generator now supports **WPBakery Page Builder** (also known as Visual Composer), expanding compatibility beyond Elementor and Divi.
+
+**Supported Page Builders:**
+- ✅ Elementor
+- ✅ Divi Builder
+- ✅ **WPBakery Page Builder (NEW)**
+
+### Added
+
+#### WPBakery Page Builder Integration
+- **Full content replacement** for WPBakery shortcode-based templates
+- **Builder auto-detection** recognizes WPBakery templates via `_wpb_vc_js_status` meta field or `[vc_` shortcodes
+- **Sample page generation** for WPBakery templates (preview before batch generation)
+- **Batch publishing support** for WPBakery sites
+- **Shortcode parsing engine** that handles nested WPBakery/Woodmart shortcodes:
+  - Text blocks (`[vc_column_text]`)
+  - Headings (`[vc_custom_heading]`)
+  - Custom headings (`[woodmart_title]`)
+  - FAQ accordions (`[vc_tta_accordion]`, `[vc_tta_section]`)
+  - Google Maps (`[vc_gmaps]`)
+  - Buttons with links (`[vc_btn]`)
+- **Documentation:** See `WPBAKERY-SUPPORT.md` for setup guide and technical details
+
+**Files Added:**
+- `src/lib/wpbakery-replacer.ts` - Core shortcode replacement logic
+- `src/lib/builders/strategies/wpbakery-strategy.ts` - Strategy pattern implementation
+- `WPBAKERY-SUPPORT.md` - Setup and technical documentation
+
+**Files Enhanced:**
+- `src/lib/page-generation.ts` - Publishing support for WPBakery
+- `src/app/api/sample-page/route.ts` - Sample generation for WPBakery
+- `src/lib/builders/builder-factory.ts` - Added WPBakery strategy
+- `src/lib/builders/detector.ts` - Enhanced builder detection
+
+### Improved
+
+#### FAQ Generation Quality & Diversity
+- **Problem:** FAQ questions were repetitive across pages (always cost, timeline, materials)
+- **Solution:** Simplified prompts to give AI creative freedom while maintaining SEO compliance
+- **Changes:**
+  - Removed prescriptive examples that caused pattern copying
+  - Streamlined to core requirements: keyword usage, grammar, natural answer structure
+  - Maintained SOP: service without adjective, no company name, general-then-company answer flow
+  - Enhanced batch-level uniqueness validation
+- **Result:** Each page generates unique, diverse FAQs covering different service aspects
+- **Files:** `src/lib/claude-api.ts`, `src/app/api/regenerate-section/route.ts`
+
+#### Error Reporting in Publish Flow
+- **Improved error messages** when publishing fails
+- **Before:** Generic "Failed to publish page"
+- **After:** Detailed server errors like "Failed to fetch template page" or "WordPress API error: [details]"
+- **Files:** `src/app/clients/[id]/GeneratePagesTab.tsx`
+
+### Technical Details
+
+**WPBakery Implementation:**
+- Uses WordPress REST API context=edit to fetch raw shortcode content
+- Parses nested shortcode structure with regex-based parser
+- Preserves theme-specific shortcodes (e.g., Woodmart)
+- Handles link placement via button shortcodes
+- Sets `_wpb_vc_js_status=true` meta field for editor compatibility
+
+**FAQ Grammar Rules:**
+- ✅ Correct: "What type of paint should be used for interior painting in Miami, FL?"
+- ❌ Wrong: "What type of paint does interior painting use?" (treats service as subject)
+
+---
+
 ## [1.3.3] - 2025-10-23
 
 ### 🔧 Fixed: ElementsKit Accordion Support & SEO Meta Description Issues
