@@ -144,17 +144,20 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
    - ✅ CORRECT: "Professional Plumber in Carlsbad, CA" (exact match)
 6. **Company Name:** MUST mention company name naturally at least once in hero/FAQ/map sections (for internal linking)
 7. **Location Name:** MUST mention full location naturally in benefits/why sections (for external linking to city websites)
-8. **FAQs:** Generate SEO-relevant questions that potential customers would actually search for.
-   - **CRITICAL: Each FAQ must be UNIQUE across all pages in this batch**
-   - Be smart and creative - vary topics naturally (cost, process, timeline, materials, availability, coverage, etc.)
+8. **FAQs:** Generate SEO-relevant questions that real customers would actually search on Google.
+   - **CRITICAL: Each FAQ must be UNIQUE across all pages in this batch - be creative and diverse**
    - **DO NOT use promotional questions** (avoid "why choose us", "what makes you special", etc.)
-   - **FAQ Questions:** Use the service and location WITHOUT the adjective from the primary keyword
-     - Example: If primary keyword is "Professional Plumber in Carlsbad, CA", FAQ questions should use "plumber in Carlsbad, CA"
-     - Remove adjectives like "Professional", "Expert", "Trusted", etc. from FAQ questions
-   - **FAQ Answers:** Can use the full primary keyword naturally when relevant
-   - CRITICAL: Mention company name (${companyName}) in the **latter half** of each answer for SEO
-   - Use company name instead of "we/our/us" - Example: "${companyName} provides..." not "We provide..."
-   - **DO NOT generate similar FAQs that only differ by location - make each topically distinct**
+   - **FAQ Questions:**
+     - Use the service WITHOUT the adjective from the primary keyword
+     - Example: If primary keyword is "Professional Plumber in Carlsbad, CA", use "plumber in Carlsbad, CA" in questions
+     - Include location naturally for local SEO
+     - Phrase questions asking ABOUT the service (good grammar), not treating service as a subject performing actions
+     - NO company name in questions
+   - **FAQ Answers - NATURAL STRUCTURE (NOT PROMOTIONAL):**
+     - **First half (30-40 words):** Answer in a GENERAL, educational way. Provide useful information without mentioning the company.
+     - **Latter half (20-35 words):** Naturally mention ${companyName} and how they handle this. Make it organic, not forced.
+     - Total: 50-75 words
+     - Use company name instead of "we/our/us"
 9. **Tone:** Professional, helpful, and authoritative
 10. **Quality:** High-quality, unique content that provides value to readers
 
@@ -298,16 +301,19 @@ The primary keyword "${primaryKeyword}" has been pre-determined by our system.
 6. Make headings unique and engaging - avoid repetitive formats across pages
 ${linkInstructions}
 ${previouslyUsedFAQs && previouslyUsedFAQs.length > 0 ? `
-**CRITICAL - FAQ UNIQUENESS REQUIREMENTS:**
-This page is part of a batch. The following FAQ questions have ALREADY been used in previous pages:
+**CRITICAL - FAQ UNIQUENESS:**
+The following FAQ questions have ALREADY been used in previous pages in this batch:
 ${previouslyUsedFAQs.map((faq, idx) => `${idx + 1}. ${faq}`).join('\n')}
 
-**YOU MUST:**
-- Generate completely DIFFERENT FAQ questions that are NOT similar to the ones above
-- Focus on different aspects: cost, timeline, coverage area, materials, process, availability, licensing, warranty, emergency services, etc.
-- DO NOT just rephrase the above questions - create entirely new topics
-- Ensure your FAQs are topically distinct from ALL the questions listed above
+Generate completely DIFFERENT FAQ questions - NOT similar to the ones above. Be creative and choose entirely different topics.
 ` : ''}
+**FAQ REQUIREMENTS:**
+- Questions must use "${primaryKeyword.split(' ').slice(1).join(' ')}" (service WITHOUT the adjective "${primaryKeyword.split(' ')[0]}")
+- Questions should be what real customers search on Google
+- Use good grammar - ask ABOUT the service, don't treat it as a subject doing things
+- NO company name in questions
+- Answers: First half (30-40 words) = general/educational, Latter half (20-35 words) = mention ${companyName} naturally
+- Be creative and diverse - each FAQ should cover a DIFFERENT topic
 **Sections to Include:**
 - Meta Title & Description
 - H1 (exactly: "${primaryKeyword}")
@@ -1033,34 +1039,45 @@ export async function regenerateField(
     // Extract service without adjective for FAQ questions
     const serviceWithoutAdjective = primaryKeyword.split(' ').slice(1).join(' ') || service;
 
+    // Get list of previously used FAQs from OTHER pages in batch
+    const previousFAQsList = params.previouslyUsedFAQs && params.previouslyUsedFAQs.length > 0
+      ? `\n\n**PREVIOUSLY USED FAQ QUESTIONS IN THIS BATCH (DO NOT REPEAT OR BE TOO SIMILAR):**\n${params.previouslyUsedFAQs.map((q, i) => `${i + 1}. ${q}`).join('\n')}`
+      : '';
+
+    // Get current page's FAQs that need to be replaced
+    const currentFAQs = previousContent.faqs || [];
+    const currentFAQsList = currentFAQs.length > 0
+      ? `\n\n**CURRENT FAQs BEING REPLACED (GENERATE COMPLETELY DIFFERENT TOPICS):**\n${currentFAQs.map((faq: any, i: number) => `${i + 1}. Q: ${faq.question}\n   A: ${faq.answer.substring(0, 100)}...`).join('\n\n')}`
+      : '';
+
     retryPrompt = `The previously generated FAQs have issues: ${reason}
+
+You MUST generate COMPLETELY NEW FAQs with DIFFERENT TOPICS than what was previously generated.
 
 Please regenerate ONLY the 3 FAQs following these STRICT requirements:
 
 **Primary Keyword (for reference):** ${primaryKeyword}
 **Service (without adjective):** ${serviceWithoutAdjective}
 **Company Name:** ${companyName}
-**Location:** ${location}
+**Location:** ${location}${previousFAQsList}${currentFAQsList}
 
-**CRITICAL - FAQ QUESTION FORMAT:**
-- FAQ questions should use "${serviceWithoutAdjective}" (WITHOUT the adjective)
-- Example: If primary keyword is "Professional Plumber in Carlsbad, CA", questions should use "plumber in Carlsbad, CA"
-- Remove adjectives like "Professional", "Expert", "Trusted", etc. from questions
-- ✅ CORRECT: "How much does plumber in ${location} cost?"
-- ❌ WRONG: "How much does ${primaryKeyword} cost?"
+**CRITICAL - GENERATE FRESH, UNIQUE TOPICS:**
+- DO NOT reuse the same topics from current FAQs above
+- DO NOT answer the same questions in different words
+- Choose COMPLETELY DIFFERENT aspects of the service to address
+- Be creative and diverse with your FAQ topics
 
-**FAQ Requirements:**
-1. Generate SEO-relevant questions that real customers would search for (NOT promotional questions)
-2. Use "${serviceWithoutAdjective}" in questions (service without adjective)
-3. Each answer must be 50-75 words
-4. Each answer can use the full primary keyword "${primaryKeyword}" naturally when relevant
-5. Each answer must mention company name "${companyName}" in the **latter half** (not "we/our/us")
-6. Be smart and creative - vary topics naturally across all 3 FAQs
-7. Focus on what customers actually want to know (cost, process, timeline, materials, coverage, etc.)
+**FAQ QUESTION FORMAT:**
+- Use "${serviceWithoutAdjective}" (service WITHOUT the adjective)
+- NO company name in questions
+- Questions should be what real customers search on Google
+- Use good grammar - ask ABOUT the service, don't treat it as a subject doing things
 
-**Example Structure:**
-Q: "How much does ${serviceWithoutAdjective} cost?"
-A: "The cost varies based on project scope and materials. ${companyName} provides competitive pricing..."
+**FAQ ANSWER FORMAT (NATURAL, NOT PROMOTIONAL):**
+- **First half (30-40 words):** General, educational answer. Do NOT mention company.
+- **Latter half (20-35 words):** Naturally mention "${companyName}" and how they handle this.
+- Total: 50-75 words
+- Be natural and organic, not promotional
 
 Return ONLY a JSON object with this structure:
 {
@@ -1325,20 +1342,13 @@ A: ${currentFaq.answer}
 **Company Name:** ${companyName}
 **Location:** ${location}
 
-**CRITICAL - FAQ QUESTION FORMAT:**
-- FAQ question should use "${serviceWithoutAdjective}" (WITHOUT the adjective)
-- Example: If primary keyword is "Professional Plumber in Carlsbad, CA", question should use "plumber in Carlsbad, CA"
-- Remove adjectives like "Professional", "Expert", "Trusted", etc. from the question
-- ✅ CORRECT: "How much does plumber in ${location} cost?"
-- ❌ WRONG: "How much does ${primaryKeyword} cost?"
-
-**Requirements:**
-1. Generate an SEO-relevant question that real customers would search for
-2. NOT a promotional question (avoid "why choose us")
-3. Use "${serviceWithoutAdjective}" in the question (service without adjective)
-4. Answer must be 50-75 words
-5. Answer can use the full primary keyword "${primaryKeyword}" naturally when relevant
-6. Answer must mention company name "${companyName}" in the latter half
+**FAQ Requirements:**
+- Question must use "${serviceWithoutAdjective}" (service WITHOUT adjective)
+- NO company name in question
+- Question should be what real customers search on Google
+- Use good grammar - ask ABOUT the service
+- Answer: 50-75 words (First half = general/educational 30-40 words, Latter half = mention ${companyName} naturally 20-35 words)
+- Be creative and SEO-relevant, NOT promotional
 
 Return ONLY a JSON object with the single FAQ:
 {"faq": {"question": "...", "answer": "..."}}`;
