@@ -10,6 +10,7 @@
 import { generatePageContent, validateAndFixContent, regenerateField } from './claude-api';
 import { replaceElementorContent } from './elementor-replacer';
 import { replaceDiviContent } from './divi-replacer';
+import { replaceWPBakeryContent } from './wpbakery-replacer';
 import { generateStructuredData } from './schema-generator';
 
 // ============================================================================
@@ -110,12 +111,16 @@ export async function fetchElementorTemplate(
     const hasDiviData = templatePage.meta?._et_pb_use_builder === 'on' ||
                         (typeof templatePage.content === 'object' && templatePage.content?.raw?.includes('[et_pb_'));
 
-    if (!hasElementorData && !hasDiviData) {
-      console.error('No Elementor or Divi data found in template page');
+    // Check for WPBakery data (stored in meta._wpb_vc_js_status or [vc_ shortcodes)
+    const hasWPBakeryData = templatePage.meta?._wpb_vc_js_status === 'true' ||
+                            (typeof templatePage.content === 'object' && templatePage.content?.raw?.includes('[vc_'));
+
+    if (!hasElementorData && !hasDiviData && !hasWPBakeryData) {
+      console.error('No Elementor, Divi, or WPBakery data found in template page');
       return null;
     }
 
-    console.log(`[FETCH TEMPLATE] Detected builder: ${hasElementorData ? 'Elementor' : 'Divi'}`);
+    console.log(`[FETCH TEMPLATE] Detected builder: ${hasElementorData ? 'Elementor' : hasWPBakeryData ? 'WPBakery' : 'Divi'}`);
 
     // Return full template page for publishing
     return templatePage;
@@ -426,11 +431,13 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
   const hasElementorData = !!templatePage.meta?._elementor_data;
   const hasDiviData = templatePage.meta?._et_pb_use_builder === 'on' ||
                       (typeof templatePage.content === 'object' && templatePage.content?.raw?.includes('[et_pb_'));
+  const hasWPBakeryData = templatePage.meta?._wpb_vc_js_status === 'true' ||
+                          (typeof templatePage.content === 'object' && templatePage.content?.raw?.includes('[vc_'));
 
-  const builderType = hasElementorData ? 'elementor' : hasDiviData ? 'divi' : null;
+  const builderType = hasElementorData ? 'elementor' : hasWPBakeryData ? 'wpbakery' : hasDiviData ? 'divi' : null;
 
   if (!builderType) {
-    throw new Error('No Elementor or Divi data found in template page');
+    throw new Error('No Elementor, WPBakery, or Divi data found in template page');
   }
 
   console.log(`[Publishing] Detected ${builderType} builder`);
@@ -485,6 +492,28 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     // via the meta fields we set below, no need to inject into page content
 
     console.log('[Publishing] Elementor replacement summary:', {
+      sectionsFound: replacementLog.sectionsFound,
+      sectionsUpdated: replacementLog.sectionsUpdated,
+      totalElements: replacementLog.elementDetails.length,
+    });
+  } else if (builderType === 'wpbakery') {
+    // WPBakery Page Builder
+    const wpbakeryContent = templatePage.content?.raw || '';
+    const { data, log } = replaceWPBakeryContent(
+      wpbakeryContent,
+      params.generatedContent,
+      params.pageData.location,
+      internalLinkUrl,
+      params.clientName,
+      params.pageData.service,
+      internalLinkPlacement,
+      externalLinkPlacement,
+      params.pageData.omitSections
+    );
+    updatedContent = data;
+    replacementLog = log;
+
+    console.log('[Publishing] WPBakery replacement summary:', {
       sectionsFound: replacementLog.sectionsFound,
       sectionsUpdated: replacementLog.sectionsUpdated,
       totalElements: replacementLog.elementDetails.length,
@@ -560,6 +589,10 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     pagePayload.meta._elementor_template_type = 'wp-page';
     pagePayload.meta._elementor_version = templatePage.meta?._elementor_version || '3.25.0';
     pagePayload.meta._wp_page_template = templatePage.meta?._wp_page_template || 'elementor_canvas';
+  } else if (builderType === 'wpbakery') {
+    // WPBakery: content goes directly into the content field (raw shortcodes)
+    pagePayload.content = schemaScript + updatedContent;
+    pagePayload.meta._wpb_vc_js_status = 'true'; // Enable WPBakery editor
   } else {
     // Divi: content goes directly into the content field
     pagePayload.content = schemaScript + updatedContent;

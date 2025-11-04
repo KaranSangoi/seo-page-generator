@@ -8,6 +8,7 @@
 import { PageBuilderStrategy, WordPressCredentials } from './universal-interface';
 import { ElementorStrategy } from './strategies/elementor-strategy';
 import { DiviStrategy } from './strategies/divi-strategy';
+import { WPBakeryStrategy } from './strategies/wpbakery-strategy';
 import { detectPageBuilder } from './detector';
 
 /**
@@ -43,7 +44,7 @@ export async function getBuilderStrategy(
       return new DiviStrategy();
 
     case 'wpbakery':
-      throw new Error('WPBakery support coming soon!');
+      return new WPBakeryStrategy();
 
     case 'gutenberg':
       throw new Error('Gutenberg support coming soon!');

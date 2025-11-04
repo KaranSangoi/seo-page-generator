@@ -177,19 +177,16 @@ export function getBuilderIcon(builder: PageBuilder): string {
  * Check if builder is supported
  */
 export function isBuilderSupported(builder: PageBuilder): boolean {
-  // Elementor and Divi are fully implemented
-  return builder === 'elementor' || builder === 'divi';
+  // Elementor, Divi, and WPBakery are fully implemented
+  return builder === 'elementor' || builder === 'divi' || builder === 'wpbakery';
 }
 
 /**
  * Get support status message
  */
 export function getBuilderSupportStatus(builder: PageBuilder): string {
-  if (builder === 'elementor' || builder === 'divi') {
+  if (builder === 'elementor' || builder === 'divi' || builder === 'wpbakery') {
     return '✅ Fully supported';
-  }
-  if (builder === 'wpbakery') {
-    return '⚠️ Coming soon';
   }
   if (builder === 'gutenberg' || builder === 'beaver-builder') {
     return '📋 Planned';

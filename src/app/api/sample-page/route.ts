@@ -45,6 +45,7 @@ const SAMPLE_CONTENT = {
     },
   ],
   mapDescription: 'This is the map section description demonstrating how location-specific content appears on your pages. Your actual pages will include relevant local information, service coverage details, and geographic specifics tailored to each target area. This helps establish local relevance and improves your search visibility in specific markets.',
+  mapIframe: '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d106401.28695469474!2d-112.17373209726564!3d33.44838294385305!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x872b12ed50a179cb%3A0x8c69c7f8354a1bac!2sPhoenix%2C%20AZ!5e0!3m2!1sen!2sus!4v1234567890123" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>',
 };
 
 // Helper to generate slug
@@ -509,16 +510,50 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No template page configured for this client' }, { status: 400 });
     }
 
-    // Check page builder support
-    const pageBuilder = client.pageBuilder || 'elementor';
-    console.log(`[SAMPLE PAGE] Client page builder: ${pageBuilder}`);
+    // Auto-detect page builder if not already detected or if detection failed
+    let pageBuilder = client.pageBuilder || 'elementor';
+    console.log(`[SAMPLE PAGE] Client page builder (from DB): ${pageBuilder}`);
+    console.log(`[SAMPLE PAGE] Builder detected flag: ${client.builderDetected}`);
+
+    // If builder was never detected, auto-detect it now
+    if (!client.builderDetected || !client.pageBuilder) {
+      console.log('[SAMPLE PAGE] Builder not detected yet - attempting auto-detection...');
+      try {
+        const { detectPageBuilder } = await import('@/lib/builders/detector');
+        const detection = await detectPageBuilder(
+          client.templatePageId!,
+          client.wordpressUrl,
+          client.wpUsername,
+          client.wpAppPassword
+        );
+
+        pageBuilder = detection.builder;
+        console.log(`[SAMPLE PAGE] Auto-detected builder: ${pageBuilder} (confidence: ${detection.confidence})`);
+
+        // Update database with detected builder
+        await prisma.client.update({
+          where: { id: clientId },
+          data: {
+            pageBuilder: pageBuilder,
+            builderDetected: true,
+          },
+        });
+        console.log('[SAMPLE PAGE] Database updated with detected builder');
+      } catch (detectionError: any) {
+        console.error('[SAMPLE PAGE] Auto-detection failed:', detectionError.message);
+        console.log('[SAMPLE PAGE] Falling back to saved builder or default');
+        // Continue with saved builder or default
+      }
+    }
+
+    console.log(`[SAMPLE PAGE] Using page builder: ${pageBuilder}`);
 
     // Check if builder is supported
     const { isBuilderSupported } = await import('@/lib/builders/detector');
     if (!isBuilderSupported(pageBuilder as any)) {
       return NextResponse.json(
         {
-          error: `Sample page generation is not yet available for ${pageBuilder} templates.\n\nCurrently supported: Elementor, Divi\n\nDetected builder: ${pageBuilder}`
+          error: `Sample page generation is not yet available for ${pageBuilder} templates.\n\nCurrently supported: Elementor, Divi, WPBakery\n\nDetected builder: ${pageBuilder}`
         },
         { status: 400 }
       );
@@ -734,6 +769,76 @@ export async function POST(request: NextRequest) {
         _et_pb_use_builder: 'on',
         _et_pb_old_content: '',
       };
+
+    } else if (pageBuilder === 'wpbakery') {
+      // ==================== WPBAKERY PATH ====================
+      console.log('[SAMPLE PAGE] Using WPBakery builder path');
+
+      // Import WPBakery replacer
+      const { replaceWPBakeryContent } = await import('@/lib/wpbakery-replacer');
+
+      // Get WPBakery content from post_content (RAW, not rendered)
+      const wpbakeryContent = templatePage.content?.raw || '';
+
+      console.log('[WPBAKERY DEBUG] Full content object keys:', Object.keys(templatePage.content || {}));
+      console.log('[WPBAKERY DEBUG] Content available:', {
+        hasRaw: !!templatePage.content?.raw,
+        hasRendered: !!templatePage.content?.rendered,
+        rawLength: templatePage.content?.raw?.length || 0,
+        renderedLength: templatePage.content?.rendered?.length || 0,
+        rawPreview: templatePage.content?.raw?.substring(0, 300) || 'none',
+        renderedPreview: templatePage.content?.rendered?.substring(0, 300) || 'none',
+        containsShortcodesInRaw: templatePage.content?.raw?.includes('[vc_') || false,
+        containsShortcodesInRendered: templatePage.content?.rendered?.includes('[vc_') || false,
+      });
+
+      if (!wpbakeryContent || !wpbakeryContent.includes('[vc_')) {
+        return NextResponse.json(
+          { error: 'No WPBakery shortcodes found in template page.\n\nPlease ensure your template page is built with WPBakery Page Builder.\n\nDebug info:\n- Has raw content: ' + !!templatePage.content?.raw + '\n- Content length: ' + (templatePage.content?.raw?.length || 0) + '\n- Contains [vc_: ' + (templatePage.content?.raw?.includes('[vc_') || false) },
+          { status: 400 }
+        );
+      }
+
+      // Replace WPBakery content
+      const { data: updatedWPBakeryContent } = replaceWPBakeryContent(
+        wpbakeryContent,
+        SAMPLE_CONTENT,
+        'Phoenix, AZ',
+        undefined, // no parent page for sample
+        undefined, // no company name for sample
+        undefined, // no service for sample
+        undefined, // no internal link placement
+        undefined, // no external link placement
+        []         // no omit sections
+      );
+
+      // Add Schema.org JSON-LD for SEO
+      const sampleTitle = SAMPLE_CONTENT.metaTitle.split('|')[0].trim();
+      const schemaData = {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": sampleTitle,
+        "description": SAMPLE_CONTENT.metaDescription,
+        "url": client.clientWebsite
+      };
+      const schemaScript = `<!-- Schema.org JSON-LD for SEO -->\n<script type="application/ld+json">\n${JSON.stringify(schemaData, null, 2)}\n</script>\n\n`;
+
+      // Add HTML meta tags as comment for reference
+      const metaTags = `<!-- SEO Meta Tags (for theme/plugin extraction or manual addition to head)
+<meta name="description" content="${SAMPLE_CONTENT.metaDescription}">
+<meta property="og:title" content="${sampleTitle}">
+<meta property="og:description" content="${SAMPLE_CONTENT.metaDescription}">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${sampleTitle}">
+<meta name="twitter:description" content="${SAMPLE_CONTENT.metaDescription}">
+-->\n\n`;
+
+      // Prepend meta tags and schema to content
+      updatedContent = metaTags + schemaScript + updatedWPBakeryContent;
+      updatedMeta = {
+        _wpb_vc_js_status: 'true', // Enable WPBakery editor
+      };
     }
 
     // Generate unique slug
@@ -744,12 +849,12 @@ export async function POST(request: NextRequest) {
     // WordPress/SEO plugins have title templates that append site name automatically
     const sampleKeywordOnly = SAMPLE_CONTENT.metaTitle.split('|')[0].trim();
 
-    // Build page payload (works for both Elementor and Divi)
+    // Build page payload (works for Elementor, Divi, and WPBakery)
     const pagePayload: any = {
       title: sampleKeywordOnly, // Use keyword only, let WordPress/theme append site name
       slug: slug,
       status: 'publish',
-      content: pageBuilder === 'divi' ? updatedContent : (templatePage.content?.rendered || ''),
+      content: (pageBuilder === 'divi' || pageBuilder === 'wpbakery') ? updatedContent : (templatePage.content?.rendered || ''),
       excerpt: SAMPLE_CONTENT.metaDescription, // Set excerpt to meta description for WordPress SEO
       featured_media: templatePage.featured_media || 0,
       comment_status: 'closed',
@@ -844,7 +949,9 @@ export async function POST(request: NextRequest) {
       pageId: result.id,
       pageUrl: result.link,
       builderType: pageBuilder,
-      hasBuilderData: pageBuilder === 'elementor' ? !!result.meta?._elementor_data : pageBuilder === 'divi' ? !!result.meta?._et_pb_use_builder : false,
+      hasBuilderData: pageBuilder === 'elementor' ? !!result.meta?._elementor_data :
+                     pageBuilder === 'divi' ? !!result.meta?._et_pb_use_builder :
+                     pageBuilder === 'wpbakery' ? !!result.meta?._wpb_vc_js_status : false,
     });
     const pageId = result.id;
     const pageUrl = result.link || result.guid?.rendered || 'Unknown URL';
