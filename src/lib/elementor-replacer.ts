@@ -271,7 +271,16 @@ export function replaceElementorContent(
           // Check if it uses tabs structure (classic accordion/toggle)
           else if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
             console.log('[DEBUG] FAQ uses tabs structure (classic accordion), updating tabs...');
+            console.log('[DEBUG] Total tabs:', element.settings.tabs.length);
             element.settings.tabs.forEach((tab: any, index: number) => {
+              console.log(`[DEBUG] Processing tab ${index}...`);
+              if (index === 0) {
+                console.log('[DEBUG] ===== INSPECTING FIRST TAB =====');
+                console.log('[DEBUG] Tab type:', typeof tab);
+                console.log('[DEBUG] Tab keys:', Object.keys(tab));
+                console.log('[DEBUG] First tab data:', JSON.stringify(tab, null, 2).substring(0, 500));
+                console.log('[DEBUG] ===== END FIRST TAB =====');
+              }
               if (generatedContent.faqs[index]) {
                 tab.tab_title = generatedContent.faqs[index].question;
                 let content = generatedContent.faqs[index].answer;

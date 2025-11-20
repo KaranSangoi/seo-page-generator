@@ -57,13 +57,7 @@ export default function LoginPage() {
             Welcome back
           </h2>
           <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-            Don't have an account?{' '}
-            <Link
-              href="/signup"
-              className="font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
-            >
-              Sign up for free
-            </Link>
+            Sign in to your account to continue
           </p>
         </div>
 

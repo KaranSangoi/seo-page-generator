@@ -299,6 +299,10 @@ function replaceElementorContent(
           else if (element.settings.tabs && Array.isArray(element.settings.tabs)) {
             console.log('[DEBUG] FAQ uses tabs structure (classic accordion), updating tabs...');
             element.settings.tabs.forEach((tab: any, index: number) => {
+              if (index === 0) {
+                console.log('[DEBUG] First tab keys:', Object.keys(tab));
+                console.log('[DEBUG] First tab structure:', JSON.stringify(tab, null, 2).substring(0, 500));
+              }
               if (generatedContent.faqs[index]) {
                 tab.tab_title = generatedContent.faqs[index].question;
                 let content = generatedContent.faqs[index].answer;

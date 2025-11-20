@@ -189,12 +189,13 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-      // All users (for filter dropdown)
+      // All users (for filter dropdown and user management)
       prisma.user.findMany({
         select: {
           id: true,
           email: true,
           name: true,
+          isBlocked: true,
         },
         orderBy: {
           email: 'asc',

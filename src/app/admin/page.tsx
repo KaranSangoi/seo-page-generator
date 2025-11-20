@@ -90,6 +90,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  isBlocked: boolean;
 }
 
 interface AdminStats {
@@ -112,6 +113,7 @@ export default function AdminDashboard() {
   const [errorPage, setErrorPage] = useState(1);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [impersonating, setImpersonating] = useState<string | null>(null);
+  const [blockingUser, setBlockingUser] = useState<string | null>(null);
 
   const fetchStats = async () => {
     try {
@@ -210,6 +212,36 @@ export default function AdminDashboard() {
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to impersonate user');
       setImpersonating(null);
+    }
+  };
+
+  const handleToggleBlock = async (userId: string, userName: string, currentlyBlocked: boolean) => {
+    const action = currentlyBlocked ? 'unblock' : 'block';
+    if (!confirm(`Are you sure you want to ${action} ${userName}?`)) {
+      return;
+    }
+
+    setBlockingUser(userId);
+
+    try {
+      const response = await fetch('/api/admin/toggle-block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, shouldBlock: !currentlyBlocked }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to toggle block status');
+      }
+
+      // Refresh stats to show updated status
+      await fetchStats();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to toggle block status');
+    } finally {
+      setBlockingUser(null);
     }
   };
 
@@ -538,6 +570,9 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">
                       Email
                     </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">
+                      Status
+                    </th>
                     <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">
                       Actions
                     </th>
@@ -552,26 +587,72 @@ export default function AdminDashboard() {
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
                         {user.email}
                       </td>
+                      <td className="py-3 px-4">
+                        {user.isBlocked ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-full text-xs font-medium">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                            Blocked
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 rounded-full text-xs font-medium">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Active
+                          </span>
+                        )}
+                      </td>
                       <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => handleImpersonate(user.id, user.name || user.email)}
-                          disabled={impersonating === user.id}
-                          className="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
-                        >
-                          {impersonating === user.id ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              Logging in...
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                              Login as User
-                            </>
-                          )}
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleToggleBlock(user.id, user.name || user.email, user.isBlocked)}
+                            disabled={blockingUser === user.id}
+                            className={`px-3 py-1.5 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 ${
+                              user.isBlocked
+                                ? 'bg-green-600 text-white hover:bg-green-700'
+                                : 'bg-red-600 text-white hover:bg-red-700'
+                            }`}
+                          >
+                            {blockingUser === user.id ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                {user.isBlocked ? 'Unblocking...' : 'Blocking...'}
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  {user.isBlocked ? (
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  ) : (
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                  )}
+                                </svg>
+                                {user.isBlocked ? 'Unblock' : 'Block'}
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleImpersonate(user.id, user.name || user.email)}
+                            disabled={impersonating === user.id}
+                            className="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                          >
+                            {impersonating === user.id ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                Logging in...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                Login as User
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

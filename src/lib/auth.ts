@@ -75,17 +75,20 @@ interface SessionPayload {
   userId: string;
   email: string;
   expiresAt: number;
+  isImpersonation?: boolean; // True when admin is impersonating a user
 }
 
 /**
  * Create a JWT token for a user session
  * @param userId - User's unique ID
  * @param email - User's email
+ * @param isImpersonation - Whether this is an admin impersonating a user
  * @returns Promise<string> - Signed JWT token
  */
 async function createSessionToken(
   userId: string,
-  email: string
+  email: string,
+  isImpersonation = false
 ): Promise<string> {
   const secretKey = getJwtSecretKey();
   if (!secretKey) {
@@ -94,7 +97,12 @@ async function createSessionToken(
 
   const expiresAt = Date.now() + SESSION_DURATION;
 
-  const token = await new SignJWT({ userId, email, expiresAt })
+  const payload: SessionPayload = { userId, email, expiresAt };
+  if (isImpersonation) {
+    payload.isImpersonation = true;
+  }
+
+  const token = await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(new Date(expiresAt))
@@ -140,12 +148,14 @@ async function verifySessionToken(
  * Create a session for a user (sets HTTP-only cookie)
  * @param userId - User's unique ID
  * @param email - User's email
+ * @param isImpersonation - Whether this is an admin impersonating a user
  */
 export async function createSession(
   userId: string,
-  email: string
+  email: string,
+  isImpersonation = false
 ): Promise<void> {
-  const token = await createSessionToken(userId, email);
+  const token = await createSessionToken(userId, email, isImpersonation);
   const cookieStore = await cookies();
 
   cookieStore.set(SESSION_COOKIE_NAME, token, {
@@ -182,7 +192,8 @@ export async function destroySession(): Promise<void> {
 
 /**
  * Impersonate a user (admin only)
- * Creates a session for a different user
+ * Creates a session for a different user with impersonation flag
+ * This allows admins to login as blocked users
  * @param targetUserId - ID of the user to impersonate
  * @returns Promise<{ success: boolean; user?: { id: string; email: string; name: string | null }; error?: string }>
  */
@@ -192,13 +203,14 @@ export async function impersonateUser(targetUserId: string): Promise<{
   error?: string;
 }> {
   try {
-    // Fetch the target user
+    // Fetch the target user (even if blocked)
     const targetUser = await prisma.user.findUnique({
       where: { id: targetUserId },
       select: {
         id: true,
         email: true,
         name: true,
+        isBlocked: true,
       },
     });
 
@@ -206,8 +218,9 @@ export async function impersonateUser(targetUserId: string): Promise<{
       return { success: false, error: 'User not found' };
     }
 
-    // Create a new session for the target user
-    await createSession(targetUser.id, targetUser.email);
+    // Create a new session for the target user with impersonation flag
+    // This bypasses the blocked check in getCurrentUser()
+    await createSession(targetUser.id, targetUser.email, true);
 
     return { success: true, user: targetUser };
   } catch (error) {
@@ -295,7 +308,7 @@ export async function createUser(
 
 /**
  * Get the currently authenticated user from the session
- * @returns Promise<User | null> - Current user or null if not authenticated
+ * @returns Promise<User | null> - Current user or null if not authenticated/blocked
  *
  * SCALE: When migrating to Clerk, replace with:
  * import { auth } from '@clerk/nextjs';
@@ -320,10 +333,27 @@ export async function getCurrentUser(): Promise<{
       id: true,
       email: true,
       name: true,
+      isBlocked: true,
     },
   });
 
-  return user;
+  if (!user) {
+    return null;
+  }
+
+  // Check if user is blocked
+  // Allow access if this is an impersonation session (admin bypass)
+  if (user.isBlocked && !session.isImpersonation) {
+    console.log(`🚫 Blocked user attempted access: ${user.email}`);
+    return null;
+  }
+
+  // Return user without isBlocked field (not needed in response)
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+  };
 }
 
 /**
