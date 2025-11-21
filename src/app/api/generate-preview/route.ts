@@ -151,7 +151,23 @@ export async function POST(request: NextRequest) {
         // Determine external link URL (city website)
         const externalLinkUrl = generateCityWebsiteUrl(page.location);
 
-        const generatedPage = {
+        const generatedPage: {
+          pageId: string;
+          pageName: string;
+          service: string;
+          location: string;
+          primaryKeyword: string;
+          content: any;
+          internalLinkPlacement: string;
+          internalLinkUrl: string;
+          externalLinkPlacement: string;
+          externalLinkUrl: string;
+          rawData: any;
+          status: string;
+          warnings: string[];
+          autoFixed: string[];
+          dbId?: string;
+        } = {
           pageId: `preview_${page.rowNumber}`,
           pageName,
           service: page.service,
@@ -204,7 +220,18 @@ export async function POST(request: NextRequest) {
 
       } catch (error) {
         console.error(`[PREVIEW] ❌ Error generating page ${index + 1}:`, error);
-        const failedPage = {
+        const failedPage: {
+          pageId: string;
+          pageName: string;
+          service: string;
+          location: string;
+          primaryKeyword: string;
+          content: null;
+          rawData: any;
+          status: string;
+          error: string;
+          dbId?: string;
+        } = {
           pageId: `preview_${page.rowNumber}`,
           pageName: page.service || page.location || 'Unknown',
           service: page.service,

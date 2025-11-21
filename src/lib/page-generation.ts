@@ -285,6 +285,7 @@ export interface PageGenerationParams {
   seoPlugin: string;
   internalLinkPlacement: string;
   externalLinkPlacement: string;
+  previouslyUsedFAQs?: string[];
 }
 
 export interface ContentValidationParams extends PageGenerationParams {
@@ -308,6 +309,7 @@ export async function generateContent(params: PageGenerationParams): Promise<any
     seoPlugin: params.seoPlugin,
     internalLinkPlacement: params.internalLinkPlacement,
     externalLinkPlacement: params.externalLinkPlacement,
+    previouslyUsedFAQs: params.previouslyUsedFAQs,
   });
 
   return generatedContent;

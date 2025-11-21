@@ -76,6 +76,7 @@ interface SessionPayload {
   email: string;
   expiresAt: number;
   isImpersonation?: boolean; // True when admin is impersonating a user
+  [key: string]: unknown; // Index signature for JWTPayload compatibility
 }
 
 /**
