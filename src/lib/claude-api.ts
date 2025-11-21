@@ -308,13 +308,20 @@ ${previouslyUsedFAQs.map((faq, idx) => `${idx + 1}. ${faq}`).join('\n')}
 Generate completely DIFFERENT FAQ questions - NOT similar to the ones above. Be creative and choose entirely different topics.
 ` : ''}
 **FAQ REQUIREMENTS - CRITICAL FOR SEO:**
-- EVERY question MUST include service AND location: "${primaryKeyword.split(' ').slice(1).join(' ')}" (service WITHOUT adjective "${primaryKeyword.split(' ')[0]}")
-- Example format: "What are [service] costs in [location]?"
+- EVERY question MUST use the EXACT phrase: "${primaryKeyword.split(' ').slice(1).join(' ')}" (service WITHOUT adjective "${primaryKeyword.split(' ')[0]}")
+- DO NOT use variations, synonyms, or related terms - use the EXACT service name
+- Example: If service is "chimney services in Johnson County, KS", use that EXACT phrase
+- ❌ WRONG: "chimney inspections", "chimney repair", "chimney cleaning"
+- ✅ CORRECT: "chimney services in Johnson County, KS" in EVERY question
+- Example questions:
+  * "What are the costs of chimney services in Johnson County, KS?"
+  * "How often should chimney services be done in Johnson County, KS?"
+  * "What preparation is needed for chimney services in Johnson County, KS?"
 - Questions should be what real customers search on Google
 - Use good grammar - ask ABOUT the service, don't treat it as a subject doing things
 - NO company name in questions
 - Answers: First half (30-40 words) = general/educational, Latter half (20-35 words) = mention ${companyName} naturally
-- Be creative and diverse - each FAQ should cover a DIFFERENT topic
+- Be creative and diverse - each FAQ should cover a DIFFERENT topic (but always use EXACT service phrase)
 **Sections to Include:**
 - Meta Title & Description
 - H1 (exactly: "${primaryKeyword}")
@@ -1068,15 +1075,19 @@ Please regenerate ONLY the 3 FAQs following these STRICT requirements:
 - Choose COMPLETELY DIFFERENT aspects of the service to address
 - Be creative and diverse with your FAQ topics
 
-**FAQ QUESTION FORMAT - CRITICAL LOCATION REQUIREMENT:**
-- EVERY question MUST include BOTH the service AND location
-- Required format: "${serviceWithoutAdjective} in ${location}"
-- Example: "What are chimney services costs in Johnson County, KS?"
-- Example: "How long do chimney services take in Miami County, KS?"
-- Example: "What preparation is needed for chimney services in Douglas County, KS?"
+**FAQ QUESTION FORMAT - CRITICAL REQUIREMENTS:**
+- EVERY question MUST use the EXACT phrase: "${serviceWithoutAdjective} in ${location}"
+- DO NOT use variations, synonyms, or related terms - use the EXACT service name
+- Example: If service is "chimney services", DO NOT use "chimney inspections", "chimney repair", or "chimney cleaning"
+- ✅ CORRECT: Use "${serviceWithoutAdjective} in ${location}" in EVERY question
+- Example questions that use the EXACT phrase:
+  * "What are the costs of ${serviceWithoutAdjective} in ${location}?"
+  * "How often should ${serviceWithoutAdjective} be performed in ${location}?"
+  * "What preparation is needed for ${serviceWithoutAdjective} in ${location}?"
 - NO company name in questions
 - Questions should be what real customers search on Google
 - Use good grammar - ask ABOUT the service, don't treat it as a subject doing things
+- Remember: Use the EXACT service phrase in every question, not synonyms or variations
 
 **FAQ ANSWER FORMAT (NATURAL, NOT PROMOTIONAL):**
 - **First half (30-40 words):** General, educational answer. Do NOT mention company.
