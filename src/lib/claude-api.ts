@@ -311,18 +311,10 @@ Generate completely DIFFERENT FAQ questions - NOT similar to the ones above. Be 
 - EVERY question MUST use the EXACT phrase: "${primaryKeyword.split(' ').slice(1).join(' ')}" (service WITHOUT adjective "${primaryKeyword.split(' ')[0]}")
 - DO NOT use variations, synonyms, or related terms for the service name
 - ❌ WRONG: "chimney inspections in Location", "chimney repair in Location", "chimney cleaning in Location"
-- ✅ CORRECT: Use "${primaryKeyword.split(' ').slice(1).join(' ')}" as the exact service+location phrase in EVERY question
-- Be CREATIVE with your questions - ask about DIFFERENT aspects:
-  * Costs, pricing, estimates
-  * Benefits, advantages, value
-  * Timing, scheduling, duration
-  * Process, steps, what to expect
-  * Signs, indicators, when needed
-  * Preparation, requirements, what's needed
-  * Quality, standards, certifications
-  * Safety, regulations, compliance
-- Each question should cover a COMPLETELY DIFFERENT topic
-- Questions should be what real customers search on Google
+- ✅ CORRECT: Use "${primaryKeyword.split(' ').slice(1).join(' ')}" in EVERY question
+- Generate SEO-relevant questions that real customers would search on Google
+- Each question must cover a COMPLETELY DIFFERENT topic - be creative and diverse
+- If previouslyUsedFAQs are provided above, ensure your questions are on ENTIRELY DIFFERENT topics
 - Use good grammar - ask ABOUT the service, don't treat it as a subject doing things
 - NO company name in questions
 - Answers: First half (30-40 words) = general/educational, Latter half (20-35 words) = mention ${companyName} naturally
@@ -1084,21 +1076,10 @@ Please regenerate ONLY the 3 FAQs following these STRICT requirements:
 - DO NOT use variations, synonyms, or related terms for the service name
 - ❌ WRONG: Using "inspections", "repair", "cleaning" instead of the exact service name
 - ✅ CORRECT: Use the exact service+location phrase in EVERY question
-- Be CREATIVE and diverse - ask about DIFFERENT aspects:
-  * Costs, pricing, budget, estimates, affordability
-  * Benefits, advantages, value, importance, why needed
-  * Timing, frequency, scheduling, best time, when to do
-  * Process, steps, how it works, what happens, what to expect
-  * Signs, indicators, symptoms, red flags, when to call
-  * Preparation, requirements, what's needed beforehand
-  * Duration, time needed, how long it takes
-  * Quality, expertise, qualifications, certifications
-  * Safety, regulations, compliance, standards
-  * Materials, equipment, tools, technology used
-  * Guarantees, warranties, follow-up, aftercare
-- Each question must cover a COMPLETELY DIFFERENT topic from current FAQs
+- Generate SEO-relevant questions that real customers would search on Google
+- Each question must cover a COMPLETELY DIFFERENT topic from current FAQs above
+- Be creative and diverse - think of unique angles and aspects customers care about
 - NO company name in questions
-- Questions should be what real customers search on Google
 - Use good grammar - ask ABOUT the service, don't treat it as a subject doing things
 
 **FAQ ANSWER FORMAT (NATURAL, NOT PROMOTIONAL):**
