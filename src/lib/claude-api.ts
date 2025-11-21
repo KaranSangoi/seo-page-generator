@@ -307,8 +307,9 @@ ${previouslyUsedFAQs.map((faq, idx) => `${idx + 1}. ${faq}`).join('\n')}
 
 Generate completely DIFFERENT FAQ questions - NOT similar to the ones above. Be creative and choose entirely different topics.
 ` : ''}
-**FAQ REQUIREMENTS:**
-- Questions must use "${primaryKeyword.split(' ').slice(1).join(' ')}" (service WITHOUT the adjective "${primaryKeyword.split(' ')[0]}")
+**FAQ REQUIREMENTS - CRITICAL FOR SEO:**
+- EVERY question MUST include service AND location: "${primaryKeyword.split(' ').slice(1).join(' ')}" (service WITHOUT adjective "${primaryKeyword.split(' ')[0]}")
+- Example format: "What are [service] costs in [location]?"
 - Questions should be what real customers search on Google
 - Use good grammar - ask ABOUT the service, don't treat it as a subject doing things
 - NO company name in questions
@@ -1067,8 +1068,12 @@ Please regenerate ONLY the 3 FAQs following these STRICT requirements:
 - Choose COMPLETELY DIFFERENT aspects of the service to address
 - Be creative and diverse with your FAQ topics
 
-**FAQ QUESTION FORMAT:**
-- Use "${serviceWithoutAdjective}" (service WITHOUT the adjective)
+**FAQ QUESTION FORMAT - CRITICAL LOCATION REQUIREMENT:**
+- EVERY question MUST include BOTH the service AND location
+- Required format: "${serviceWithoutAdjective} in ${location}"
+- Example: "What are chimney services costs in Johnson County, KS?"
+- Example: "How long do chimney services take in Miami County, KS?"
+- Example: "What preparation is needed for chimney services in Douglas County, KS?"
 - NO company name in questions
 - Questions should be what real customers search on Google
 - Use good grammar - ask ABOUT the service, don't treat it as a subject doing things

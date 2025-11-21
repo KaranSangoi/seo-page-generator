@@ -67,140 +67,186 @@ export async function POST(request: NextRequest) {
     // Fetch sitemap once for all pages (for intelligent internal linking)
     const sitemap = await fetchSitemap(client.clientWebsite);
 
-    // Generate content for all pages (parallel for speed)
-    const generatedPages = await Promise.all(
-      pages.map(async (page: any, index: number) => {
-        try {
-          // Get deterministic adjective
-          const adjective = getAdjectiveForRow(page.rowNumber);
+    // Generate content SEQUENTIALLY for FAQ uniqueness and better UX
+    // User can review Page 1 while Page 2 is still generating!
+    console.log(`[PREVIEW] Generating ${pages.length} pages sequentially for FAQ uniqueness...`);
 
-          // Form primary keyword
-          let primaryKeyword: string;
-          if (page.customPrimaryKeyword) {
-            primaryKeyword = page.customPrimaryKeyword;
+    const generatedPages: any[] = [];
+    const previouslyUsedFAQs: string[] = []; // Track FAQs across pages
+
+    for (let index = 0; index < pages.length; index++) {
+      const page = pages[index];
+
+      try {
+        console.log(`[PREVIEW] Generating page ${index + 1}/${pages.length}: ${page.service} in ${page.location}`);
+
+        // Get deterministic adjective
+        const adjective = getAdjectiveForRow(page.rowNumber);
+
+        // Form primary keyword
+        let primaryKeyword: string;
+        if (page.customPrimaryKeyword) {
+          primaryKeyword = page.customPrimaryKeyword;
+        } else {
+          if (page.service && page.location) {
+            primaryKeyword = `${adjective} ${page.service} in ${page.location}`;
+          } else if (page.service) {
+            primaryKeyword = `${adjective} ${page.service}`;
+          } else if (page.location) {
+            primaryKeyword = `${adjective} ${page.location}`;
           } else {
-            if (page.service && page.location) {
-              primaryKeyword = `${adjective} ${page.service} in ${page.location}`;
-            } else if (page.service) {
-              primaryKeyword = `${adjective} ${page.service}`;
-            } else if (page.location) {
-              primaryKeyword = `${adjective} ${page.location}`;
-            } else {
-              primaryKeyword = adjective;
-            }
+            primaryKeyword = adjective;
           }
-
-          // Calculate link placements (for accurate preview)
-          const omitMap = (page.omitSections || []).includes('Map');
-          const { internalLinkPlacement, externalLinkPlacement } = determineLinkPlacements(
-            page.rowNumber,
-            pages.length,
-            omitMap
-          );
-
-          // Build generation params
-          const genParams: PageGenerationParams = {
-            batchId: `preview_${Date.now()}`,
-            pageType: page.pageType,
-            companyName: client.clientName,
-            companyWebsite: client.clientWebsite,
-            service: page.service,
-            location: page.location,
-            primaryKeyword,
-            omitSections: page.omitSections || [],
-            seoPlugin: client.seoPlugin,
-            internalLinkPlacement,
-            externalLinkPlacement,
-          };
-
-          // Generate content using shared function
-          const rawContent = await generateContent(genParams);
-
-          // Validate and fix content using shared function
-          const validationParams: ContentValidationParams = {
-            ...genParams,
-            previouslyUsedFAQs: [], // No FAQ uniqueness check in preview mode
-          };
-          const validated = await validateContent(rawContent, validationParams);
-
-          // Get page name using shared function
-          const pageName = getPageName(page.pageType, page.service, page.location);
-
-          // Determine internal link URL (40% homepage, 60% contextual pages)
-          let internalLinkUrl = client.clientWebsite; // default to homepage
-          const rotation = page.rowNumber % 5;
-
-          if (rotation >= 1 && rotation <= 3 && sitemap.length > 0) {
-            // Use contextual page for rotations 1, 2, 3
-            const relevantPage = findRelevantPage(sitemap, page.service, page.location);
-            if (relevantPage) {
-              internalLinkUrl = relevantPage;
-            }
-          }
-
-          // Determine external link URL (city website)
-          const externalLinkUrl = generateCityWebsiteUrl(page.location);
-
-          return {
-            pageId: `preview_${page.rowNumber}`,
-            pageName,
-            service: page.service,
-            location: page.location,
-            primaryKeyword,
-            content: validated.content,
-            internalLinkPlacement,
-            internalLinkUrl,
-            externalLinkPlacement,
-            externalLinkUrl,
-            rawData: page, // Store original page data for later publishing
-            status: 'ready', // Ready for review
-            warnings: validated.warnings,
-            autoFixed: validated.autoFixed,
-          };
-        } catch (error) {
-          console.error(`Error generating content for page ${page.rowNumber}:`, error);
-          return {
-            pageId: `preview_${page.rowNumber}`,
-            pageName: page.service || page.location || 'Unknown',
-            service: page.service,
-            location: page.location,
-            primaryKeyword: '',
-            content: null,
-            rawData: page,
-            status: 'failed',
-            error: error instanceof Error ? error.message : 'Failed to generate content',
-          };
         }
-      })
-    );
 
-    // Create GeneratedPage records for history tracking
-    const pageRecords = await Promise.all(
-      generatedPages.map(async (genPage) => {
+        // Calculate link placements (for accurate preview)
+        const omitMap = (page.omitSections || []).includes('Map');
+        const { internalLinkPlacement, externalLinkPlacement } = determineLinkPlacements(
+          page.rowNumber,
+          pages.length,
+          omitMap
+        );
+
+        // Build generation params
+        const genParams: PageGenerationParams = {
+          batchId: batch.id, // Use actual batch ID for tracking
+          pageType: page.pageType,
+          companyName: client.clientName,
+          companyWebsite: client.clientWebsite,
+          service: page.service,
+          location: page.location,
+          primaryKeyword,
+          omitSections: page.omitSections || [],
+          seoPlugin: client.seoPlugin,
+          internalLinkPlacement,
+          externalLinkPlacement,
+          previouslyUsedFAQs, // Pass FAQs from previous pages for uniqueness!
+        };
+
+        // Generate content using shared function
+        const rawContent = await generateContent(genParams);
+
+        // Validate and fix content using shared function
+        const validationParams: ContentValidationParams = {
+          ...genParams,
+          previouslyUsedFAQs, // Include for validation too
+        };
+        const validated = await validateContent(rawContent, validationParams);
+
+        // Get page name using shared function
+        const pageName = getPageName(page.pageType, page.service, page.location);
+
+        // Determine internal link URL (40% homepage, 60% contextual pages)
+        let internalLinkUrl = client.clientWebsite; // default to homepage
+        const rotation = page.rowNumber % 5;
+
+        if (rotation >= 1 && rotation <= 3 && sitemap.length > 0) {
+          // Use contextual page for rotations 1, 2, 3
+          const relevantPage = findRelevantPage(sitemap, page.service, page.location);
+          if (relevantPage) {
+            internalLinkUrl = relevantPage;
+          }
+        }
+
+        // Determine external link URL (city website)
+        const externalLinkUrl = generateCityWebsiteUrl(page.location);
+
+        const generatedPage = {
+          pageId: `preview_${page.rowNumber}`,
+          pageName,
+          service: page.service,
+          location: page.location,
+          primaryKeyword,
+          content: validated.content,
+          internalLinkPlacement,
+          internalLinkUrl,
+          externalLinkPlacement,
+          externalLinkUrl,
+          rawData: page, // Store original page data for later publishing
+          status: 'ready', // Ready for review
+          warnings: validated.warnings,
+          autoFixed: validated.autoFixed,
+        };
+
+        generatedPages.push(generatedPage);
+
+        // Save to database immediately for progressive UI updates
         try {
           const pageRecord = await prisma.generatedPage.create({
             data: {
               batchId: batch.id,
-              pageName: genPage.pageName,
-              pageType: genPage.rawData.pageType,
-              service: genPage.service,
-              location: genPage.location,
-              parentSlug: genPage.rawData.parentSlug,
-              rowNumber: genPage.rawData.rowNumber,
-              status: genPage.status === 'ready' ? 'validating' : 'failed', // 'validating' = ready for review
-              errorMessage: genPage.error,
-              primaryKeyword: genPage.primaryKeyword,
-              generatedContent: JSON.stringify(genPage.content),
+              pageName: generatedPage.pageName,
+              pageType: page.pageType,
+              service: page.service,
+              location: page.location,
+              parentSlug: page.parentSlug,
+              rowNumber: page.rowNumber,
+              status: 'validating', // 'validating' = ready for review in preview mode
+              primaryKeyword,
+              generatedContent: JSON.stringify(generatedPage.content),
               timeElapsed: 0, // Will be updated when published
             },
           });
-          return { ...genPage, dbId: pageRecord.id }; // Add database ID to response
+          generatedPage.dbId = pageRecord.id; // Add DB ID to the object
+          console.log(`[PREVIEW] 💾 Saved page ${index + 1} to database (ID: ${pageRecord.id})`);
         } catch (dbError) {
-          console.error('Failed to create page record:', dbError);
-          return genPage; // Return original if DB insert fails
+          console.error(`[PREVIEW] Failed to save page ${index + 1} to database:`, dbError);
         }
-      })
-    );
+
+        // Extract FAQs from this page and add to previouslyUsedFAQs for next page
+        if (validated.content.faqs && Array.isArray(validated.content.faqs)) {
+          const newFAQs = validated.content.faqs.map((faq: any) => faq.question);
+          previouslyUsedFAQs.push(...newFAQs);
+          console.log(`[PREVIEW] Stored ${newFAQs.length} FAQs from page ${index + 1}. Total tracked: ${previouslyUsedFAQs.length}`);
+        }
+
+        console.log(`[PREVIEW] ✅ Page ${index + 1}/${pages.length} generated successfully`);
+
+      } catch (error) {
+        console.error(`[PREVIEW] ❌ Error generating page ${index + 1}:`, error);
+        const failedPage = {
+          pageId: `preview_${page.rowNumber}`,
+          pageName: page.service || page.location || 'Unknown',
+          service: page.service,
+          location: page.location,
+          primaryKeyword: '',
+          content: null,
+          rawData: page,
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Failed to generate content',
+        };
+        generatedPages.push(failedPage);
+
+        // Save failed page to database immediately for UI updates
+        try {
+          const pageRecord = await prisma.generatedPage.create({
+            data: {
+              batchId: batch.id,
+              pageName: failedPage.pageName,
+              pageType: page.pageType,
+              service: page.service,
+              location: page.location,
+              parentSlug: page.parentSlug,
+              rowNumber: page.rowNumber,
+              status: 'failed',
+              errorMessage: failedPage.error,
+              primaryKeyword: '',
+              generatedContent: null,
+              timeElapsed: 0,
+            },
+          });
+          failedPage.dbId = pageRecord.id;
+          console.log(`[PREVIEW] 💾 Saved failed page ${index + 1} to database`);
+        } catch (dbError) {
+          console.error(`[PREVIEW] Failed to save failed page to database:`, dbError);
+        }
+      }
+    }
+
+    console.log(`[PREVIEW] ✅ All ${pages.length} pages generated!`);
+
+    // Pages are already saved to database as they completed (progressive saves)
+    // generatedPages array now has dbId for each page
 
     // Count successful and failed pages
     const successfulPages = generatedPages.filter(p => p.status === 'ready').length;
@@ -221,7 +267,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       batchId: batch.id, // Return batch ID for publishing
-      pages: pageRecords,
+      pages: generatedPages,
       message: 'Content generated successfully. Review and publish when ready.',
     });
   } catch (error) {

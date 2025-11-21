@@ -1050,7 +1050,8 @@ function determineLinkPlacements(
  */
 async function processPage(
   job: PageJob,
-  batchSize: number
+  batchSize: number,
+  previouslyUsedFAQs?: string[]
 ): Promise<{ job: PageJob; generatedContent: any; primaryKeyword: string; startTime: number } | null> {
   const startTime = Date.now();
 
@@ -1118,9 +1119,10 @@ async function processPage(
     }
     lastApiCall = Date.now();
 
-    // STEP 1: Generate content in parallel (no FAQ uniqueness check yet - done during validation)
+    // STEP 1: Generate content with FAQ uniqueness check
     // Pass batchId for context caching (saves ~75% on input tokens)
     // IMPORTANT: Pass link placements so AI knows where to naturally include company name and location
+    // IMPORTANT: Pass previouslyUsedFAQs to avoid duplicate FAQs across batch
     const generatedContent = await generatePageContent({
       batchId: job.batchId,
       pageType: job.pageData.pageType,
@@ -1133,6 +1135,7 @@ async function processPage(
       seoPlugin: job.clientData.seoPlugin,
       internalLinkPlacement,
       externalLinkPlacement,
+      previouslyUsedFAQs, // Pass FAQs from previous pages for uniqueness
     });
 
     // Check for "undefined" in generated content
@@ -1534,43 +1537,49 @@ async function processBatchSequentially(
   console.log(`[BATCH] Processing ${batchSize} pages with ${adjectives.length} adjectives`);
   console.log(`[BATCH] Adjectives array:`, adjectives);
 
-  // STEP 1: Generate ALL content in PARALLEL (faster!)
-  console.log(`[BATCH] 🚀 Generating content for all ${batchSize} pages in parallel...`);
-  const jobs: PageJob[] = pages.map((page, i) => ({
-    batchId,
-    clientId,
-    userId,
-    pageData: page,
-    clientData,
-    adjective: adjectives[i],
-  }));
+  // SEQUENTIAL GENERATION: Process pages ONE AT A TIME for FAQ uniqueness
+  console.log(`[BATCH] 🚀 Generating and publishing pages sequentially for FAQ uniqueness...`);
 
-  const generationResults = await Promise.all(
-    jobs.map(job => processPage(job, batchSize))
-  );
-
-  console.log(`[BATCH] ✅ All ${batchSize} pages generated! Now validating and publishing sequentially...`);
-
-  // STEP 2: Validate and publish SEQUENTIALLY (to maintain FAQ uniqueness tracking)
+  // Track FAQs from all previous pages in this batch
   const previouslyUsedFAQs: string[] = [];
 
-  for (let i = 0; i < generationResults.length; i++) {
-    const result = generationResults[i];
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    const adjective = adjectives[i];
+
+    // Create job for this page
+    const job: PageJob = {
+      batchId,
+      clientId,
+      userId,
+      pageData: page,
+      clientData,
+      adjective,
+    };
+
+    console.log(`[BATCH] Processing page ${i + 1}/${batchSize}: ${page.service} in ${page.location}`);
+
+    // Generate content with FAQ uniqueness check (pass FAQs from all previous pages)
+    const result = await processPage(job, batchSize, previouslyUsedFAQs);
 
     if (!result) {
-      console.log(`[BATCH] ⚠️ Skipping page ${i + 1} (generation failed)`);
+      console.log(`[BATCH] ⚠️ Page ${i + 1} generation failed, skipping...`);
       continue;
     }
 
-    const { job, generatedContent, primaryKeyword, startTime } = result;
+    const { job: completedJob, generatedContent, primaryKeyword, startTime } = result;
 
-    console.log(`[BATCH] Validating and publishing page ${i + 1}/${batchSize}: ${job.pageData.service} in ${job.pageData.location}`);
+    console.log(`[BATCH] Validating and publishing page ${i + 1}/${batchSize}...`);
 
-    // Validate and publish with FAQ uniqueness check
-    await validateAndPublish(job, generatedContent, primaryKeyword, startTime, batchSize, previouslyUsedFAQs);
+    // Validate and publish
+    await validateAndPublish(completedJob, generatedContent, primaryKeyword, startTime, batchSize, previouslyUsedFAQs);
 
-    // Add this page's FAQs to the list for next page's validation
-    // (This is redundant since validateAndPublish also does it, but keeping for clarity)
+    // Extract FAQs from this page and add to previouslyUsedFAQs for next page
+    if (generatedContent.faqs && Array.isArray(generatedContent.faqs)) {
+      const newFAQs = generatedContent.faqs.map((faq: any) => faq.question);
+      previouslyUsedFAQs.push(...newFAQs);
+      console.log(`[BATCH] Stored ${newFAQs.length} FAQs from page ${i + 1}. Total tracked: ${previouslyUsedFAQs.length}`);
+    }
   }
 
   // Mark batch as completed

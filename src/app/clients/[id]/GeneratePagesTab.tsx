@@ -538,6 +538,8 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
       if (!response.ok) throw new Error('Failed to generate preview');
       const data = await response.json();
       if (data.success) {
+        // Store batch ID for FAQ uniqueness checking during regeneration
+        setBatchId(data.batchId);
         // Update all pages with generated content
         setContentPreviewPages(data.pages);
       }
