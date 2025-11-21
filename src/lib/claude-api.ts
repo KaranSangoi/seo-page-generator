@@ -307,17 +307,33 @@ ${previouslyUsedFAQs.map((faq, idx) => `${idx + 1}. ${faq}`).join('\n')}
 
 Generate completely DIFFERENT FAQ questions - NOT similar to the ones above. Be creative and choose entirely different topics.
 ` : ''}
-**FAQ REQUIREMENTS - CRITICAL FOR SEO:**
-- EVERY question MUST use the EXACT phrase: "${primaryKeyword.split(' ').slice(1).join(' ')}" (service WITHOUT adjective "${primaryKeyword.split(' ')[0]}")
-- DO NOT use variations, synonyms, or related terms for the service name
-- ❌ WRONG: "chimney inspections in Location", "chimney repair in Location", "chimney cleaning in Location"
-- ✅ CORRECT: Use "${primaryKeyword.split(' ').slice(1).join(' ')}" in EVERY question
-- Generate SEO-relevant questions that real customers would search on Google
-- Each question must cover a COMPLETELY DIFFERENT topic - be creative and diverse
-- If previouslyUsedFAQs are provided above, ensure your questions are on ENTIRELY DIFFERENT topics
-- Use good grammar - ask ABOUT the service, don't treat it as a subject doing things
+**FAQ REQUIREMENTS:**
+
+**MANDATORY PHRASE (MUST APPEAR IN EVERY QUESTION):**
+"${primaryKeyword.split(' ').slice(1).join(' ')}"
+
+YOU MUST USE THIS EXACT PHRASE IN EVERY QUESTION. DO NOT USE:
+❌ "${primaryKeyword.split(' ')[1] || 'service'} inspections in ${primaryKeyword.split('in')[1]?.trim() || 'location'}"
+❌ "${primaryKeyword.split(' ')[1] || 'service'} repair in ${primaryKeyword.split('in')[1]?.trim() || 'location'}"
+❌ "${primaryKeyword.split(' ')[1] || 'service'} cleaning in ${primaryKeyword.split('in')[1]?.trim() || 'location'}"
+❌ "${primaryKeyword.split(' ')[1] || 'service'} caps in ${primaryKeyword.split('in')[1]?.trim() || 'location'}"
+❌ "${primaryKeyword.split(' ')[1] || 'service'} needs repairs in ${primaryKeyword.split('in')[1]?.trim() || 'location'}"
+
+ONLY USE: "${primaryKeyword.split(' ').slice(1).join(' ')}" (EXACTLY AS SHOWN)
+
+**UNIQUENESS CHECK:**
+- If previouslyUsedFAQs are provided above, ensure your questions ask about DIFFERENT topics
+- Do NOT reword the same question - ask about a DIFFERENT aspect of the service
+
+**QUESTION REQUIREMENTS:**
+- Use the EXACT phrase shown above in every question
+- Ask SEO-relevant questions real customers would search
 - NO company name in questions
-- Answers: First half (30-40 words) = general/educational, Latter half (20-35 words) = mention ${companyName} naturally
+- Be creative with topics while keeping the EXACT phrase
+
+**ANSWER FORMAT:**
+- First half (30-40 words): General, educational answer (no company mention)
+- Latter half (20-35 words): Naturally mention ${companyName}
 **Sections to Include:**
 - Meta Title & Description
 - H1 (exactly: "${primaryKeyword}")
@@ -1071,16 +1087,28 @@ Please regenerate ONLY the 3 FAQs following these STRICT requirements:
 - Choose COMPLETELY DIFFERENT aspects of the service to address
 - Be creative and diverse with your FAQ topics
 
-**FAQ QUESTION FORMAT - CRITICAL REQUIREMENTS:**
-- EVERY question MUST use the EXACT phrase: "${serviceWithoutAdjective} in ${location}"
-- DO NOT use variations, synonyms, or related terms for the service name
-- ❌ WRONG: Using "inspections", "repair", "cleaning" instead of the exact service name
-- ✅ CORRECT: Use the exact service+location phrase in EVERY question
-- Generate SEO-relevant questions that real customers would search on Google
-- Each question must cover a COMPLETELY DIFFERENT topic from current FAQs above
-- Be creative and diverse - think of unique angles and aspects customers care about
+**MANDATORY PHRASE (MUST APPEAR IN EVERY QUESTION):**
+"${serviceWithoutAdjective} in ${location}"
+
+YOU MUST USE THIS EXACT PHRASE IN EVERY QUESTION. DO NOT USE:
+❌ "${serviceWithoutAdjective.split(' ')[0]} inspections in ${location}"
+❌ "${serviceWithoutAdjective.split(' ')[0]} repair in ${location}"
+❌ "${serviceWithoutAdjective.split(' ')[0]} cleaning in ${location}"
+❌ "${serviceWithoutAdjective.split(' ')[0]} caps in ${location}"
+❌ "${serviceWithoutAdjective.split(' ')[0]} needs repairs in ${location}"
+
+ONLY USE: "${serviceWithoutAdjective} in ${location}" (EXACTLY AS SHOWN)
+
+**UNIQUENESS CHECK:**
+- The current FAQs above are being replaced because they are duplicate or not relevant
+- Generate questions about COMPLETELY DIFFERENT topics than those shown above
+- Do NOT reword the same questions - choose ENTIRELY different aspects to ask about
+
+**QUESTION REQUIREMENTS:**
+- Use the EXACT phrase shown above in every question
+- Ask SEO-relevant questions real customers would search
 - NO company name in questions
-- Use good grammar - ask ABOUT the service, don't treat it as a subject doing things
+- Be creative with topics while keeping the EXACT phrase
 
 **FAQ ANSWER FORMAT (NATURAL, NOT PROMOTIONAL):**
 - **First half (30-40 words):** General, educational answer. Do NOT mention company.
