@@ -309,19 +309,23 @@ Generate completely DIFFERENT FAQ questions - NOT similar to the ones above. Be 
 ` : ''}
 **FAQ REQUIREMENTS - CRITICAL FOR SEO:**
 - EVERY question MUST use the EXACT phrase: "${primaryKeyword.split(' ').slice(1).join(' ')}" (service WITHOUT adjective "${primaryKeyword.split(' ')[0]}")
-- DO NOT use variations, synonyms, or related terms - use the EXACT service name
-- Example: If service is "chimney services in Johnson County, KS", use that EXACT phrase
-- ❌ WRONG: "chimney inspections", "chimney repair", "chimney cleaning"
-- ✅ CORRECT: "chimney services in Johnson County, KS" in EVERY question
-- Example questions:
-  * "What are the costs of chimney services in Johnson County, KS?"
-  * "How often should chimney services be done in Johnson County, KS?"
-  * "What preparation is needed for chimney services in Johnson County, KS?"
+- DO NOT use variations, synonyms, or related terms for the service name
+- ❌ WRONG: "chimney inspections in Location", "chimney repair in Location", "chimney cleaning in Location"
+- ✅ CORRECT: Use "${primaryKeyword.split(' ').slice(1).join(' ')}" as the exact service+location phrase in EVERY question
+- Be CREATIVE with your questions - ask about DIFFERENT aspects:
+  * Costs, pricing, estimates
+  * Benefits, advantages, value
+  * Timing, scheduling, duration
+  * Process, steps, what to expect
+  * Signs, indicators, when needed
+  * Preparation, requirements, what's needed
+  * Quality, standards, certifications
+  * Safety, regulations, compliance
+- Each question should cover a COMPLETELY DIFFERENT topic
 - Questions should be what real customers search on Google
 - Use good grammar - ask ABOUT the service, don't treat it as a subject doing things
 - NO company name in questions
 - Answers: First half (30-40 words) = general/educational, Latter half (20-35 words) = mention ${companyName} naturally
-- Be creative and diverse - each FAQ should cover a DIFFERENT topic (but always use EXACT service phrase)
 **Sections to Include:**
 - Meta Title & Description
 - H1 (exactly: "${primaryKeyword}")
@@ -1077,17 +1081,25 @@ Please regenerate ONLY the 3 FAQs following these STRICT requirements:
 
 **FAQ QUESTION FORMAT - CRITICAL REQUIREMENTS:**
 - EVERY question MUST use the EXACT phrase: "${serviceWithoutAdjective} in ${location}"
-- DO NOT use variations, synonyms, or related terms - use the EXACT service name
-- Example: If service is "chimney services", DO NOT use "chimney inspections", "chimney repair", or "chimney cleaning"
-- ✅ CORRECT: Use "${serviceWithoutAdjective} in ${location}" in EVERY question
-- Example questions that use the EXACT phrase:
-  * "What are the costs of ${serviceWithoutAdjective} in ${location}?"
-  * "How often should ${serviceWithoutAdjective} be performed in ${location}?"
-  * "What preparation is needed for ${serviceWithoutAdjective} in ${location}?"
+- DO NOT use variations, synonyms, or related terms for the service name
+- ❌ WRONG: Using "inspections", "repair", "cleaning" instead of the exact service name
+- ✅ CORRECT: Use the exact service+location phrase in EVERY question
+- Be CREATIVE and diverse - ask about DIFFERENT aspects:
+  * Costs, pricing, budget, estimates, affordability
+  * Benefits, advantages, value, importance, why needed
+  * Timing, frequency, scheduling, best time, when to do
+  * Process, steps, how it works, what happens, what to expect
+  * Signs, indicators, symptoms, red flags, when to call
+  * Preparation, requirements, what's needed beforehand
+  * Duration, time needed, how long it takes
+  * Quality, expertise, qualifications, certifications
+  * Safety, regulations, compliance, standards
+  * Materials, equipment, tools, technology used
+  * Guarantees, warranties, follow-up, aftercare
+- Each question must cover a COMPLETELY DIFFERENT topic from current FAQs
 - NO company name in questions
 - Questions should be what real customers search on Google
 - Use good grammar - ask ABOUT the service, don't treat it as a subject doing things
-- Remember: Use the EXACT service phrase in every question, not synonyms or variations
 
 **FAQ ANSWER FORMAT (NATURAL, NOT PROMOTIONAL):**
 - **First half (30-40 words):** General, educational answer. Do NOT mention company.
