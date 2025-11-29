@@ -224,7 +224,16 @@ Always return ONLY valid JSON with this exact structure (omit sections as instru
  * Build page-specific prompt (sent for each page)
  */
 function buildPagePrompt(params: ContentGenerationParams): string {
-  const { service, location, primaryKeyword, omitSections, companyName, internalLinkPlacement, externalLinkPlacement, previouslyUsedFAQs } = params;
+  const {
+    service,
+    location,
+    primaryKeyword,
+    omitSections,
+    companyName,
+    internalLinkPlacement,
+    externalLinkPlacement,
+    previouslyUsedFAQs,
+  } = params;
 
   const includeMap = !omitSections.includes("Map");
   const includeFAQ = !omitSections.includes("FAQ");
@@ -232,33 +241,36 @@ function buildPagePrompt(params: ContentGenerationParams): string {
   const includeWhy = !omitSections.includes("Why");
 
   // Build link placement instructions
-  let linkInstructions = '';
+  let linkInstructions = "";
   if (internalLinkPlacement || externalLinkPlacement) {
-    linkInstructions = '\n\n**LINK PLACEMENT CONTEXT (CRITICAL FOR NATURAL WRITING):**\n';
+    linkInstructions =
+      "\n\n**LINK PLACEMENT CONTEXT (CRITICAL FOR NATURAL WRITING):**\n";
 
     if (internalLinkPlacement) {
       const sectionMap: Record<string, string> = {
-        'hero': 'Hero Description',
-        'faq-1': 'FAQ Answer 1',
-        'faq-2': 'FAQ Answer 2',
-        'faq-3': 'FAQ Answer 3',
-        'map': 'Map Description'
+        hero: "Hero Description",
+        "faq-1": "FAQ Answer 1",
+        "faq-2": "FAQ Answer 2",
+        "faq-3": "FAQ Answer 3",
+        map: "Map Description",
       };
-      const sectionName = sectionMap[internalLinkPlacement] || internalLinkPlacement;
+      const sectionName =
+        sectionMap[internalLinkPlacement] || internalLinkPlacement;
       linkInstructions += `- An internal link will be added to the company name "${companyName}" in the ${sectionName} section.\n`;
       linkInstructions += `  **ACTION REQUIRED:** Ensure "${companyName}" appears naturally in the ${sectionName} section so the link can be inserted seamlessly.\n`;
     }
 
     if (externalLinkPlacement) {
       const sectionMap: Record<string, string> = {
-        'benefits-1': 'Benefits Bullet 1',
-        'benefits-2': 'Benefits Bullet 2',
-        'benefits-3': 'Benefits Bullet 3',
-        'why-1': 'Why Bullet 1',
-        'why-2': 'Why Bullet 2',
-        'why-3': 'Why Bullet 3'
+        "benefits-1": "Benefits Bullet 1",
+        "benefits-2": "Benefits Bullet 2",
+        "benefits-3": "Benefits Bullet 3",
+        "why-1": "Why Bullet 1",
+        "why-2": "Why Bullet 2",
+        "why-3": "Why Bullet 3",
       };
-      const sectionName = sectionMap[externalLinkPlacement] || externalLinkPlacement;
+      const sectionName =
+        sectionMap[externalLinkPlacement] || externalLinkPlacement;
       linkInstructions += `- An external link will be added to the location name "${location}" in the ${sectionName} section.\n`;
       linkInstructions += `  **ACTION REQUIRED:** Ensure the full location "${location}" appears naturally in the ${sectionName} section so the link can be inserted seamlessly.\n`;
     }
@@ -300,15 +312,22 @@ The primary keyword "${primaryKeyword}" has been pre-determined by our system.
 5. When referencing in natural text, you may use "${service}" alone, but when stating the full keyword, use "${primaryKeyword}" exactly
 6. Make headings unique and engaging - avoid repetitive formats across pages
 ${linkInstructions}
-${previouslyUsedFAQs && previouslyUsedFAQs.length > 0 ? `
+${
+  previouslyUsedFAQs && previouslyUsedFAQs.length > 0
+    ? `
 **CRITICAL - FAQ UNIQUENESS:**
 The following FAQ questions have ALREADY been used in previous pages in this batch:
-${previouslyUsedFAQs.map((faq, idx) => `${idx + 1}. ${faq}`).join('\n')}
+${previouslyUsedFAQs.map((faq, idx) => `${idx + 1}. ${faq}`).join("\n")}
 
 Generate completely DIFFERENT FAQ questions - NOT similar to the ones above. Be creative and choose entirely different topics.
-` : ''}
+`
+    : ""
+}
 **FAQ REQUIREMENTS:**
-- Every question must include the phrase: "${primaryKeyword.split(' ').slice(1).join(' ')}"
+- Every question must include the phrase: "${primaryKeyword
+    .split(" ")
+    .slice(1)
+    .join(" ")}"
 - If previouslyUsedFAQs are shown above, ask about different topics
 - Generate SEO-relevant questions that real customers would search
 - NO company name in questions
@@ -479,7 +498,9 @@ export async function generatePageContent(
   }
 
   try {
-    console.log(`[AI] Generating content with primaryKeyword: "${params.primaryKeyword}"`);
+    console.log(
+      `[AI] Generating content with primaryKeyword: "${params.primaryKeyword}"`
+    );
 
     let generated: GeneratedContent;
 
@@ -492,9 +513,11 @@ export async function generatePageContent(
     console.log(`[AI] Generated content:`, {
       h1: generated.h1,
       metaTitle: generated.metaTitle,
-      benefitsHeading: generated.benefitsHeading?.substring(0, 60) + '...',
-      whyHeading: generated.whyHeading?.substring(0, 60) + '...',
-      faqQuestions: generated.faqs?.map(f => f.question.substring(0, 50) + '...'),
+      benefitsHeading: generated.benefitsHeading?.substring(0, 60) + "...",
+      whyHeading: generated.whyHeading?.substring(0, 60) + "...",
+      faqQuestions: generated.faqs?.map(
+        (f) => f.question.substring(0, 50) + "..."
+      ),
     });
 
     // Ensure omitted sections return empty defaults
@@ -561,21 +584,27 @@ export function validateContent(
   if (companyName) {
     const allContent = [
       content.heroDescription,
-      ...content.faqs.map(f => f.answer),
-      content.mapDescription || ''
-    ].join(' ');
+      ...content.faqs.map((f) => f.answer),
+      content.mapDescription || "",
+    ].join(" ");
 
     if (!allContent.toLowerCase().includes(companyName.toLowerCase())) {
-      errors.push(`Company name "${companyName}" not found in hero/FAQ/map sections`);
+      errors.push(
+        `Company name "${companyName}" not found in hero/FAQ/map sections`
+      );
     }
   }
 
   // Check for location in benefits/why sections (for external linking)
-  if (location && !omitSections.includes("Benefits") && !omitSections.includes("Why")) {
+  if (
+    location &&
+    !omitSections.includes("Benefits") &&
+    !omitSections.includes("Why")
+  ) {
     const benefitsWhyContent = [
       ...content.benefitsBullets,
-      ...content.whyBullets
-    ].join(' ');
+      ...content.whyBullets,
+    ].join(" ");
 
     if (!benefitsWhyContent.toLowerCase().includes(location.toLowerCase())) {
       errors.push(`Location "${location}" not found in benefits/why sections`);
@@ -643,22 +672,29 @@ function autoFixMetaDescription(
   const targetMaxLength = 155;
 
   // Check if description already has company name, keyword, and "Call now!"
-  const hasCompany = metaDescription.toLowerCase().includes(companyName.toLowerCase());
-  const hasKeyword = metaDescription.toLowerCase().includes(primaryKeyword.toLowerCase());
+  const hasCompany = metaDescription
+    .toLowerCase()
+    .includes(companyName.toLowerCase());
+  const hasKeyword = metaDescription
+    .toLowerCase()
+    .includes(primaryKeyword.toLowerCase());
   const hasCTA = /call\s+(now|us|today)!?$/i.test(metaDescription);
 
   // If everything is present and length is good, return as-is
   if (hasCompany && hasKeyword && hasCTA) {
-    if (metaDescription.length >= targetMinLength && metaDescription.length <= targetMaxLength) {
+    if (
+      metaDescription.length >= targetMinLength &&
+      metaDescription.length <= targetMaxLength
+    ) {
       return metaDescription;
     }
   }
 
   // Otherwise, reconstruct from scratch
   // Extract service and location from primary keyword
-  const keywordParts = primaryKeyword.split(' in ');
+  const keywordParts = primaryKeyword.split(" in ");
   const service = keywordParts[0] || primaryKeyword;
-  const location = keywordParts[1] || '';
+  const location = keywordParts[1] || "";
 
   // Build base description
   let fixed: string;
@@ -671,8 +707,8 @@ function autoFixMetaDescription(
   }
 
   // Add period if not present
-  if (!fixed.endsWith('.')) {
-    fixed += '.';
+  if (!fixed.endsWith(".")) {
+    fixed += ".";
   }
 
   // Calculate space for benefits (we need to reserve space for " Call now!" = 11 chars)
@@ -685,18 +721,20 @@ function autoFixMetaDescription(
   if (currentLength < maxContentLength - 20) {
     // Clean the original description to extract useful benefit text
     let cleanDesc = metaDescription
-      .replace(/call\s+(now|us|today)!?\.?$/i, '')
-      .replace(/contact\s+us!?\.?$/i, '')
+      .replace(/call\s+(now|us|today)!?\.?$/i, "")
+      .replace(/contact\s+us!?\.?$/i, "")
       .trim();
 
     // Extract benefit phrases
-    const benefitMatch = cleanDesc.match(/(?:with|offering|featuring|providing)\s+([^.]+)/i);
+    const benefitMatch = cleanDesc.match(
+      /(?:with|offering|featuring|providing)\s+([^.]+)/i
+    );
     if (benefitMatch && benefitMatch[1]) {
       const benefit = benefitMatch[1].trim();
       const additionalText = ` ${benefit}`;
 
-      if ((fixed.length + additionalText.length + ctaLength) <= targetMaxLength) {
-        fixed = fixed.replace(/\.$/, '') + additionalText + '.';
+      if (fixed.length + additionalText.length + ctaLength <= targetMaxLength) {
+        fixed = fixed.replace(/\.$/, "") + additionalText + ".";
       }
     }
   }
@@ -705,8 +743,8 @@ function autoFixMetaDescription(
   if (fixed.length < minContentLength) {
     // Add generic benefit to reach minimum
     const genericBenefit = " Professional service with quality results";
-    if ((fixed.length + genericBenefit.length + ctaLength) <= targetMaxLength) {
-      fixed = fixed.replace(/\.$/, '') + genericBenefit + '.';
+    if (fixed.length + genericBenefit.length + ctaLength <= targetMaxLength) {
+      fixed = fixed.replace(/\.$/, "") + genericBenefit + ".";
     }
   }
 
@@ -719,9 +757,12 @@ function autoFixMetaDescription(
     const excessLength = fixed.length - targetMaxLength;
     // Remove from before the CTA
     const contentWithoutCTA = fixed.substring(0, fixed.length - 11); // Remove " Call now!"
-    const trimmedContent = contentWithoutCTA.substring(0, contentWithoutCTA.length - excessLength);
+    const trimmedContent = contentWithoutCTA.substring(
+      0,
+      contentWithoutCTA.length - excessLength
+    );
     // Ensure it ends with a period before CTA
-    fixed = trimmedContent.replace(/\.*$/, '.') + " Call now!";
+    fixed = trimmedContent.replace(/\.*$/, ".") + " Call now!";
   }
 
   return fixed;
@@ -853,24 +894,36 @@ export async function validateAndFixContent(
 
   // 4. CHECK: Benefits Heading (warn if missing company name or primary keyword)
   if (!omitSections.includes("Benefits")) {
-    const hasCompany = fixed.benefitsHeading.toLowerCase().includes(companyName.toLowerCase());
-    const hasKeyword = fixed.benefitsHeading.toLowerCase().includes(primaryKeyword.toLowerCase());
+    const hasCompany = fixed.benefitsHeading
+      .toLowerCase()
+      .includes(companyName.toLowerCase());
+    const hasKeyword = fixed.benefitsHeading
+      .toLowerCase()
+      .includes(primaryKeyword.toLowerCase());
 
     if (!hasCompany) {
       warnings.push(`Benefits heading missing company name: "${companyName}"`);
     }
     if (!hasKeyword) {
-      warnings.push(`Benefits heading missing primary keyword: "${primaryKeyword}"`);
+      warnings.push(
+        `Benefits heading missing primary keyword: "${primaryKeyword}"`
+      );
     }
   }
 
   // 5. CHECK: Why Heading (warn if missing primary keyword, or if it includes company name)
   if (!omitSections.includes("Why")) {
-    const hasCompany = fixed.whyHeading.toLowerCase().includes(companyName.toLowerCase());
-    const hasKeyword = fixed.whyHeading.toLowerCase().includes(primaryKeyword.toLowerCase());
+    const hasCompany = fixed.whyHeading
+      .toLowerCase()
+      .includes(companyName.toLowerCase());
+    const hasKeyword = fixed.whyHeading
+      .toLowerCase()
+      .includes(primaryKeyword.toLowerCase());
 
     if (hasCompany) {
-      warnings.push(`Why heading should NOT include company name (it's about service importance, not the company)`);
+      warnings.push(
+        `Why heading should NOT include company name (it's about service importance, not the company)`
+      );
     }
     if (!hasKeyword) {
       warnings.push(`Why heading missing primary keyword: "${primaryKeyword}"`);
@@ -894,10 +947,21 @@ export async function validateAndFixContent(
       }
 
       // Check if answer is too promotional (multiple promotional phrases)
-      const promotionalPhrases = ["why choose", "why select", "what makes us", "what sets us apart"];
-      const isPromotional = promotionalPhrases.some(phrase => faq.question.toLowerCase().includes(phrase));
+      const promotionalPhrases = [
+        "why choose",
+        "why select",
+        "what makes us",
+        "what sets us apart",
+      ];
+      const isPromotional = promotionalPhrases.some((phrase) =>
+        faq.question.toLowerCase().includes(phrase)
+      );
       if (isPromotional) {
-        faqIssues.push(`FAQ ${idx + 1} is promotional - use customer-focused questions instead`);
+        faqIssues.push(
+          `FAQ ${
+            idx + 1
+          } is promotional - use customer-focused questions instead`
+        );
       }
 
       // Check answer length (should be 50-75 words)
@@ -916,19 +980,52 @@ export async function validateAndFixContent(
           const previousQuestion = previousFaq.toLowerCase();
 
           // Calculate simple similarity: check if questions share significant words
-          const currentWords = currentQuestion.split(/\s+/).filter(w => w.length > 3);
-          const previousWords = previousQuestion.split(/\s+/).filter(w => w.length > 3);
+          const currentWords = currentQuestion
+            .split(/\s+/)
+            .filter((w) => w.length > 3);
+          const previousWords = previousQuestion
+            .split(/\s+/)
+            .filter((w) => w.length > 3);
 
           // Count matching words (excluding common words)
-          const commonWords = new Set(['what', 'when', 'where', 'who', 'why', 'how', 'does', 'can', 'will', 'the', 'is', 'are', 'for', 'in', 'on', 'at', 'to', 'from', 'with', 'your', 'our']);
-          const matchingWords = currentWords.filter(w =>
-            !commonWords.has(w) && previousWords.includes(w)
+          const commonWords = new Set([
+            "what",
+            "when",
+            "where",
+            "who",
+            "why",
+            "how",
+            "does",
+            "can",
+            "will",
+            "the",
+            "is",
+            "are",
+            "for",
+            "in",
+            "on",
+            "at",
+            "to",
+            "from",
+            "with",
+            "your",
+            "our",
+          ]);
+          const matchingWords = currentWords.filter(
+            (w) => !commonWords.has(w) && previousWords.includes(w)
           ).length;
 
           // If more than 50% of significant words match, questions are too similar
           const similarityThreshold = Math.floor(currentWords.length * 0.5);
           if (matchingWords >= similarityThreshold && matchingWords >= 2) {
-            faqIssues.push(`FAQ ${idx + 1} is too similar to a previously used FAQ: "${previousFaq.substring(0, 50)}..."`);
+            faqIssues.push(
+              `FAQ ${
+                idx + 1
+              } is too similar to a previously used FAQ: "${previousFaq.substring(
+                0,
+                50
+              )}..."`
+            );
             break; // Only report once per FAQ
           }
         }
@@ -936,12 +1033,17 @@ export async function validateAndFixContent(
     });
 
     // Check if at least ONE FAQ uses primary keyword or service (flexible - not all need it)
-    const hasAnyKeyword = fixed.faqs.some(faq => {
+    const hasAnyKeyword = fixed.faqs.some((faq) => {
       const q = faq.question.toLowerCase();
-      return q.includes(primaryKeyword.toLowerCase()) || q.includes(service.toLowerCase());
+      return (
+        q.includes(primaryKeyword.toLowerCase()) ||
+        q.includes(service.toLowerCase())
+      );
     });
     if (!hasAnyKeyword) {
-      faqIssues.push(`At least one FAQ should mention the primary keyword or service`);
+      faqIssues.push(
+        `At least one FAQ should mention the primary keyword or service`
+      );
     }
 
     if (faqIssues.length > 0) {
@@ -980,7 +1082,9 @@ export async function validateAndFixContent(
       const words = bullet.split(/\s+/).length;
       if (words < 26) {
         bulletIssues.push(
-          `Benefits bullet ${idx + 1} has ${words} words (target 30+, minimum 26)`
+          `Benefits bullet ${
+            idx + 1
+          } has ${words} words (target 30+, minimum 26)`
         );
       }
     });
@@ -990,7 +1094,9 @@ export async function validateAndFixContent(
     fixed.whyBullets.forEach((bullet, idx) => {
       const words = bullet.split(/\s+/).length;
       if (words < 26) {
-        bulletIssues.push(`Why bullet ${idx + 1} has ${words} words (target 30+, minimum 26)`);
+        bulletIssues.push(
+          `Why bullet ${idx + 1} has ${words} words (target 30+, minimum 26)`
+        );
       }
     });
   }
@@ -1030,24 +1136,51 @@ export async function regenerateField(
     throw new Error("No AI API key configured");
   }
 
-  const {primaryKeyword, companyName, service, location } = params;
+  const {
+    primaryKeyword,
+    companyName,
+    service,
+    location,
+    internalLinkPlacement,
+    externalLinkPlacement,
+  } = params;
 
   let retryPrompt = "";
 
   if (field === "faqs") {
     // Extract service without adjective for FAQ questions
-    const serviceWithoutAdjective = primaryKeyword.split(' ').slice(1).join(' ') || service;
+    const serviceWithoutAdjective =
+      primaryKeyword.split(" ").slice(1).join(" ") || service;
 
     // Get list of previously used FAQs from OTHER pages in batch
-    const previousFAQsList = params.previouslyUsedFAQs && params.previouslyUsedFAQs.length > 0
-      ? `\n\n**PREVIOUSLY USED FAQ QUESTIONS IN THIS BATCH (DO NOT REPEAT OR BE TOO SIMILAR):**\n${params.previouslyUsedFAQs.map((q, i) => `${i + 1}. ${q}`).join('\n')}`
-      : '';
+    const previousFAQsList =
+      params.previouslyUsedFAQs && params.previouslyUsedFAQs.length > 0
+        ? `\n\n**PREVIOUSLY USED FAQ QUESTIONS IN THIS BATCH (DO NOT REPEAT OR BE TOO SIMILAR):**\n${params.previouslyUsedFAQs
+            .map((q, i) => `${i + 1}. ${q}`)
+            .join("\n")}`
+        : "";
 
     // Get current page's FAQs that need to be replaced
     const currentFAQs = previousContent.faqs || [];
-    const currentFAQsList = currentFAQs.length > 0
-      ? `\n\n**CURRENT FAQs BEING REPLACED (GENERATE COMPLETELY DIFFERENT TOPICS):**\n${currentFAQs.map((faq: any, i: number) => `${i + 1}. Q: ${faq.question}\n   A: ${faq.answer.substring(0, 100)}...`).join('\n\n')}`
-      : '';
+    const currentFAQsList =
+      currentFAQs.length > 0
+        ? `\n\n**CURRENT FAQs BEING REPLACED (GENERATE COMPLETELY DIFFERENT TOPICS):**\n${currentFAQs
+            .map(
+              (faq: any, i: number) =>
+                `${i + 1}. Q: ${faq.question}\n   A: ${faq.answer.substring(
+                  0,
+                  100
+                )}...`
+            )
+            .join("\n\n")}`
+        : "";
+
+    // Check if any FAQ should have an internal link
+    let linkInstruction = "";
+    if (internalLinkPlacement?.startsWith("faq-")) {
+      const faqNum = internalLinkPlacement.split("-")[1];
+      linkInstruction = `\n\n**CRITICAL LINKING REQUIREMENT:**\nFAQ #${faqNum} ANSWER must include the company name "${companyName}" naturally. An internal link will be added to it.`;
+    }
 
     retryPrompt = `The previously generated FAQs have issues: ${reason}
 
@@ -1076,7 +1209,7 @@ Please regenerate ONLY the 3 FAQs following these STRICT requirements:
 - **First half (30-40 words):** General, educational answer. Do NOT mention company.
 - **Latter half (20-35 words):** Naturally mention "${companyName}" and how they handle this.
 - Total: 50-75 words
-- Be natural and organic, not promotional
+- Be natural and organic, not promotional${linkInstruction}
 
 Return ONLY a JSON object with this structure:
 {
@@ -1087,6 +1220,12 @@ Return ONLY a JSON object with this structure:
   ]
 }`;
   } else if (field === "mapDescription") {
+    // Check if this section should have an internal link
+    const needsInternalLink = internalLinkPlacement === "map";
+    const linkInstruction = needsInternalLink
+      ? `\n6. **CRITICAL:** You MUST include the company name "${companyName}" naturally in this description. An internal link will be added to it.`
+      : "";
+
     retryPrompt = `The previously generated map description has an issue: ${reason}
 
 Please regenerate ONLY the map description following these requirements:
@@ -1106,13 +1245,19 @@ The primary keyword "${primaryKeyword}" is pre-determined. DO NOT modify it.
 2. Include the exact primary keyword "${primaryKeyword}" naturally in the text
 3. Describe service coverage in the location
 4. Mention company name "${companyName}" at least once
-5. Professional, informative tone
+5. Professional, informative tone${linkInstruction}
 
 Return ONLY a JSON object with this structure:
 {
   "mapDescription": "Your 50-60 word description here..."
 }`;
   } else if (field === "heroDescription") {
+    // Check if this section should have an internal link
+    const needsInternalLink = internalLinkPlacement === "hero";
+    const linkInstruction = needsInternalLink
+      ? `\n7. **CRITICAL:** You MUST include the company name "${companyName}" naturally in this description. An internal link will be added to it.`
+      : "";
+
     retryPrompt = `The previously generated hero description has an issue: ${reason}
 
 Please regenerate ONLY the hero description following these requirements:
@@ -1133,7 +1278,7 @@ The primary keyword "${primaryKeyword}" is pre-determined. DO NOT modify it.
 3. Describe the service and its benefits
 4. Mention company name "${companyName}" at least once
 5. Professional, engaging tone
-6. DO NOT include call-to-action phrases like "Call now!" - these are added programmatically
+6. DO NOT include call-to-action phrases like "Call now!" - these are added programmatically${linkInstruction}
 
 Return ONLY a JSON object with this structure:
 {
@@ -1184,8 +1329,7 @@ Return ONLY a JSON object with this structure (regenerate ALL 6 bullets):
 
 Return ONLY a JSON object:
 {"metaTitle": "..."}`;
-  }
-  else if (field === "metaDescription") {
+  } else if (field === "metaDescription") {
     retryPrompt = `Regenerate ONLY the meta description.
 
 **Primary Keyword:** ${primaryKeyword}
@@ -1205,8 +1349,7 @@ Return ONLY a JSON object:
 
 Return ONLY a JSON object:
 {"metaDescription": "..."}`;
-  }
-  else if (field === "h1") {
+  } else if (field === "h1") {
     retryPrompt = `Regenerate ONLY the H1 heading.
 
 **Primary Keyword:** ${primaryKeyword}
@@ -1217,8 +1360,7 @@ Return ONLY a JSON object:
 
 Return ONLY a JSON object:
 {"h1": "${primaryKeyword}"}`;
-  }
-  else if (field === "benefitsHeading") {
+  } else if (field === "benefitsHeading") {
     retryPrompt = `Regenerate ONLY the Benefits section heading.
 
 **Primary Keyword:** ${primaryKeyword}
@@ -1232,8 +1374,7 @@ Return ONLY a JSON object:
 
 Return ONLY a JSON object:
 {"benefitsHeading": "..."}`;
-  }
-  else if (field === "benefitsSubheading") {
+  } else if (field === "benefitsSubheading") {
     retryPrompt = `Regenerate ONLY the Benefits section subheading.
 
 **Primary Keyword:** ${primaryKeyword}
@@ -1246,8 +1387,7 @@ Return ONLY a JSON object:
 
 Return ONLY a JSON object:
 {"benefitsSubheading": "..."}`;
-  }
-  else if (field === "whyHeading") {
+  } else if (field === "whyHeading") {
     retryPrompt = `Regenerate ONLY the Why section heading.
 
 **Primary Keyword:** ${primaryKeyword}
@@ -1261,8 +1401,7 @@ Return ONLY a JSON object:
 
 Return ONLY a JSON object:
 {"whyHeading": "..."}`;
-  }
-  else if (field === "whySubheading") {
+  } else if (field === "whySubheading") {
     retryPrompt = `Regenerate ONLY the Why section subheading.
 
 **Primary Keyword:** ${primaryKeyword}
@@ -1275,10 +1414,16 @@ Return ONLY a JSON object:
 
 Return ONLY a JSON object:
 {"whySubheading": "..."}`;
-  }
-  else if (field.startsWith("benefitsBullet-")) {
+  } else if (field.startsWith("benefitsBullet-")) {
     const bulletIndex = parseInt(field.split("-")[1]) - 1;
     const currentBullet = previousContent.benefitsBullets[bulletIndex] || "";
+
+    // Check if this bullet should have an external link
+    const bulletKey = `benefits-${bulletIndex + 1}`;
+    const needsExternalLink = externalLinkPlacement === bulletKey;
+    const linkInstruction = needsExternalLink
+      ? `\n- **CRITICAL:** You MUST naturally include the location "${location}" in this bullet point. An external link will be added to it.`
+      : "";
 
     retryPrompt = `Regenerate ONLY Benefits bullet #${bulletIndex + 1}.
 
@@ -1294,14 +1439,20 @@ Return ONLY a JSON object:
 - MUST start with "<b>Topic Name:</b>" format (HTML bold tags)
 - Include the exact primary keyword naturally if relevant
 - Provide specific, valuable information
-- Professional tone
+- Professional tone${linkInstruction}
 
 Return ONLY a JSON object with the single bullet:
 {"benefitsBullet": "<b>Topic:</b> 30+ words here..."}`;
-  }
-  else if (field.startsWith("whyBullet-")) {
+  } else if (field.startsWith("whyBullet-")) {
     const bulletIndex = parseInt(field.split("-")[1]) - 1;
     const currentBullet = previousContent.whyBullets[bulletIndex] || "";
+
+    // Check if this bullet should have an external link
+    const bulletKey = `why-${bulletIndex + 1}`;
+    const needsExternalLink = externalLinkPlacement === bulletKey;
+    const linkInstruction = needsExternalLink
+      ? `\n- **CRITICAL:** You MUST naturally include the location "${location}" in this bullet point. An external link will be added to it.`
+      : "";
 
     retryPrompt = `Regenerate ONLY Why bullet #${bulletIndex + 1}.
 
@@ -1317,16 +1468,26 @@ Return ONLY a JSON object with the single bullet:
 - MUST start with "<b>Topic Name:</b>" format (HTML bold tags)
 - Include the exact primary keyword naturally if relevant
 - Provide specific, valuable information about why this service matters
-- Professional tone
+- Professional tone${linkInstruction}
 
 Return ONLY a JSON object with the single bullet:
 {"whyBullet": "<b>Topic:</b> 30+ words here..."}`;
-  }
-  else if (field.startsWith("faq-")) {
+  } else if (field.startsWith("faq-")) {
     const faqIndex = parseInt(field.split("-")[1]) - 1;
-    const currentFaq = previousContent.faqs[faqIndex] || { question: "", answer: "" };
+    const currentFaq = previousContent.faqs[faqIndex] || {
+      question: "",
+      answer: "",
+    };
     // Extract service without adjective for FAQ questions
-    const serviceWithoutAdjective = primaryKeyword.split(' ').slice(1).join(' ') || service;
+    const serviceWithoutAdjective =
+      primaryKeyword.split(" ").slice(1).join(" ") || service;
+
+    // Check if this FAQ should have an internal link
+    const faqKey = `faq-${faqIndex + 1}`;
+    const needsInternalLink = internalLinkPlacement === faqKey;
+    const linkInstruction = needsInternalLink
+      ? `\n- **CRITICAL:** You MUST include the company name "${companyName}" naturally in the ANSWER. An internal link will be added to it.`
+      : "";
 
     retryPrompt = `Regenerate ONLY FAQ #${faqIndex + 1}.
 
@@ -1347,7 +1508,7 @@ A: ${currentFaq.answer}
 - Question should be what real customers search on Google
 - Use good grammar - ask ABOUT the service
 - Answer: 50-75 words (First half = general/educational 30-40 words, Latter half = mention ${companyName} naturally 20-35 words)
-- Be creative and SEO-relevant, NOT promotional
+- Be creative and SEO-relevant, NOT promotional${linkInstruction}
 
 Return ONLY a JSON object with the single FAQ:
 {"faq": {"question": "...", "answer": "..."}}`;
@@ -1370,7 +1531,7 @@ Return ONLY a JSON object with the single FAQ:
       return parseAIResponse(message.content[0]);
     } else if (PROVIDER === "openai" && openai) {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: "gpt-4o",
         messages: [{ role: "user", content: retryPrompt }],
         temperature: 0.7,
         max_tokens: 2048,
@@ -1437,7 +1598,7 @@ Return ONLY a JSON array of ${count} adjectives:
       return JSON.parse(jsonMatch[0]);
     } else if (PROVIDER === "openai" && openai) {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.8,
         max_tokens: 1024,
@@ -1522,7 +1683,7 @@ export async function checkApiHealth(): Promise<boolean> {
       return message.content[0].type === "text";
     } else if (PROVIDER === "openai" && openai) {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: "gpt-4o",
         messages: [{ role: "user", content: "Respond with OK" }],
         max_tokens: 10,
       });

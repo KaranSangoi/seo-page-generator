@@ -237,8 +237,11 @@ export function determineLinkPlacements(
   // Calculate 0-indexed position in batch
   const position = (rowNumber - 1) % batchSize;
 
-  // Internal link placement (5-page pattern: hero, faq-1, faq-2, faq-3, map)
-  const internalLinkRotation5 = ['hero', 'faq-1', 'faq-2', 'faq-3', 'map'];
+  // Internal link placement patterns - exclude 'map' if omitMap is true
+  // 5-page pattern: hero, faq-1, faq-2, faq-3, map (or cycle back to hero if map omitted)
+  const internalLinkRotation5 = omitMap
+    ? ['hero', 'faq-1', 'faq-2', 'faq-3', 'hero'] // Cycle back to hero instead of map
+    : ['hero', 'faq-1', 'faq-2', 'faq-3', 'map'];
 
   // For 3-page batches: hero, faq-1, map (if not omitted) or faq-2 (if map omitted)
   const internalLinkRotation3 = omitMap

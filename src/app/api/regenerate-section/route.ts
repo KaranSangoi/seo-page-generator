@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
       sectionToRegenerate,
       primaryKeyword,
       batchId, // ADDED: Need batch ID to fetch other FAQs
+      internalLinkPlacement, // Link placement for company name linking
+      externalLinkPlacement, // Link placement for city/location linking
     } = body;
 
     if (!clientId || !pageData || !currentContent || !sectionToRegenerate) {
@@ -148,6 +150,8 @@ export async function POST(request: NextRequest) {
             omitSections: pageData.omitSections || [],
             seoPlugin: client.seoPlugin,
             previouslyUsedFAQs: previouslyUsedFAQs.length > 0 ? previouslyUsedFAQs : undefined,
+            internalLinkPlacement, // Pass link placements for content regeneration
+            externalLinkPlacement,
           },
           fieldToRegenerate,
           currentContent,
