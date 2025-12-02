@@ -116,7 +116,9 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
    - Focus on describing the service, company value proposition, and benefits
    - MUST naturally include BOTH company name and primary keyword
    - **MUST end with "Call now!" within the 120-155 character limit**
-   - Format: "{CompanyName} provides {service} in {location}. [Brief benefit]. Call now!"
+   - Format: "{CompanyName} [grammatically correct connector] {primary keyword}. [Brief benefit]. Call now!"
+   - Use appropriate connector based on keyword type (e.g., "is your trusted" for professions like "Contractor", "provides expert" for services like "roof repair")
+   - CRITICAL: Ensure the sentence is grammatically correct - don't use "provides contractor" (wrong), use "is your trusted contractor" (correct)
 2. **Hero Description:** Must be 50-60 words (STRICT - count your words!)
    Example (52 words): "Our professional dumpster rental services in Phoenix provide reliable waste management solutions for residential and commercial projects. With same-day delivery, flexible rental periods, and competitive pricing, we make waste disposal easy. Contact us today for a free quote and experience hassle-free service from Phoenix's most trusted waste management company."
 3. **Bullet Points:** Each must be ≥30 words (STRICT - count your words! Aim for 40-50 words)
@@ -696,14 +698,27 @@ function autoFixMetaDescription(
   const service = keywordParts[0] || primaryKeyword;
   const location = keywordParts[1] || "";
 
-  // Build base description
+  // Detect if keyword is a profession noun (contractor, plumber, electrician, etc.)
+  // These need "is your trusted" instead of "provides"
+  const professionPattern = /\b(contractor|plumber|electrician|roofer|installer|technician|specialist|expert|consultant|provider|company|service|builder|painter|cleaner|mechanic|inspector|handler|remover|exterminator)s?\b/i;
+  const isProfessionNoun = professionPattern.test(service);
+
+  // Build base description with grammatically correct connector
   let fixed: string;
   if (location) {
-    // Format: "{CompanyName} provides {service} in {location}"
-    fixed = `${companyName} provides ${service.toLowerCase()} in ${location}`;
+    if (isProfessionNoun) {
+      // Format: "{CompanyName} is your trusted {service} in {location}"
+      fixed = `${companyName} is your trusted ${service.toLowerCase()} in ${location}`;
+    } else {
+      // Format: "{CompanyName} provides expert {service} in {location}"
+      fixed = `${companyName} provides expert ${service.toLowerCase()} in ${location}`;
+    }
   } else {
-    // Format: "{CompanyName} offers {service}"
-    fixed = `${companyName} offers ${service.toLowerCase()}`;
+    if (isProfessionNoun) {
+      fixed = `${companyName} is your trusted ${service.toLowerCase()}`;
+    } else {
+      fixed = `${companyName} offers expert ${service.toLowerCase()}`;
+    }
   }
 
   // Add period if not present
@@ -1342,10 +1357,12 @@ Return ONLY a JSON object:
 - MUST naturally include BOTH the company name "${companyName}" AND the primary keyword "${primaryKeyword}"
 - MUST end with "Call now!" within the 120-155 character limit
 - Focus on benefits and value proposition
-- Format: "${companyName} provides ${primaryKeyword.toLowerCase()}. [Brief benefit]. Call now!"
+- Format: "${companyName} [grammatically correct connector] ${primaryKeyword.toLowerCase()}. [Brief benefit]. Call now!"
+- Use appropriate connector (e.g., "is your trusted" for professions like Contractor/Plumber, "provides expert" for services like roof repair)
+- CRITICAL: Ensure grammatically correct - "provides contractor" is WRONG, "is your trusted contractor" is CORRECT
 
 **Example (good - 145 characters):**
-"ABC Roofing provides expert roof repair in Phoenix, AZ with 25+ years of experience, licensed contractors, and same-day service. Call now!"
+"ABC Roofing is your trusted roofing contractor in Phoenix, AZ with 25+ years of experience and licensed professionals. Call now!"
 
 Return ONLY a JSON object:
 {"metaDescription": "..."}`;
