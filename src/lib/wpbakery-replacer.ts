@@ -191,7 +191,8 @@ export function replaceWPBakeryContent(
   service?: string,
   internalLinkPlacement?: string,
   externalLinkPlacement?: string,
-  omitSections?: string[]
+  omitSections?: string[],
+  externalLinkUrlOverride?: string
 ): { data: string; log: WPBakeryReplacementLog } {
   if (!postContent || typeof postContent !== 'string') {
     return {
@@ -298,7 +299,8 @@ export function replaceWPBakeryContent(
     }
   };
 
-  const cityWebsiteUrl = location ? generateCityWebsiteUrl(location) : '';
+  // Use override URL if provided, otherwise generate from location
+  const cityWebsiteUrl = externalLinkUrlOverride || (location ? generateCityWebsiteUrl(location) : '');
 
   // Helper: Insert internal link
   const insertInternalLink = (text: string, linkUrl: string, companyName: string): string => {

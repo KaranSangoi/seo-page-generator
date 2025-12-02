@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { clientId, pageData, generatedContent, primaryKeyword, dbId } = body;
+    const { clientId, pageData, generatedContent, primaryKeyword, dbId, externalLinkUrl } = body;
 
     if (!clientId || !pageData || !generatedContent) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
       generatedContent,
       primaryKeyword,
       batchSize, // Use original batch size for proper link rotation
+      externalLinkUrlOverride: externalLinkUrl, // User-edited external link URL
     };
 
     // Publish using shared function (same logic as v1)

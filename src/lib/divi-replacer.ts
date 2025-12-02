@@ -25,7 +25,8 @@ export function replaceDiviContent(
   service?: string,
   internalLinkPlacement?: string,
   externalLinkPlacement?: string,
-  omitSections?: string[]
+  omitSections?: string[],
+  externalLinkUrlOverride?: string
 ): { data: string; log: DiviReplacementLog } {
   if (!postContent || typeof postContent !== 'string') {
     return {
@@ -87,7 +88,8 @@ export function replaceDiviContent(
     }
   };
 
-  const cityWebsiteUrl = location ? generateCityWebsiteUrl(location) : '';
+  // Use override URL if provided, otherwise generate from location
+  const cityWebsiteUrl = externalLinkUrlOverride || (location ? generateCityWebsiteUrl(location) : '');
 
   // Helper: Insert internal link
   const insertInternalLink = (text: string, linkUrl: string, companyName: string): string => {

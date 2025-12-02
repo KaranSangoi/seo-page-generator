@@ -42,7 +42,8 @@ export function replaceClassicEditorContent(
   service: string,
   internalLinkPlacement: string | null,
   externalLinkPlacement: string | null,
-  omitSections: string[]
+  omitSections: string[],
+  externalLinkUrlOverride?: string
 ): { data: string; log: ReplacementLog } {
 
   const log: ReplacementLog = {
@@ -107,7 +108,7 @@ export function replaceClassicEditorContent(
     const bulletsHtml = generatedContent.benefitsBullets.map((bullet, idx) => {
       const shouldAddExternalLink = externalLinkPlacement === `benefits-${idx + 1}`;
       const bulletText = shouldAddExternalLink
-        ? addExternalLink(bullet, location)
+        ? addExternalLink(bullet, location, externalLinkUrlOverride)
         : bullet;
       return `<li>${bulletText}</li>`;
     }).join('\n');
@@ -128,7 +129,7 @@ ${bulletsHtml}
     const bulletsHtml = generatedContent.whyBullets.map((bullet, idx) => {
       const shouldAddExternalLink = externalLinkPlacement === `why-${idx + 1}`;
       const bulletText = shouldAddExternalLink
-        ? addExternalLink(bullet, location)
+        ? addExternalLink(bullet, location, externalLinkUrlOverride)
         : bullet;
       return `<li>${bulletText}</li>`;
     }).join('\n');
@@ -207,20 +208,24 @@ function addInternalLink(text: string, linkUrl: string | null, companyName: stri
 /**
  * Add external link to location in text
  */
-function addExternalLink(text: string, location: string): string {
+function addExternalLink(text: string, location: string, urlOverride?: string): string {
   if (!location) {
     return text;
   }
 
-  // Create link to city website (simplified - you may want to fetch actual city website)
-  const [city, state] = location.split(',').map(s => s.trim());
-  if (!city || !state) {
-    return text;
-  }
+  let cityUrl = urlOverride;
 
-  const citySlug = city.toLowerCase().replace(/\s+/g, '-');
-  const stateCode = state.toLowerCase().replace(/\s+/g, '-');
-  const cityUrl = `https://www.${citySlug}${stateCode}.gov`;
+  if (!cityUrl) {
+    // Create link to city website (simplified - you may want to fetch actual city website)
+    const [city, state] = location.split(',').map(s => s.trim());
+    if (!city || !state) {
+      return text;
+    }
+
+    const citySlug = city.toLowerCase().replace(/\s+/g, '-');
+    const stateCode = state.toLowerCase().replace(/\s+/g, '-');
+    cityUrl = `https://www.${citySlug}${stateCode}.gov`;
+  }
 
   // Find location and wrap with link
   const regex = new RegExp(`\\b${escapeRegex(location)}\\b`, 'i');

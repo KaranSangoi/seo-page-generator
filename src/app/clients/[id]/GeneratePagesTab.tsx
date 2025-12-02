@@ -607,6 +607,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           generatedContent: page.content,
           primaryKeyword: page.primaryKeyword,
           dbId: page.dbId, // Pass database ID for history tracking
+          externalLinkUrl: page.externalLinkUrl, // User-edited external link URL
         }),
       });
       if (!response.ok) {

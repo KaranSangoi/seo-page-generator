@@ -404,6 +404,8 @@ export interface PublishParams {
   generatedContent: any;
   primaryKeyword: string;
   batchSize: number;
+  // Optional override for external link URL (user-edited)
+  externalLinkUrlOverride?: string;
 }
 
 /**
@@ -496,7 +498,8 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
       params.pageData.service,
       internalLinkPlacement,
       externalLinkPlacement,
-      params.pageData.omitSections
+      params.pageData.omitSections,
+      params.externalLinkUrlOverride
     );
     updatedContent = data;
     replacementLog = log;
@@ -521,7 +524,8 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
       params.pageData.service,
       internalLinkPlacement,
       externalLinkPlacement,
-      params.pageData.omitSections
+      params.pageData.omitSections,
+      params.externalLinkUrlOverride
     );
     updatedContent = data;
     replacementLog = log;
@@ -543,7 +547,8 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
       params.pageData.service,
       internalLinkPlacement,
       externalLinkPlacement,
-      params.pageData.omitSections
+      params.pageData.omitSections,
+      params.externalLinkUrlOverride
     );
     updatedContent = data;
     replacementLog = log;
@@ -565,7 +570,8 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
       params.pageData.service,
       internalLinkPlacement,
       externalLinkPlacement,
-      params.pageData.omitSections
+      params.pageData.omitSections,
+      params.externalLinkUrlOverride
     );
     updatedContent = data;
     replacementLog = log;

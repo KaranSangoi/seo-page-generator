@@ -23,7 +23,8 @@ export function replaceElementorContent(
   service?: string,
   internalLinkPlacement?: string,
   externalLinkPlacement?: string,
-  omitSections?: string[]
+  omitSections?: string[],
+  externalLinkUrlOverride?: string
 ): { data: any; log: ElementorReplacementLog } {
   if (!elementorData || !Array.isArray(elementorData)) {
     return {
@@ -60,7 +61,8 @@ export function replaceElementorContent(
     }
   };
 
-  const cityWebsiteUrl = location ? generateCityWebsiteUrl(location) : '';
+  // Use override URL if provided, otherwise generate from location
+  const cityWebsiteUrl = externalLinkUrlOverride || (location ? generateCityWebsiteUrl(location) : '');
 
   // Insert internal link helper
   const insertInternalLink = (text: string, linkUrl: string, companyName: string): string => {

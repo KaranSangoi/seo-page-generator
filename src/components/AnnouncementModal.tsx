@@ -19,44 +19,27 @@ interface Announcement {
 
 // Current announcement - update this when you have new features to announce
 const CURRENT_ANNOUNCEMENT: Announcement = {
-  id: 'divi-support-v1',
-  version: 'v2.0',
-  title: '🎉 Divi Page Builder Now Supported!',
-  description: 'We\'ve added comprehensive Divi support alongside Elementor, plus major improvements to SEO and reliability.',
+  id: 'external-link-edit-v2.1',
+  version: 'v2.1',
+  title: 'Edit External Links & Smarter Meta Descriptions',
+  description: 'New editing capability in content preview plus improved grammar handling for meta descriptions.',
   features: [
     {
-      icon: '🎨',
-      title: 'Divi Page Builder Support',
-      description: 'Full support for Divi\'s shortcode-based structure with automatic detection and content replacement.',
-    },
-    {
-      icon: '🔍',
-      title: 'Auto-Detect Page Builder',
-      description: 'System automatically detects whether you\'re using Divi or Elementor and saves it for you.',
-    },
-    {
-      icon: '✨',
-      title: 'Improved Hero-H1 Matching',
-      description: '100% reliable hero H1 replacement using index-based matching instead of regex.',
-    },
-    {
-      icon: '📊',
-      title: 'Enhanced SEO Meta Fields',
-      description: 'Comprehensive Yoast SEO support with automatic reindexing, plus fallbacks for Genesis and All in One SEO.',
-    },
-    {
-      icon: '🔗',
-      title: 'Schema.org Structured Data',
-      description: 'Automatic JSON-LD structured data generation for better SEO and search visibility.',
+      icon: '✏️',
+      title: 'Edit External Link URL',
+      description: 'Click the pencil icon next to external links in the content preview modal to change the URL before publishing.',
     },
     {
       icon: '📝',
-      title: 'Better Formatting',
-      description: 'Proper H2/H3 heading structure with improved spacing in benefits and why sections.',
+      title: 'Smarter Meta Description Grammar',
+      description: 'Meta descriptions now use grammatically correct phrasing for all keyword types - "is your trusted contractor" instead of incorrect "provides contractor".',
+    },
+    {
+      icon: '🎯',
+      title: 'Profession-Aware Connectors',
+      description: 'System detects profession keywords (contractor, plumber, installer, etc.) and automatically uses appropriate sentence structure.',
     },
   ],
-  ctaText: 'View Divi Setup Guide',
-  ctaLink: 'https://github.com/KaranSangoi/seo-page-generator/blob/main/docs/DIVI_SETUP_GUIDE.md',
 };
 
 export default function AnnouncementModal() {
