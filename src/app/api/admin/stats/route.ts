@@ -299,6 +299,7 @@ export async function GET(request: NextRequest) {
         id: u.id,
         name: u.name || u.email,
         email: u.email,
+        isBlocked: u.isBlocked,
       })),
       filterUserId: filterUserId || null,
     });

@@ -12,11 +12,15 @@ datasource db {
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
-  passwordHash String   // INTERNAL: bcrypt hash | SCALE: Remove when using Clerk
+  passwordHash String   @default("") // INTERNAL: bcrypt hash | SCALE: Remove when using Clerk (empty for invited users pending password set)
   name         String?
   isBlocked    Boolean  @default(false) // Admin can block users from accessing the app
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // Invite system - for admin-only user creation
+  inviteToken       String?   @unique // Token sent via magic link for password setup
+  inviteTokenExpiry DateTime? // When the invite token expires
 
   // SCALE: Add when moving to Clerk
   // clerkId   String?  @unique

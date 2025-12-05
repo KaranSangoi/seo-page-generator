@@ -91,6 +91,8 @@ interface User {
   name: string;
   email: string;
   isBlocked: boolean;
+  passwordHash?: string;
+  inviteToken?: string | null;
 }
 
 interface AdminStats {
@@ -114,6 +116,14 @@ export default function AdminDashboard() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [impersonating, setImpersonating] = useState<string | null>(null);
   const [blockingUser, setBlockingUser] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState<string | null>(null);
+
+  // Invite user state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteResult, setInviteResult] = useState<{ success: boolean; message: string; inviteLink?: string } | null>(null);
 
   const fetchStats = async () => {
     try {
@@ -216,14 +226,21 @@ export default function AdminDashboard() {
   };
 
   const handleToggleBlock = async (userId: string, userName: string, currentlyBlocked: boolean) => {
+    console.log('handleToggleBlock called:', { userId, userName, currentlyBlocked });
+
     const action = currentlyBlocked ? 'unblock' : 'block';
-    if (!confirm(`Are you sure you want to ${action} ${userName}?`)) {
+    const confirmed = window.confirm(`Are you sure you want to ${action} ${userName}?`);
+
+    console.log('User confirmed:', confirmed);
+
+    if (!confirmed) {
       return;
     }
 
     setBlockingUser(userId);
 
     try {
+      console.log('Making API call to toggle-block...');
       const response = await fetch('/api/admin/toggle-block', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -231,17 +248,120 @@ export default function AdminDashboard() {
       });
 
       const data = await response.json();
+      console.log('API response:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to toggle block status');
       }
 
+      // Show success message
+      alert(`User ${action}ed successfully`);
+
       // Refresh stats to show updated status
       await fetchStats();
     } catch (err) {
+      console.error('Toggle block error:', err);
       alert(err instanceof Error ? err.message : 'Failed to toggle block status');
     } finally {
       setBlockingUser(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string, userEmail: string) => {
+    const confirmMessage = `Are you sure you want to PERMANENTLY DELETE ${userName || userEmail}?\n\nThis will delete:\n- All their clients\n- All generation batches\n- All generated pages\n- All logs\n\nThis action CANNOT be undone!`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    // Double confirmation for safety
+    const doubleConfirm = prompt(`Type "DELETE" to confirm deletion of ${userEmail}:`);
+    if (doubleConfirm !== 'DELETE') {
+      alert('Deletion cancelled - confirmation text did not match');
+      return;
+    }
+
+    setDeletingUser(userId);
+
+    try {
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete user');
+      }
+
+      alert(data.message);
+      // Refresh stats to show updated user list
+      await fetchStats();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete user');
+    } finally {
+      setDeletingUser(null);
+    }
+  };
+
+  const handleInviteUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteLoading(true);
+    setInviteResult(null);
+
+    try {
+      const response = await fetch('/api/admin/invite-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: inviteEmail, name: inviteName }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to invite user');
+      }
+
+      setInviteResult({
+        success: true,
+        message: data.message,
+        inviteLink: data.inviteLink,
+      });
+
+      // Refresh the user list
+      await fetchStats();
+    } catch (err) {
+      setInviteResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to invite user',
+      });
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const resetInviteModal = () => {
+    setShowInviteModal(false);
+    setInviteEmail('');
+    setInviteName('');
+    setInviteResult(null);
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('Link copied to clipboard!');
+    } catch {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('Link copied to clipboard!');
     }
   };
 
@@ -555,8 +675,19 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                 User Management
               </h2>
-              <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium">
-                {stats.users.length} total users
+              <div className="flex items-center gap-3">
+                <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium">
+                  {stats.users.length} total users
+                </div>
+                <button
+                  onClick={() => setShowInviteModal(true)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium inline-flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  Invite User
+                </button>
               </div>
             </div>
 
@@ -649,6 +780,26 @@ export default function AdminDashboard() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                                 Login as User
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(user.id, user.name || '', user.email)}
+                            disabled={deletingUser === user.id}
+                            className="px-3 py-1.5 bg-gray-800 dark:bg-gray-900 text-white rounded-lg hover:bg-black transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                            title="Permanently delete user"
+                          >
+                            {deletingUser === user.id ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                Deleting...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Delete
                               </>
                             )}
                           </button>
@@ -792,6 +943,163 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Invite User Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Invite New User
+                </h3>
+                <button
+                  onClick={resetInviteModal}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {inviteResult ? (
+                <div>
+                  {inviteResult.success ? (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                        <div className="flex items-center gap-3 mb-2">
+                          <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="font-medium text-green-800 dark:text-green-300">
+                            {inviteResult.message}
+                          </span>
+                        </div>
+                      </div>
+
+                      {inviteResult.inviteLink && (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Magic Link (send this to the user):
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value={inviteResult.inviteLink}
+                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 truncate"
+                            />
+                            <button
+                              onClick={() => copyToClipboard(inviteResult.inviteLink!)}
+                              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium whitespace-nowrap"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            This link expires in 7 days
+                          </p>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={resetInviteModal}
+                        className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-red-800 dark:text-red-300">
+                            {inviteResult.message}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setInviteResult(null)}
+                        className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <form onSubmit={handleInviteUser} className="space-y-4">
+                  <div>
+                    <label htmlFor="invite-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Email Address *
+                    </label>
+                    <input
+                      id="invite-email"
+                      type="email"
+                      required
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="user@example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="invite-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Name (optional)
+                    </label>
+                    <input
+                      id="invite-name"
+                      type="text"
+                      value={inviteName}
+                      onChange={(e) => setInviteName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="John Doe"
+                    />
+                  </div>
+
+                  <div className="text-sm text-gray-500 dark:text-gray-400 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                    A magic link will be generated for the user to set their password. The link expires in 7 days.
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={resetInviteModal}
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={inviteLoading || !inviteEmail}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                    >
+                      {inviteLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                          Send Invite
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

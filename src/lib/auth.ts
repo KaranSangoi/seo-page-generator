@@ -239,12 +239,12 @@ export async function impersonateUser(targetUserId: string): Promise<{
  * Authenticate a user with email and password
  * @param email - User's email
  * @param password - User's plain text password
- * @returns Promise<User | null> - User object if authenticated, null otherwise
+ * @returns Promise<{ user, blocked }> - User object if authenticated, blocked flag if user is blocked
  */
 export async function authenticateUser(
   email: string,
   password: string
-): Promise<{ id: string; email: string; name: string | null } | null> {
+): Promise<{ id: string; email: string; name: string | null; isBlocked?: boolean } | null> {
   // Find user by email
   const user = await prisma.user.findUnique({
     where: { email: email.toLowerCase().trim() },
@@ -253,6 +253,7 @@ export async function authenticateUser(
       email: true,
       name: true,
       passwordHash: true,
+      isBlocked: true,
     },
   });
 
@@ -267,11 +268,12 @@ export async function authenticateUser(
     return null;
   }
 
-  // Return user without password hash
+  // Return user with blocked status
   return {
     id: user.id,
     email: user.email,
     name: user.name,
+    isBlocked: user.isBlocked,
   };
 }
 

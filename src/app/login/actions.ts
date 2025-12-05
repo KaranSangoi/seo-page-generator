@@ -52,6 +52,14 @@ export async function loginAction(
       };
     }
 
+    // Check if user is blocked
+    if (user.isBlocked) {
+      return {
+        success: false,
+        error: 'Your account has been blocked. Please contact the administrator.',
+      };
+    }
+
     // Create session
     await createSession(user.id, user.email);
 
