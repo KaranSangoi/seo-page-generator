@@ -134,6 +134,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
     Papa.parse<CSVRow>(file, {
       header: true,
       skipEmptyLines: true,
+      delimiter: "", // Auto-detect delimiter (handles comma, semicolon, tab, etc.)
       complete: (results) => {
         const pages: ParsedPage[] = [];
         const errors: ValidationError[] = [];
