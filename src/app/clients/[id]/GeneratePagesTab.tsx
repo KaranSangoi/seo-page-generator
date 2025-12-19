@@ -641,6 +641,39 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
       p.pageId === pageId ? { ...p, externalLinkUrl: newUrl } : p
     ));
   };
+
+  const handleUpdateContent = (pageId: string, field: string, value: string) => {
+    setContentPreviewPages(prev => prev.map(p => {
+      if (p.pageId !== pageId) return p;
+
+      // Handle nested fields like benefitsBullets[0], faqs[1].question
+      const updatedContent = { ...p.content };
+
+      // Parse field path and update accordingly
+      if (field.startsWith('benefitsBullets[')) {
+        const idx = parseInt(field.match(/\[(\d+)\]/)?.[1] || '0');
+        updatedContent.benefitsBullets = [...updatedContent.benefitsBullets];
+        updatedContent.benefitsBullets[idx] = value;
+      } else if (field.startsWith('whyBullets[')) {
+        const idx = parseInt(field.match(/\[(\d+)\]/)?.[1] || '0');
+        updatedContent.whyBullets = [...updatedContent.whyBullets];
+        updatedContent.whyBullets[idx] = value;
+      } else if (field.startsWith('faqs[')) {
+        const match = field.match(/faqs\[(\d+)\]\.(\w+)/);
+        if (match) {
+          const idx = parseInt(match[1]);
+          const subField = match[2] as 'question' | 'answer';
+          updatedContent.faqs = [...updatedContent.faqs];
+          updatedContent.faqs[idx] = { ...updatedContent.faqs[idx], [subField]: value };
+        }
+      } else {
+        // Simple field like metaTitle, h1, heroDescription, etc.
+        (updatedContent as any)[field] = value;
+      }
+
+      return { ...p, content: updatedContent };
+    }));
+  };
   // ==========================================================================
 
   const generateSamplePage = async () => {
@@ -1204,6 +1237,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           onPublishPage={handlePublishPage}
           onPublishAll={handlePublishAll}
           onUpdateExternalLink={handleUpdateExternalLink}
+          onUpdateContent={handleUpdateContent}
         />
       )}
 

@@ -19,25 +19,25 @@ interface Announcement {
 
 // Current announcement - update this when you have new features to announce
 const CURRENT_ANNOUNCEMENT: Announcement = {
-  id: 'external-link-edit-v2.1',
-  version: 'v2.1',
-  title: 'Edit External Links & Smarter Meta Descriptions',
-  description: 'New editing capability in content preview plus improved grammar handling for meta descriptions.',
+  id: 'inline-content-editing-v2.2',
+  version: 'v2.2',
+  title: 'Full Inline Content Editing',
+  description: 'Edit any generated content field directly in the preview modal before publishing.',
   features: [
     {
       icon: '✏️',
-      title: 'Edit External Link URL',
-      description: 'Click the pencil icon next to external links in the content preview modal to change the URL before publishing.',
+      title: 'Edit All Content Fields',
+      description: 'Click the pencil icon next to any field to edit meta titles, descriptions, H1, hero text, headings, subheadings, and map descriptions.',
     },
     {
       icon: '📝',
-      title: 'Smarter Meta Description Grammar',
-      description: 'Meta descriptions now use grammatically correct phrasing for all keyword types - "is your trusted contractor" instead of incorrect "provides contractor".',
+      title: 'Edit Bullets & FAQs',
+      description: 'Each bullet point and FAQ can be individually edited. Modify questions, answers, or bullet text with full HTML support.',
     },
     {
-      icon: '🎯',
-      title: 'Profession-Aware Connectors',
-      description: 'System detects profession keywords (contractor, plumber, installer, etc.) and automatically uses appropriate sentence structure.',
+      icon: '💾',
+      title: 'Edits Saved to Published Pages',
+      description: 'All your edits are automatically saved and used when publishing to WordPress - what you see is what gets published.',
     },
   ],
 };
