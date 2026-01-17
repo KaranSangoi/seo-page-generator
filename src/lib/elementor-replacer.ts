@@ -236,10 +236,28 @@ export function replaceElementorContent(
 
       // FAQ section - exactly matching sample page logic
       else if (cssId.includes('faq')) {
-        // Handle FAQ section - check by ID first, then adapt to structure
-
+        // Handle FAQ heading (faq-heading)
+        if (cssId.includes('heading') && !cssId.includes('subheading') && generatedContent.faqHeading) {
+          if (element.widgetType === 'heading' && element.settings.title !== undefined) {
+            element.settings.title = generatedContent.faqHeading;
+            logUpdate(cssId, element.widgetType, 'faq heading', 'Updated');
+          } else if (element.widgetType === 'text-editor') {
+            element.settings.editor = generatedContent.faqHeading;
+            logUpdate(cssId, element.widgetType, 'faq heading (text-editor)', 'Updated');
+          }
+        }
+        // Handle FAQ description (faq-description)
+        else if (cssId.includes('description') && generatedContent.faqDescription) {
+          if (element.widgetType === 'text-editor') {
+            element.settings.editor = generatedContent.faqDescription;
+            logUpdate(cssId, element.widgetType, 'faq description', 'Updated');
+          } else if (element.widgetType === 'heading' && element.settings.title !== undefined) {
+            element.settings.title = generatedContent.faqDescription;
+            logUpdate(cssId, element.widgetType, 'faq description (heading)', 'Updated');
+          }
+        }
         // If this is the main FAQ container (ID contains 'questions')
-        if (cssId.includes('questions')) {
+        else if (cssId.includes('questions')) {
           console.log('[DEBUG] Found FAQ container:', {
             cssId: cssId,
             widgetType: element.widgetType,

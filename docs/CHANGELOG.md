@@ -6,6 +6,51 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.3.0] - 2025-01-18
+
+### 🎉 NEW: AI-Powered Adjective Selection & Enhanced Content Fields
+
+**Major Feature Addition:**
+The AI now intelligently selects contextually appropriate adjectives for each service, eliminating awkward pairings like "Licensed Marketing Agency". Plus new FAQ header fields and SEO-optimized image alt texts.
+
+### Added
+
+#### Smart Adjective Selection
+- **AI selects appropriate adjectives** based on service context (e.g., "Professional Plumber" not "Licensed Marketing")
+- **`selectedAdjective` field** returned in generated content
+- **Consistency enforced** - same adjective used throughout the entire page
+- **Regeneration preserves adjective** - when regenerating, the existing adjective is reused
+- **Adjective displayed in preview modal** with copy button
+
+#### New FAQ Header Fields
+- **`faq-heading`** - AI-generated FAQ section heading (e.g., "Frequently Asked Questions About Plumbing in Carlsbad, CA")
+- **`faq-description`** - Brief intro paragraph for FAQ section (20-30 words)
+- **Elementor support** - New CSS IDs supported in templates
+- **Optional fields** - If not present in template, gracefully skipped
+
+#### Scenario-Specific Image Alt Texts
+- **`benefitsImgAlt`** - Contextual alt text describing a real service scenario
+- **`whyImgAlt`** - Expertise-focused alt text showing professionalism
+- **Conversational search optimized** - Aligned with the shift from "plumber near me" to detailed queries
+- **Copy buttons** - Easy one-click copy for manual image updates
+
+#### Copy Buttons Throughout Preview Modal
+- **All content fields** now have copy buttons
+- **Green checkmark feedback** shows successful copy for 2 seconds
+- **HTML stripped** - Clean text copied to clipboard
+
+### Changed
+
+#### Adjectives List Updated
+- **Removed:** "Licensed", "Qualified" (don't fit all services)
+- **Added:** "Best", "Dedicated" (more universally appropriate)
+
+### Documentation Updated
+- `TEMPLATE_ELEMENTS.md` - Added faq-heading and faq-description IDs
+- `ELEMENTOR_TEMPLATE_SETUP.md` - Updated FAQ section with new optional fields
+
+---
+
 ## [1.5.0] - 2025-01-04
 
 ### 🎉 NEW: WordPress Classic Editor Support

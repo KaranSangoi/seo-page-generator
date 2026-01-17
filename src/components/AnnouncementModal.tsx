@@ -19,25 +19,30 @@ interface Announcement {
 
 // Current announcement - update this when you have new features to announce
 const CURRENT_ANNOUNCEMENT: Announcement = {
-  id: 'inline-content-editing-v2.2',
-  version: 'v2.2',
-  title: 'Full Inline Content Editing',
-  description: 'Edit any generated content field directly in the preview modal before publishing.',
+  id: 'smart-adjectives-v2.3',
+  version: 'v2.3',
+  title: 'Smart AI Adjective Selection & New Content Fields',
+  description: 'AI now picks contextually appropriate adjectives, plus new FAQ headers and SEO image alts.',
   features: [
     {
-      icon: '✏️',
-      title: 'Edit All Content Fields',
-      description: 'Click the pencil icon next to any field to edit meta titles, descriptions, H1, hero text, headings, subheadings, and map descriptions.',
+      icon: '🤖',
+      title: 'Smart Adjective Selection',
+      description: 'AI intelligently selects adjectives that fit your service. No more awkward "Licensed Marketing Agency" - now you get "Leading Marketing Agency" instead.',
+    },
+    {
+      icon: '📋',
+      title: 'Copy Buttons Everywhere',
+      description: 'Every content field now has a copy button. Click to copy any text to clipboard with instant visual feedback.',
     },
     {
       icon: '📝',
-      title: 'Edit Bullets & FAQs',
-      description: 'Each bullet point and FAQ can be individually edited. Modify questions, answers, or bullet text with full HTML support.',
+      title: 'FAQ Heading & Description',
+      description: 'New optional fields for FAQ section headers. Add faq-heading and faq-description CSS IDs to your Elementor template to use them.',
     },
     {
-      icon: '💾',
-      title: 'Edits Saved to Published Pages',
-      description: 'All your edits are automatically saved and used when publishing to WordPress - what you see is what gets published.',
+      icon: '🖼️',
+      title: 'SEO Image Alt Texts',
+      description: 'AI generates scenario-specific alt texts for images (e.g., "Technician installing tankless water heater in modern kitchen"). Copy and paste to your images for better SEO.',
     },
   ],
 };

@@ -135,6 +135,8 @@ For each section below, you need to add a special identifier so the generator kn
 | **Hero Description** | Introductory paragraph       | `hero-description` |
 | **Benefits Section** | List of benefits/features    | `benefits`         |
 | **Why Choose Us**    | Reasons to pick your company | `why`              |
+| **FAQ Heading** (Optional) | FAQ section title       | `faq-heading`      |
+| **FAQ Description** (Optional) | FAQ intro paragraph | `faq-description`  |
 | **FAQ Section**      | Questions and answers        | `faq`              |
 | **Map**              | Embedded Google Map          | `map`              |
 
@@ -197,6 +199,8 @@ For each section below, you need to add a special identifier:
 | **Why Section Heading**            | Why Heading                                                               | `why-heading`                                  |
 | **Why Section Sub-Heading**        | Why Sub-Heading                                                           | `why-subheading`                               |
 | **Why Section Bullet Points**      | Why Bullet Points                                                         | `why-bullets`                                  |
+| **FAQ Section Heading** (Optional) | FAQ section title (e.g., "Frequently Asked Questions About...")           | `faq-heading`                                  |
+| **FAQ Section Description** (Optional) | Brief intro paragraph for FAQ section                                 | `faq-description`                              |
 | **FAQ Section**                    | Questions and answers                                                     | `faq-questions`                                |
 | **FAQ Section**                    | Answers only if they are separate component as in newer elementor clients | `faq-answer-1`, `faq-answer-2`, `faq-answer-3` |
 | **Map**                            | Map Section Description                                                   | `map-description`                              |
@@ -397,6 +401,8 @@ hero-h1
 hero-description
 benefits
 why
+faq-heading          (optional - FAQ section title)
+faq-description      (optional - FAQ intro paragraph)
 faq
 map
 ```
@@ -416,6 +422,8 @@ benefits-bullets
 why-heading
 why-subheading
 why-bullets
+faq-heading          (optional - FAQ section title)
+faq-description      (optional - FAQ intro paragraph)
 faq-questions
 faq-answer-1
 faq-answer-2
@@ -424,9 +432,11 @@ map-description
 map-iframe
 ```
 
-**Note:** The `faq-answer-*` IDs are only needed if your FAQ answers are separate components (as in newer Elementor templates).
+**Notes:**
+- The `faq-answer-*` IDs are only needed if your FAQ answers are separate components (as in newer Elementor templates).
+- The `faq-heading` and `faq-description` IDs are optional - add them if you want AI to generate a custom FAQ section header and intro text.
 
 ---
 
-**Last Updated:** 27 October 2025
-**Version:** 2.0 (with Divi support!)
+**Last Updated:** 18 January 2025
+**Version:** 2.3 (with AI adjective selection & FAQ headers!)

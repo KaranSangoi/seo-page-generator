@@ -52,25 +52,25 @@ The generator maps generated content to your Elementor template by matching **CS
 
 ### 4. FAQ Section (Optional - based on CSV)
 
-**FAQ Question 1 (Heading Widget):**
-- CSS ID: `faq-1-question`
-- Content will be replaced with: `generatedContent.faqs[0].question`
+**FAQ Heading (Heading Widget) - OPTIONAL:**
+- CSS ID: `faq-heading`
+- Content will be replaced with: `generatedContent.faqHeading`
+- Example: "Frequently Asked Questions About Plumbing Services in Carlsbad, CA"
 
-**FAQ Answer 1 (Text Editor Widget):**
-- CSS ID: `faq-1-answer`
-- Content will be replaced with: `generatedContent.faqs[0].answer`
+**FAQ Description (Text Editor Widget) - OPTIONAL:**
+- CSS ID: `faq-description`
+- Content will be replaced with: `generatedContent.faqDescription`
+- Brief intro paragraph (20-30 words) about the FAQ section
 
-**FAQ Question 2 (Heading Widget):**
-- CSS ID: `faq-2-question`
+**FAQ Questions & Answers (Toggle/Accordion Widget):**
+- CSS ID: `faq-questions` (must contain both "faq" AND "questions")
+- Widget should have 3 items, each with question as title and answer as content
+- See [FAQ_TOGGLE_SETUP.md](FAQ_TOGGLE_SETUP.md) for detailed setup
 
-**FAQ Answer 2 (Text Editor Widget):**
-- CSS ID: `faq-2-answer`
-
-**FAQ Question 3 (Heading Widget):**
-- CSS ID: `faq-3-question`
-
-**FAQ Answer 3 (Text Editor Widget):**
-- CSS ID: `faq-3-answer`
+**Alternative: Separate Question/Answer Widgets:**
+- CSS ID: `faq-1-question`, `faq-1-answer`
+- CSS ID: `faq-2-question`, `faq-2-answer`
+- CSS ID: `faq-3-question`, `faq-3-answer`
 
 ### 5. Map Section (Optional - based on CSV)
 
@@ -117,12 +117,12 @@ Section: Why Choose Us
 └── Text Editor Widget (CSS ID: why-bullet-3)
 
 Section: FAQs
-├── Heading Widget (CSS ID: faq-1-question)
-├── Text Editor Widget (CSS ID: faq-1-answer)
-├── Heading Widget (CSS ID: faq-2-question)
-├── Text Editor Widget (CSS ID: faq-2-answer)
-├── Heading Widget (CSS ID: faq-3-question)
-└── Text Editor Widget (CSS ID: faq-3-answer)
+├── Heading Widget (CSS ID: faq-heading) [OPTIONAL]
+├── Text Editor Widget (CSS ID: faq-description) [OPTIONAL]
+└── Toggle/Accordion Widget (CSS ID: faq-questions)
+    ├── Item 1: Question → Answer
+    ├── Item 2: Question → Answer
+    └── Item 3: Question → Answer
 
 Section: Map
 └── Text Editor Widget (CSS ID: map-description)

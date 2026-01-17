@@ -62,6 +62,7 @@ setInterval(() => {
 }, 300000); // Check every 5 minutes
 
 export interface GeneratedContent {
+  selectedAdjective: string; // AI-selected adjective appropriate for the service
   metaTitle: string;
   metaDescription: string;
   h1: string;
@@ -69,9 +70,13 @@ export interface GeneratedContent {
   benefitsHeading: string;
   benefitsSubheading: string;
   benefitsBullets: string[];
+  benefitsImgAlt?: string; // SEO alt text for benefits section image
   whyHeading: string;
   whySubheading: string;
   whyBullets: string[];
+  whyImgAlt?: string; // SEO alt text for why section image
+  faqHeading?: string; // FAQ section heading
+  faqDescription?: string; // FAQ section description/intro text
   faqs: Array<{
     question: string;
     answer: string;
@@ -92,6 +97,7 @@ export interface ContentGenerationParams {
   internalLinkPlacement?: string; // Where internal link will be placed (e.g., "hero", "faq-1", "map")
   externalLinkPlacement?: string; // Where external link will be placed (e.g., "benefits-2", "why-1")
   previouslyUsedFAQs?: string[]; // FAQ questions already used in this batch (to ensure uniqueness)
+  existingAdjective?: string; // If provided, reuse this adjective (for regeneration)
 }
 
 export interface ValidationResult {
@@ -133,17 +139,24 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
    ❌ WRONG: "**Custom Solutions:** We provide..."
    ✅ CORRECT: "<b>Custom Solutions:</b> We provide..."
 4. **Map Description:** Must be 50-60 words (STRICT - count your words!)
-5. **PRIMARY KEYWORD - ABSOLUTE REQUIREMENT (CRITICAL):**
-   - You will be provided with an EXACT PRIMARY KEYWORD that has already been determined
-   - **DO NOT modify, change, or vary this keyword in ANY way**
-   - **DO NOT generate your own adjectives or alternative phrasings**
-   - **DO NOT rearrange the word order**
-   - Use the PRIMARY KEYWORD exactly as provided throughout ALL content
-   - The keyword must appear verbatim in: H1, meta title, meta description, bullets, FAQs
-   - Example: If given "Professional Plumber in Carlsbad, CA" - use EXACTLY that phrase
-   - ❌ WRONG: "Expert Plumber in Carlsbad, CA" (changed adjective)
-   - ❌ WRONG: "Plumber Professional in Carlsbad, CA" (changed order)
-   - ✅ CORRECT: "Professional Plumber in Carlsbad, CA" (exact match)
+5. **ADJECTIVE SELECTION - CRITICAL:**
+   - You MUST select ONE appropriate adjective for this service that:
+     a) Makes grammatical sense with the service (e.g., "Professional Plumber" NOT "Licensed Marketing")
+     b) Is truthful and doesn't make false claims (avoid "Certified" unless certification actually applies)
+     c) Fits the tone and industry (e.g., "Emergency" for urgent services, "Expert" for specialized work)
+   - Return your selected adjective in the "selectedAdjective" field
+   - **CONSISTENCY RULE:** Once you select an adjective, use it EXACTLY THE SAME throughout ALL content
+   - The PRIMARY KEYWORD format is: "[Adjective] [Service] in [Location]"
+   - Example: If you select "Professional" for a plumber in Carlsbad, CA:
+     - Primary keyword becomes: "Professional Plumber in Carlsbad, CA"
+     - Use this EXACT phrase throughout: H1, meta title, meta description, bullets, FAQs
+   - Good adjective examples by context:
+     - Services requiring trust: "Trusted", "Reliable", "Dependable"
+     - Technical/skilled work: "Expert", "Professional", "Skilled", "Specialized"
+     - Quality-focused: "Quality", "Premium", "Top-Rated", "Best"
+     - Speed-focused: "Fast", "Quick", "Same-Day", "Emergency", "24/7"
+     - Local focus: "Local", "Neighborhood", "Community"
+   - ❌ AVOID: "Licensed" (unless actually licensed), "Certified" (unless certified), "Qualified" (vague)
 6. **Company Name:** MUST mention company name naturally at least once in hero/FAQ/map sections (for internal linking)
 7. **Location Name:** MUST mention full location naturally in benefits/why sections (for external linking to city websites)
 8. **FAQs:** Generate SEO-relevant questions that real customers would actually search on Google.
@@ -205,6 +218,7 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
 **JSON Output Format:**
 Always return ONLY valid JSON with this exact structure (omit sections as instructed):
 {
+  "selectedAdjective": "string (the adjective you selected for this service - e.g., 'Professional', 'Expert', 'Trusted')",
   "metaTitle": "string",
   "metaDescription": "string (120-155 chars, must include company name, primary keyword, and end with 'Call now!')",
   "h1": "string",
@@ -212,9 +226,13 @@ Always return ONLY valid JSON with this exact structure (omit sections as instru
   "benefitsHeading": "string",
   "benefitsSubheading": "string",
   "benefitsBullets": ["<b>Topic:</b> text (30+ words)", "<b>Topic:</b> text (30+ words)", "<b>Topic:</b> text (30+ words)"],
+  "benefitsImgAlt": "string (10-20 words, scenario-specific: describe a real situation where customer benefits from this service, e.g., 'Technician installing new tankless water heater in modern Carlsbad kitchen' NOT generic 'plumber in Carlsbad')",
   "whyHeading": "string",
   "whySubheading": "string",
   "whyBullets": ["<b>Topic:</b> text (30+ words)", "<b>Topic:</b> text (30+ words)", "<b>Topic:</b> text (30+ words)"],
+  "whyImgAlt": "string (10-20 words, expertise-focused: show depth of skill/professionalism, e.g., 'Experienced plumber diagnosing complex pipe issue with specialized equipment' NOT generic 'why choose us')",
+  "faqHeading": "string (FAQ section heading, include primary keyword, e.g., 'Frequently Asked Questions About [Service] in [Location]')",
+  "faqDescription": "string (20-30 words, brief intro to FAQ section mentioning service and location)",
   "faqs": [{"question": "string", "answer": "string"}, {"question": "string", "answer": "string"}, {"question": "string", "answer": "string"}],
   "mapDescription": "string (50-60 words)"
 }
@@ -229,12 +247,12 @@ function buildPagePrompt(params: ContentGenerationParams): string {
   const {
     service,
     location,
-    primaryKeyword,
     omitSections,
     companyName,
     internalLinkPlacement,
     externalLinkPlacement,
     previouslyUsedFAQs,
+    existingAdjective,
   } = params;
 
   const includeMap = !omitSections.includes("Map");
@@ -278,40 +296,55 @@ function buildPagePrompt(params: ContentGenerationParams): string {
     }
   }
 
+  // Adjective instruction - either use existing or let AI select
+  const adjectiveInstruction = existingAdjective
+    ? `**ADJECTIVE (PRE-SELECTED - MUST USE):**
+Use this exact adjective: "${existingAdjective}"
+Your PRIMARY KEYWORD will be: "${existingAdjective} ${service} in ${location}"
+Return this exact adjective in the "selectedAdjective" field.`
+    : `**ADJECTIVE SELECTION (REQUIRED):**
+Select ONE appropriate adjective for "${service}" that:
+- Makes grammatical sense (e.g., "Professional Plumber" NOT "Licensed Marketing Agency")
+- Is truthful (avoid "Certified"/"Licensed" unless actually applicable)
+- Fits the service type and tone
+
+Your PRIMARY KEYWORD will be: "[Your Selected Adjective] ${service} in ${location}"
+Return your chosen adjective in the "selectedAdjective" field.`;
+
+  // Construct example primary keyword for illustrations
+  const exampleAdjective = existingAdjective || "Professional";
+  const examplePrimaryKeyword = `${exampleAdjective} ${service} in ${location}`;
+
   return `Generate content for this specific page:
 
 **Company Name:** ${companyName}
 **Service:** ${service}
 **Location:** ${location}
-**Primary Keyword:** ${primaryKeyword}
 
-**CRITICAL - PRIMARY KEYWORD USAGE:**
-The primary keyword "${primaryKeyword}" has been pre-determined by our system.
-- ✅ USE THIS EXACT PHRASE: "${primaryKeyword}"
-- ❌ DO NOT modify it in any way
-- ❌ DO NOT change the adjective (first word)
-- ❌ DO NOT rearrange word order
-- ❌ DO NOT create alternative phrasings
+${adjectiveInstruction}
+
+**CRITICAL - PRIMARY KEYWORD CONSISTENCY:**
+Once you select your adjective, your PRIMARY KEYWORD becomes: "[Adjective] ${service} in ${location}"
+- Use this EXACT phrase consistently throughout ALL content
+- Do NOT vary the adjective once selected
+- Example format: "${examplePrimaryKeyword}"
 
 **CRITICAL INSTRUCTIONS:**
-1. H1 must be EXACTLY: "${primaryKeyword}" (no variations, no company name added)
+1. H1 must be EXACTLY your primary keyword: "[Adjective] ${service} in ${location}" (no company name)
 2. Benefits H2 MUST include BOTH (MANDATORY):
    - Company name: "${companyName}"
-   - Primary keyword: "${primaryKeyword}" (use the EXACT phrase)
+   - Your full primary keyword
    - Focus: Why choose THIS COMPANY for this service
-   - Example: "Experience Excellence with ${companyName} - Your ${primaryKeyword}"
-   - Example: "${companyName}: Leading ${primaryKeyword}"
-   - Example: "Why Choose ${companyName} for ${primaryKeyword}"
+   - Example: "Experience Excellence with ${companyName} - Your ${examplePrimaryKeyword}"
+   - Example: "${companyName}: Leading ${examplePrimaryKeyword}"
 3. Why H2 MUST include primary keyword ONLY (MANDATORY - DO NOT SKIP):
-   - Primary keyword: "${primaryKeyword}" (use the EXACT phrase)
+   - Your full primary keyword
    - DO NOT include company name in Why heading
-   - Focus: Why this SERVICE is important in this LOCATION (not about the company)
-   - Be creative and contextual!
-   - Example: "Why ${primaryKeyword} Matters for Your Property"
-   - Example: "The Importance of ${primaryKeyword}"
-   - Example: "Why ${location} Needs ${primaryKeyword}"
-4. Use the EXACT phrase "${primaryKeyword}" multiple times throughout bullets, FAQs, and BOTH section headings
-5. When referencing in natural text, you may use "${service}" alone, but when stating the full keyword, use "${primaryKeyword}" exactly
+   - Focus: Why this SERVICE is important in this LOCATION
+   - Example: "Why ${examplePrimaryKeyword} Matters for Your Property"
+   - Example: "The Importance of ${examplePrimaryKeyword}"
+4. Use your EXACT primary keyword multiple times throughout bullets, FAQs, and BOTH section headings
+5. When referencing in natural text, you may use "${service}" alone, but when stating the full keyword, use your primary keyword exactly
 6. Make headings unique and engaging - avoid repetitive formats across pages
 ${linkInstructions}
 ${
@@ -326,17 +359,14 @@ Generate completely DIFFERENT FAQ questions - NOT similar to the ones above. Be 
     : ""
 }
 **FAQ REQUIREMENTS:**
-- Every question must include the phrase: "${primaryKeyword
-    .split(" ")
-    .slice(1)
-    .join(" ")}"
+- Every question must include the phrase: "${service} in ${location}" (service WITHOUT adjective)
 - If previouslyUsedFAQs are shown above, ask about different topics
 - Generate SEO-relevant questions that real customers would search
 - NO company name in questions
 - Answers: First half (30-40 words) = general/educational, Latter half (20-35 words) = mention ${companyName}
 **Sections to Include:**
 - Meta Title & Description
-- H1 (exactly: "${primaryKeyword}")
+- H1 (your selected primary keyword)
 - Hero Description${
     includeBenefits
       ? "\n- Benefits Section (heading, subheading, 3 bullets)"
@@ -351,7 +381,7 @@ ${!includeBenefits ? "⚠️ OMIT Benefits section entirely" : ""}${
     !includeMap ? "\n⚠️ OMIT Map description entirely" : ""
   }
 
-Return ONLY the JSON object as specified in the SOP.`;
+Return ONLY the JSON object as specified in the SOP. REMEMBER to include "selectedAdjective" as the first field.`;
 }
 
 /**

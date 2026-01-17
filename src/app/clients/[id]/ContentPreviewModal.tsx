@@ -9,6 +9,7 @@
 import { useState } from 'react';
 
 interface GeneratedContent {
+  selectedAdjective: string;
   metaTitle: string;
   metaDescription: string;
   h1: string;
@@ -16,9 +17,13 @@ interface GeneratedContent {
   benefitsHeading: string;
   benefitsSubheading: string;
   benefitsBullets: string[];
+  benefitsImgAlt?: string;
   whyHeading: string;
   whySubheading: string;
   whyBullets: string[];
+  whyImgAlt?: string;
+  faqHeading?: string;
+  faqDescription?: string;
   faqs: Array<{ question: string; answer: string }>;
   mapDescription?: string;
 }
@@ -69,6 +74,21 @@ export default function ContentPreviewModal({
   // Content field editing
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editedValue, setEditedValue] = useState('');
+  // Copy to clipboard feedback
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopyToClipboard = async (fieldName: string, value: string) => {
+    try {
+      // Strip HTML tags for clean copy
+      const cleanValue = value.replace(/<[^>]*>/g, '');
+      await navigator.clipboard.writeText(cleanValue);
+      setCopiedField(fieldName);
+      // Clear the copied state after 2 seconds
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   const selectedPage = pages[selectedPageIndex];
   const publishedCount = pages.filter((p) => p.status === 'published').length;
@@ -171,6 +191,23 @@ export default function ContentPreviewModal({
               </>
             ) : (
               <>
+                {currentValue !== undefined && (
+                  <button
+                    onClick={() => handleCopyToClipboard(fieldName, currentValue)}
+                    className="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                    title={copiedField === fieldName ? 'Copied!' : `Copy ${label}`}
+                  >
+                    {copiedField === fieldName ? (
+                      <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
+                  </button>
+                )}
                 {currentValue !== undefined && onUpdateContent && (
                   <button
                     onClick={handleStartEdit}
@@ -344,6 +381,29 @@ export default function ContentPreviewModal({
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   Primary Keyword: <span className="font-medium text-blue-600 dark:text-blue-400">{selectedPage.primaryKeyword}</span>
+                  {selectedPage.content?.selectedAdjective && (
+                    <span className="ml-3">
+                      AI-Selected Adjective:
+                      <span className="ml-1 font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded">
+                        {selectedPage.content.selectedAdjective}
+                      </span>
+                      <button
+                        onClick={() => handleCopyToClipboard('selectedAdjective', selectedPage.content.selectedAdjective)}
+                        className="ml-1 p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors inline-flex items-center"
+                        title={copiedField === 'selectedAdjective' ? 'Copied!' : 'Copy adjective'}
+                      >
+                        {copiedField === 'selectedAdjective' ? (
+                          <svg className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                      </button>
+                    </span>
+                  )}
                 </p>
                 {selectedPage.publishedUrl && (
                   <a
@@ -611,6 +671,21 @@ export default function ContentPreviewModal({
                               </>
                             ) : (
                               <>
+                                <button
+                                  onClick={() => handleCopyToClipboard(fieldName, bullet)}
+                                  className="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                                  title={copiedField === fieldName ? 'Copied!' : `Copy bullet #${idx + 1}`}
+                                >
+                                  {copiedField === fieldName ? (
+                                    <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                  )}
+                                </button>
                                 {onUpdateContent && (
                                   <button
                                     onClick={() => {
@@ -667,6 +742,17 @@ export default function ContentPreviewModal({
                     })}
                   </div>
                 </div>
+                {/* Benefits Image Alt Text */}
+                {selectedPage.content.benefitsImgAlt && renderField(
+                  'Benefits Image Alt Text',
+                  'benefitsImgAlt',
+                  <p className="text-sm text-gray-900 dark:text-white bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800">
+                    {selectedPage.content.benefitsImgAlt}
+                  </p>,
+                  `${selectedPage.content.benefitsImgAlt.split(' ').length} words`,
+                  selectedPage.content.benefitsImgAlt,
+                  false
+                )}
               </div>
             )}
 
@@ -736,6 +822,21 @@ export default function ContentPreviewModal({
                               </>
                             ) : (
                               <>
+                                <button
+                                  onClick={() => handleCopyToClipboard(fieldName, bullet)}
+                                  className="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                                  title={copiedField === fieldName ? 'Copied!' : `Copy bullet #${idx + 1}`}
+                                >
+                                  {copiedField === fieldName ? (
+                                    <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                  )}
+                                </button>
                                 {onUpdateContent && (
                                   <button
                                     onClick={() => {
@@ -792,6 +893,17 @@ export default function ContentPreviewModal({
                     })}
                   </div>
                 </div>
+                {/* Why Image Alt Text */}
+                {selectedPage.content.whyImgAlt && renderField(
+                  'Why Image Alt Text',
+                  'whyImgAlt',
+                  <p className="text-sm text-gray-900 dark:text-white bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800">
+                    {selectedPage.content.whyImgAlt}
+                  </p>,
+                  `${selectedPage.content.whyImgAlt.split(' ').length} words`,
+                  selectedPage.content.whyImgAlt,
+                  false
+                )}
               </div>
             )}
 
@@ -800,6 +912,25 @@ export default function ContentPreviewModal({
               'FAQ Section',
               'faqs',
               <div className="space-y-3">
+                {/* FAQ Heading */}
+                {selectedPage.content.faqHeading && renderField(
+                  'FAQ Heading',
+                  'faqHeading',
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedPage.content.faqHeading}</h2>,
+                  undefined,
+                  selectedPage.content.faqHeading,
+                  false
+                )}
+                {/* FAQ Description */}
+                {selectedPage.content.faqDescription && renderField(
+                  'FAQ Description',
+                  'faqDescription',
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{selectedPage.content.faqDescription}</p>,
+                  `${selectedPage.content.faqDescription.split(' ').length} words`,
+                  selectedPage.content.faqDescription,
+                  true
+                )}
+                {/* FAQ Items */}
                 {selectedPage.content.faqs.map((faq, idx) => {
                   const questionFieldName = `faqs[${idx}].question`;
                   const answerFieldName = `faqs[${idx}].answer`;
@@ -864,21 +995,38 @@ export default function ContentPreviewModal({
                                   </button>
                                 </>
                               ) : (
-                                onUpdateContent && (
+                                <>
                                   <button
-                                    onClick={() => {
-                                      setEditingField(questionFieldName);
-                                      setEditedValue(faq.question);
-                                    }}
-                                    disabled={selectedPage.status === 'publishing'}
-                                    className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50"
-                                    title="Edit question"
+                                    onClick={() => handleCopyToClipboard(questionFieldName, faq.question)}
+                                    className="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                                    title={copiedField === questionFieldName ? 'Copied!' : 'Copy question'}
                                   >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
+                                    {copiedField === questionFieldName ? (
+                                      <svg className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    ) : (
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                      </svg>
+                                    )}
                                   </button>
-                                )
+                                  {onUpdateContent && (
+                                    <button
+                                      onClick={() => {
+                                        setEditingField(questionFieldName);
+                                        setEditedValue(faq.question);
+                                      }}
+                                      disabled={selectedPage.status === 'publishing'}
+                                      className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50"
+                                      title="Edit question"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                      </svg>
+                                    </button>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
@@ -930,21 +1078,38 @@ export default function ContentPreviewModal({
                                   </button>
                                 </>
                               ) : (
-                                onUpdateContent && (
+                                <>
                                   <button
-                                    onClick={() => {
-                                      setEditingField(answerFieldName);
-                                      setEditedValue(faq.answer);
-                                    }}
-                                    disabled={selectedPage.status === 'publishing'}
-                                    className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50"
-                                    title="Edit answer"
+                                    onClick={() => handleCopyToClipboard(answerFieldName, faq.answer)}
+                                    className="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                                    title={copiedField === answerFieldName ? 'Copied!' : 'Copy answer'}
                                   >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
+                                    {copiedField === answerFieldName ? (
+                                      <svg className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    ) : (
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                      </svg>
+                                    )}
                                   </button>
-                                )
+                                  {onUpdateContent && (
+                                    <button
+                                      onClick={() => {
+                                        setEditingField(answerFieldName);
+                                        setEditedValue(faq.answer);
+                                      }}
+                                      disabled={selectedPage.status === 'publishing'}
+                                      className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50"
+                                      title="Edit answer"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                      </svg>
+                                    </button>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>

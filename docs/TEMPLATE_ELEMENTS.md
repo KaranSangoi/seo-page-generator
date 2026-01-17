@@ -88,7 +88,22 @@ why-bullets    → Icon List widget with 3 items (each ≥30 words, starts with 
 
 ## FAQ Section
 
-### Two Supported Structures:
+### Optional FAQ Header Elements (NEW):
+
+```
+faq-heading     → FAQ section heading (e.g., "Frequently Asked Questions About [Service] in [Location]")
+faq-description → Brief intro paragraph for FAQ section (20-30 words)
+```
+
+**Example in Elementor:**
+- Add a Heading widget → Advanced → CSS ID → `faq-heading`
+- Add a Text Editor widget → Advanced → CSS ID → `faq-description`
+
+These elements are **optional** - if they exist in your template, the system will populate them with AI-generated content. If not present, they'll be skipped.
+
+---
+
+### Two Supported Structures for FAQ Items:
 
 The system supports **TWO different FAQ template structures**. Choose the one that fits your design:
 
@@ -235,6 +250,8 @@ Use this checklist to ensure your Elementor template has all required IDs:
 
 - [ ] `benefits-subheading` (Heading OR Text Editor widget)
 - [ ] `why-subheading` (Heading OR Text Editor widget)
+- [ ] `faq-heading` (Heading widget - FAQ section title)
+- [ ] `faq-description` (Text Editor widget - FAQ intro paragraph)
 - [ ] `map-description` (Text Editor widget)
 - [ ] `map-iframe` (HTML widget - only for broad strokes & nested broad strokes)
 

@@ -289,6 +289,7 @@ export interface PageGenerationParams {
   internalLinkPlacement: string;
   externalLinkPlacement: string;
   previouslyUsedFAQs?: string[];
+  existingAdjective?: string; // If provided, AI reuses this adjective (for regeneration)
 }
 
 export interface ContentValidationParams extends PageGenerationParams {

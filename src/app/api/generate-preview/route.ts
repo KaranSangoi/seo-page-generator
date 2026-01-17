@@ -9,7 +9,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getAdjectiveForRow } from '@/lib/adjectives';
 import {
   generateContent,
   validateContent,
@@ -80,25 +79,6 @@ export async function POST(request: NextRequest) {
       try {
         console.log(`[PREVIEW] Generating page ${index + 1}/${pages.length}: ${page.service} in ${page.location}`);
 
-        // Get deterministic adjective
-        const adjective = getAdjectiveForRow(page.rowNumber);
-
-        // Form primary keyword
-        let primaryKeyword: string;
-        if (page.customPrimaryKeyword) {
-          primaryKeyword = page.customPrimaryKeyword;
-        } else {
-          if (page.service && page.location) {
-            primaryKeyword = `${adjective} ${page.service} in ${page.location}`;
-          } else if (page.service) {
-            primaryKeyword = `${adjective} ${page.service}`;
-          } else if (page.location) {
-            primaryKeyword = `${adjective} ${page.location}`;
-          } else {
-            primaryKeyword = adjective;
-          }
-        }
-
         // Calculate link placements (for accurate preview)
         const omitMap = (page.omitSections || []).includes('Map');
         const { internalLinkPlacement, externalLinkPlacement } = determineLinkPlacements(
@@ -107,7 +87,14 @@ export async function POST(request: NextRequest) {
           omitMap
         );
 
-        // Build generation params
+        // Extract existing adjective from custom primary keyword if provided
+        let existingAdjective: string | undefined;
+        if (page.customPrimaryKeyword) {
+          // If custom keyword provided, extract the first word as the adjective
+          existingAdjective = page.customPrimaryKeyword.split(' ')[0];
+        }
+
+        // Build generation params - AI will select appropriate adjective
         const genParams: PageGenerationParams = {
           batchId: batch.id, // Use actual batch ID for tracking
           pageType: page.pageType,
@@ -115,16 +102,37 @@ export async function POST(request: NextRequest) {
           companyWebsite: client.clientWebsite,
           service: page.service,
           location: page.location,
-          primaryKeyword,
+          primaryKeyword: '', // Will be constructed after AI selects adjective
           omitSections: page.omitSections || [],
           seoPlugin: client.seoPlugin,
           internalLinkPlacement,
           externalLinkPlacement,
           previouslyUsedFAQs, // Pass FAQs from previous pages for uniqueness!
+          existingAdjective, // Pass if we have a custom keyword with adjective
         };
 
-        // Generate content using shared function
+        // Generate content using shared function - AI selects appropriate adjective
         const rawContent = await generateContent(genParams);
+
+        // Construct primary keyword using AI-selected adjective
+        const selectedAdjective = rawContent.selectedAdjective || 'Professional';
+        let primaryKeyword: string;
+        if (page.customPrimaryKeyword) {
+          primaryKeyword = page.customPrimaryKeyword;
+        } else if (page.service && page.location) {
+          primaryKeyword = `${selectedAdjective} ${page.service} in ${page.location}`;
+        } else if (page.service) {
+          primaryKeyword = `${selectedAdjective} ${page.service}`;
+        } else if (page.location) {
+          primaryKeyword = `${selectedAdjective} ${page.location}`;
+        } else {
+          primaryKeyword = selectedAdjective;
+        }
+
+        console.log(`[PREVIEW] AI selected adjective: "${selectedAdjective}" -> Primary keyword: "${primaryKeyword}"`);
+
+        // Update genParams with actual primary keyword for validation
+        genParams.primaryKeyword = primaryKeyword;
 
         // Validate and fix content using shared function
         const validationParams: ContentValidationParams = {
