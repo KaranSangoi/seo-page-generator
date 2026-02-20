@@ -3,7 +3,7 @@
  * No Redis required - uses sequential generation with parallel validation/publishing
  */
 
-import { generatePageContent, validateContent, validateAndFixContent, regenerateField, generateAdjectives, clearBatchContext } from './claude-api';
+import { generatePageContent, validateContent, validateAndFixContent, regenerateField, clearBatchContext } from './claude-api';
 import { prisma } from './prisma';
 import { generateStructuredData } from './schema-generator';
 import { replaceDiviContent } from './divi-replacer';

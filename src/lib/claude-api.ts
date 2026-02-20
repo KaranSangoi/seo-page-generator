@@ -1602,69 +1602,125 @@ Return ONLY a JSON object with the single FAQ:
 }
 
 /**
- * Generate adjectives for batch of pages
- * @deprecated This function is no longer used. Use deterministic adjectives from @/lib/adjectives instead.
- * The system now uses a predefined list of adjectives for consistency between preview and generation.
+ * Select smart, SEO-relevant adjectives for a batch of pages
+ * Makes a single lightweight AI call to pick unique, grammatically correct adjectives
+ * that are contextually appropriate for each service type
  */
-export async function generateAdjectives(count: number): Promise<string[]> {
+export async function selectAdjectivesForBatch(
+  pages: Array<{ service: string; location: string; rowNumber: number }>
+): Promise<Record<number, string>> {
   if (!PROVIDER) {
     throw new Error("No AI API key configured");
   }
 
-  const prompt = `Generate ${count} unique, professional adjectives suitable for SEO keywords for service-based businesses.
+  const pageList = pages
+    .map((p) => `Row ${p.rowNumber}: "${p.service}" in "${p.location}"`)
+    .join("\n");
 
-Examples: Expert, Professional, Trusted, Reliable, Certified, Licensed, Experienced, Quality, Top-Rated, Premier
+  const prompt = `You are an SEO keyword expert. Select ONE unique, SEO-valuable adjective for each service page below.
 
-Return ONLY a JSON array of ${count} adjectives:
-["Adjective1", "Adjective2", "Adjective3", ...]`;
+RULES:
+1. Every adjective MUST be unique within this batch — no repeats allowed.
+2. The adjective must read naturally as "[Adjective] [Service]":
+   - GOOD: "Professional Plumber", "Thorough House Cleaning", "Expert Roof Repair", "Emergency HVAC Repair"
+   - BAD: "Certified House Cleaning" (certified doesn't apply to cleaning), "Licensed Marketing" (marketing isn't licensed)
+3. Use "Certified" or "Licensed" ONLY for trades that genuinely require certification/licensing (plumbing, electrical, HVAC, roofing, etc.).
+4. Prioritize adjectives real users actually search for — think like someone Googling for a local service.
+5. Match the tone to the service:
+   - Skilled trades (plumber, electrician, roofer): Professional, Expert, Skilled, Master, Certified, Licensed
+   - Cleaning/maintenance: Thorough, Reliable, Detailed, Meticulous, Deep, Premium
+   - Emergency/urgent: Emergency, 24/7, Same-Day, Rapid, Immediate
+   - Consulting/professional services: Experienced, Trusted, Strategic, Proven, Leading
+   - General: Quality, Top-Rated, Affordable, Local, Dedicated, Dependable, Outstanding
+
+PAGES:
+${pageList}
+
+Return ONLY valid JSON (no markdown, no backticks):
+{"adjectives":{"ROW_NUMBER":"Adjective",...}}`;
 
   try {
+    let responseText: string;
+
     if (PROVIDER === "claude" && anthropic) {
       const message = await anthropic.messages.create({
         model: "claude-3-5-sonnet-20241022",
-        max_tokens: 1024,
-        temperature: 0.8,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
+        max_tokens: 512,
+        temperature: 0.7,
+        messages: [{ role: "user", content: prompt }],
       });
 
       const content = message.content[0];
-      if (content.type !== "text") {
-        throw new Error("Unexpected response type");
-      }
-
-      const jsonMatch = content.text.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) {
-        throw new Error("Could not extract JSON array");
-      }
-
-      return JSON.parse(jsonMatch[0]);
+      if (content.type !== "text") throw new Error("Unexpected response type");
+      responseText = content.text;
     } else if (PROVIDER === "openai" && openai) {
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.8,
-        max_tokens: 1024,
+        temperature: 0.7,
+        max_tokens: 512,
         response_format: { type: "json_object" },
       });
 
-      const content = completion.choices[0].message.content;
-      if (!content) throw new Error("Empty response");
-
-      // OpenAI with json_object mode might wrap it
-      const parsed = JSON.parse(content);
-      return parsed.adjectives || parsed;
+      responseText = completion.choices[0].message.content || "";
+    } else {
+      throw new Error("No provider available");
     }
 
-    throw new Error("No provider available");
+    // Parse JSON from response (handle markdown code blocks if present)
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Could not extract JSON from response");
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    const rawAdjectives: Record<string, string> = parsed.adjectives || parsed;
+
+    // Convert string keys to numbers and validate
+    const result: Record<number, string> = {};
+    const usedAdjectives = new Set<string>();
+
+    for (const page of pages) {
+      const adj = rawAdjectives[String(page.rowNumber)];
+      if (adj && typeof adj === "string" && adj.trim()) {
+        const normalized = adj.trim();
+        if (!usedAdjectives.has(normalized.toLowerCase())) {
+          result[page.rowNumber] = normalized;
+          usedAdjectives.add(normalized.toLowerCase());
+        } else {
+          // Duplicate — will be filled by fallback below
+          result[page.rowNumber] = "";
+        }
+      }
+    }
+
+    // Fill any missing/empty entries with static fallback adjectives (avoiding duplicates)
+    const { ADJECTIVES } = await import("./adjectives");
+    let fallbackIdx = 0;
+    for (const page of pages) {
+      if (!result[page.rowNumber]) {
+        while (
+          fallbackIdx < ADJECTIVES.length &&
+          usedAdjectives.has(ADJECTIVES[fallbackIdx].toLowerCase())
+        ) {
+          fallbackIdx++;
+        }
+        const fallback =
+          fallbackIdx < ADJECTIVES.length
+            ? ADJECTIVES[fallbackIdx]
+            : "Professional";
+        result[page.rowNumber] = fallback;
+        usedAdjectives.add(fallback.toLowerCase());
+        fallbackIdx++;
+      }
+    }
+
+    console.log(
+      `[ADJECTIVES] AI selected ${Object.keys(result).length} unique adjectives for batch`
+    );
+    return result;
   } catch (error) {
-    console.error("Adjective generation error:", error);
+    console.error("Smart adjective selection failed:", error);
     throw new Error(
-      `Failed to generate adjectives: ${
+      `Failed to select adjectives: ${
         error instanceof Error ? error.message : "Unknown error"
       }`
     );

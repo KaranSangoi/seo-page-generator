@@ -20,6 +20,7 @@ import {
   type PageGenerationParams,
   type ContentValidationParams
 } from '@/lib/page-generation';
+import { getAdjectiveForRow } from '@/lib/adjectives';
 
 // Force dynamic rendering (uses cookies for authentication)
 export const dynamic = 'force-dynamic';
@@ -87,14 +88,20 @@ export async function POST(request: NextRequest) {
           omitMap
         );
 
-        // Extract existing adjective from custom primary keyword if provided
-        let existingAdjective: string | undefined;
+        // Determine adjective priority: user edit > AI-selected > static fallback
+        let existingAdjective: string;
         if (page.customPrimaryKeyword) {
-          // If custom keyword provided, extract the first word as the adjective
+          // User manually edited the primary keyword — extract adjective from first word
           existingAdjective = page.customPrimaryKeyword.split(' ')[0];
+        } else if (page.aiAdjective) {
+          // AI-selected smart adjective (from /api/select-adjectives call)
+          existingAdjective = page.aiAdjective;
+        } else {
+          // Static fallback from deterministic list
+          existingAdjective = getAdjectiveForRow(page.rowNumber);
         }
 
-        // Build generation params - AI will select appropriate adjective
+        // Build generation params - adjective is pre-assigned for consistency with preview
         const genParams: PageGenerationParams = {
           batchId: batch.id, // Use actual batch ID for tracking
           pageType: page.pageType,
@@ -102,13 +109,13 @@ export async function POST(request: NextRequest) {
           companyWebsite: client.clientWebsite,
           service: page.service,
           location: page.location,
-          primaryKeyword: '', // Will be constructed after AI selects adjective
+          primaryKeyword: '', // Will be constructed after generation using pre-assigned adjective
           omitSections: page.omitSections || [],
           seoPlugin: client.seoPlugin,
           internalLinkPlacement,
           externalLinkPlacement,
           previouslyUsedFAQs, // Pass FAQs from previous pages for uniqueness!
-          existingAdjective, // Pass if we have a custom keyword with adjective
+          existingAdjective, // Always pass pre-assigned adjective for consistency
         };
 
         // Generate content using shared function - AI selects appropriate adjective

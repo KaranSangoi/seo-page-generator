@@ -314,6 +314,7 @@ export async function generateContent(params: PageGenerationParams): Promise<any
     internalLinkPlacement: params.internalLinkPlacement,
     externalLinkPlacement: params.externalLinkPlacement,
     previouslyUsedFAQs: params.previouslyUsedFAQs,
+    existingAdjective: params.existingAdjective,
   });
 
   return generatedContent;
