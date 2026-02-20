@@ -19,30 +19,30 @@ interface Announcement {
 
 // Current announcement - update this when you have new features to announce
 const CURRENT_ANNOUNCEMENT: Announcement = {
-  id: 'smart-adjectives-v2.3',
-  version: 'v2.3',
-  title: 'Smart AI Adjective Selection & New Content Fields',
-  description: 'AI now picks contextually appropriate adjectives, plus new FAQ headers and SEO image alts.',
+  id: 'smart-adjectives-v2.4',
+  version: 'v2.4',
+  title: 'Smarter Adjective Selection',
+  description: 'Adjectives are now selected by AI per batch — unique, grammatically correct, and SEO-optimized for each service.',
   features: [
     {
-      icon: '🤖',
-      title: 'Smart Adjective Selection',
-      description: 'AI intelligently selects adjectives that fit your service. No more awkward "Licensed Marketing Agency" - now you get "Leading Marketing Agency" instead.',
+      icon: '🎯',
+      title: 'Context-Aware Adjectives',
+      description: 'Each page now gets a unique adjective that makes sense for the service type. "Licensed Plumber" instead of "Certified House Cleaning" — no more awkward pairings.',
     },
     {
-      icon: '📋',
-      title: 'Copy Buttons Everywhere',
-      description: 'Every content field now has a copy button. Click to copy any text to clipboard with instant visual feedback.',
+      icon: '⚡',
+      title: 'Single AI Call for Entire Batch',
+      description: 'One lightweight AI call selects adjectives for all pages at once before showing the preview. Fast, cost-efficient, and consistent.',
     },
     {
-      icon: '📝',
-      title: 'FAQ Heading & Description',
-      description: 'New optional fields for FAQ section headers. Add faq-heading and faq-description CSS IDs to your Elementor template to use them.',
+      icon: '🔗',
+      title: 'Preview-to-Publish Consistency',
+      description: 'The adjectives you see in the preview modal are now the exact same ones used in the generated content. No more mismatches.',
     },
     {
-      icon: '🖼️',
-      title: 'SEO Image Alt Texts',
-      description: 'AI generates scenario-specific alt texts for images (e.g., "Technician installing tankless water heater in modern kitchen"). Copy and paste to your images for better SEO.',
+      icon: '✏️',
+      title: 'Still Fully Editable',
+      description: 'You can still edit the primary keyword (including the adjective) in the preview modal before generating. Your edits always take priority.',
     },
   ],
 };
