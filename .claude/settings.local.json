@@ -20,7 +20,8 @@
       "Bash(node scripts/create-landing-page.js:*)",
       "Bash(node scripts/upload-number-svgs.js:*)",
       "Bash(node scripts/create-invite.js:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

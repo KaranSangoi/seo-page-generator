@@ -37,7 +37,13 @@ async function fetchAvailableModels(): Promise<string[]> {
     const data = await res.json();
     const models = (data.data as Array<{ id: string }>)
       .map((m) => m.id)
-      .filter((id) => /^gpt-[45]/.test(id) && !/(audio|realtime|tts|transcribe|image|search|instruct|codex)/i.test(id))
+      .filter((id) =>
+        /^gpt-[45]/.test(id) &&
+        !/(audio|realtime|tts|transcribe|image|search|instruct|codex|nano|chat-latest)/i.test(id) &&
+        !/\d{4}-\d{2}/.test(id) && // exclude dated snapshots like gpt-5.4-2026-03-05
+        !/^\w+-\d+-\d{4}/.test(id) && // exclude legacy versioned like gpt-4-0613, gpt-4-0125-preview
+        !/-preview$/.test(id) // exclude preview variants
+      )
       .sort((a, b) => {
         // Sort newest/highest version first
         const versionA = a.match(/gpt-(\d+\.?\d*)/)?.[1] || '0';
