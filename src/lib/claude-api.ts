@@ -466,7 +466,7 @@ async function generateWithOpenAI(
     model: selectedModel,
     messages,
     temperature: 0.7,
-    max_tokens: 4096,
+    max_completion_tokens: 4096,
     response_format: { type: "json_object" },
   });
 
@@ -1583,7 +1583,7 @@ Return ONLY a JSON object with the single FAQ:
         model: params.model || "gpt-5.4",
         messages: [{ role: "user", content: retryPrompt }],
         temperature: 0.7,
-        max_tokens: 2048,
+        max_completion_tokens: 2048,
         response_format: { type: "json_object" },
       });
 
@@ -1660,7 +1660,7 @@ Return ONLY valid JSON (no markdown, no backticks):
         model: "gpt-5.4",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
-        max_tokens: 512,
+        max_completion_tokens: 512,
         response_format: { type: "json_object" },
       });
 
@@ -1790,7 +1790,7 @@ export async function checkApiHealth(): Promise<boolean> {
       const completion = await openai.chat.completions.create({
         model: "gpt-5.4",
         messages: [{ role: "user", content: "Respond with OK" }],
-        max_tokens: 10,
+        max_completion_tokens: 10,
       });
 
       return !!completion.choices[0].message.content;
