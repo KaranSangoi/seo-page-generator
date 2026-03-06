@@ -90,6 +90,11 @@ export default function GeneratePagesTab({ clientId }: GeneratePagesTabProps) {
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   // ==========================================================================
 
+  // AI Model selection
+  const [selectedModel, setSelectedModel] = useState('gpt-5.4');
+  const [availableModels, setAvailableModels] = useState<string[]>(['gpt-5.4']);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -105,6 +110,28 @@ export default function GeneratePagesTab({ clientId }: GeneratePagesTabProps) {
         clearInterval(pollIntervalRef.current);
       }
     };
+  }, []);
+
+  // Fetch available AI models on mount
+  useEffect(() => {
+    async function loadModels() {
+      setIsLoadingModels(true);
+      try {
+        const res = await fetch('/api/models');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.models?.length > 0) {
+            setAvailableModels(data.models);
+            if (data.default) setSelectedModel(data.default);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load models:', e);
+      } finally {
+        setIsLoadingModels(false);
+      }
+    }
+    loadModels();
   }, []);
 
   // Download sample CSV
@@ -336,6 +363,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
         },
         body: JSON.stringify({
           clientId,
+          model: selectedModel,
           pages: parsedPages.map((page) => {
             const edits = editedData.get(page.rowNumber);
             return {
@@ -521,6 +549,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId,
+          model: selectedModel,
           csvFilename: csvFile?.name || `preview_${Date.now()}.csv`,
           pages: parsedPages.map((page) => {
             const edits = editedData.get(page.rowNumber);
@@ -1078,46 +1107,68 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
               V2 ACTIVATED: Mode selection UI enabled
               ========================================================================== */}
               <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
-                <label className="text-sm font-medium text-gray-900 dark:text-white mb-3 block">
-                  Generation Mode
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="generationMode"
-                      value="direct"
-                      checked={generationMode === 'direct'}
-                      onChange={(e) => setGenerationMode(e.target.value as 'direct')}
-                      className="w-4 h-4 text-primary-600"
-                    />
-                    <div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        Generate Directly
-                      </span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Fast publishing without review
-                      </p>
+                <div className="flex gap-8 items-start">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-gray-900 dark:text-white mb-3 block">
+                      Generation Mode
+                    </label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="generationMode"
+                          value="direct"
+                          checked={generationMode === 'direct'}
+                          onChange={(e) => setGenerationMode(e.target.value as 'direct')}
+                          className="w-4 h-4 text-primary-600"
+                        />
+                        <div>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            Generate Directly
+                          </span>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Fast publishing without review
+                          </p>
+                        </div>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="generationMode"
+                          value="preview"
+                          checked={generationMode === 'preview'}
+                          onChange={(e) => setGenerationMode(e.target.value as 'preview')}
+                          className="w-4 h-4 text-primary-600"
+                        />
+                        <div>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            Preview & Publish
+                          </span>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Review content before publishing
+                          </p>
+                        </div>
+                      </label>
                     </div>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="generationMode"
-                      value="preview"
-                      checked={generationMode === 'preview'}
-                      onChange={(e) => setGenerationMode(e.target.value as 'preview')}
-                      className="w-4 h-4 text-primary-600"
-                    />
-                    <div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        Preview & Publish
-                      </span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Review content before publishing
-                      </p>
-                    </div>
-                  </label>
+                  </div>
+                  <div className="w-56">
+                    <label className="text-sm font-medium text-gray-900 dark:text-white mb-3 block">
+                      AI Model
+                    </label>
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      disabled={isLoadingModels}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      {availableModels.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Powered by OpenAI
+                    </p>
+                  </div>
                 </div>
               </div>
 

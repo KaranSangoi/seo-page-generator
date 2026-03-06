@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { clientId, pages } = body;
+    const { clientId, pages, model } = body;
 
     if (!clientId || !pages || !Array.isArray(pages) || pages.length === 0) {
       return NextResponse.json(
@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       clientId,
       userId: user.id,
       pages: pagesWithRowNumber,
+      model, // User-selected AI model
       clientData: {
         clientName: client.clientName,
         clientWebsite: client.clientWebsite,

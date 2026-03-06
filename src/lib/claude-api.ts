@@ -98,6 +98,7 @@ export interface ContentGenerationParams {
   externalLinkPlacement?: string; // Where external link will be placed (e.g., "benefits-2", "why-1")
   previouslyUsedFAQs?: string[]; // FAQ questions already used in this batch (to ensure uniqueness)
   existingAdjective?: string; // If provided, reuse this adjective (for regeneration)
+  model?: string; // AI model to use (e.g. "gpt-5.4", "gpt-4o")
 }
 
 export interface ValidationResult {
@@ -440,7 +441,8 @@ async function generateWithOpenAI(
 ): Promise<GeneratedContent> {
   if (!openai) throw new Error("OpenAI API not initialized");
 
-  const { batchId } = params;
+  const { batchId, model } = params;
+  const selectedModel = model || "gpt-5.4";
   const systemPrompt = buildSystemPrompt(params);
   const pagePrompt = buildPagePrompt(params);
 
@@ -461,7 +463,7 @@ async function generateWithOpenAI(
   }
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4-turbo-preview",
+    model: selectedModel,
     messages,
     temperature: 0.7,
     max_tokens: 4096,
@@ -1578,7 +1580,7 @@ Return ONLY a JSON object with the single FAQ:
       return parseAIResponse(message.content[0]);
     } else if (PROVIDER === "openai" && openai) {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: params.model || "gpt-5.4",
         messages: [{ role: "user", content: retryPrompt }],
         temperature: 0.7,
         max_tokens: 2048,
@@ -1655,7 +1657,7 @@ Return ONLY valid JSON (no markdown, no backticks):
       responseText = content.text;
     } else if (PROVIDER === "openai" && openai) {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-5.4",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
         max_tokens: 512,
@@ -1786,7 +1788,7 @@ export async function checkApiHealth(): Promise<boolean> {
       return message.content[0].type === "text";
     } else if (PROVIDER === "openai" && openai) {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-5.4",
         messages: [{ role: "user", content: "Respond with OK" }],
         max_tokens: 10,
       });

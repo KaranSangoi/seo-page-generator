@@ -38,6 +38,7 @@ interface PageJob {
     gbpUrl?: string;
   };
   adjective: string;
+  model?: string;
 }
 
 // In-memory storage for active batches
@@ -1136,6 +1137,7 @@ async function processPage(
       internalLinkPlacement,
       externalLinkPlacement,
       previouslyUsedFAQs, // Pass FAQs from previous pages for uniqueness
+      model: job.model, // User-selected AI model
     });
 
     // Check for "undefined" in generated content
@@ -1454,8 +1456,9 @@ export async function queueBatchGeneration(params: {
     businessType?: string;
     gbpUrl?: string;
   };
+  model?: string; // User-selected AI model
 }) {
-  const { batchId, clientId, userId, pages, clientData } = params;
+  const { batchId, clientId, userId, pages, clientData, model } = params;
 
   try {
     // Get adjectives deterministically based on row numbers
@@ -1503,7 +1506,7 @@ export async function queueBatchGeneration(params: {
     });
 
     // Process pages sequentially (but validation+publishing happens in parallel)
-    processBatchSequentially(batchId, pages, adjectives, clientData, clientId, userId);
+    processBatchSequentially(batchId, pages, adjectives, clientData, clientId, userId, model);
 
     return { success: true };
   } catch (error) {
@@ -1531,7 +1534,8 @@ async function processBatchSequentially(
   adjectives: string[],
   clientData: any,
   clientId: string,
-  userId: string
+  userId: string,
+  model?: string
 ) {
   const batchSize = pages.length;
   console.log(`[BATCH] Processing ${batchSize} pages with ${adjectives.length} adjectives`);
@@ -1555,6 +1559,7 @@ async function processBatchSequentially(
       pageData: page,
       clientData,
       adjective,
+      model,
     };
 
     console.log(`[BATCH] Processing page ${i + 1}/${batchSize}: ${page.service} in ${page.location}`);

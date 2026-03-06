@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { clientId, pages, csvFilename } = body;
+    const { clientId, pages, csvFilename, model } = body;
 
     if (!clientId || !pages || !Array.isArray(pages)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -116,6 +116,7 @@ export async function POST(request: NextRequest) {
           externalLinkPlacement,
           previouslyUsedFAQs, // Pass FAQs from previous pages for uniqueness!
           existingAdjective, // Always pass pre-assigned adjective for consistency
+          model, // User-selected AI model
         };
 
         // Generate content using shared function - AI selects appropriate adjective

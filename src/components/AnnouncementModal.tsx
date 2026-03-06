@@ -19,30 +19,30 @@ interface Announcement {
 
 // Current announcement - update this when you have new features to announce
 const CURRENT_ANNOUNCEMENT: Announcement = {
-  id: 'smart-adjectives-v2.4',
-  version: 'v2.4',
-  title: 'Smarter Adjective Selection',
-  description: 'Adjectives are now selected by AI per batch — unique, grammatically correct, and SEO-optimized for each service.',
+  id: 'model-selection-v2.5',
+  version: 'v2.5',
+  title: 'Choose Your AI Model',
+  description: 'You can now pick which AI model generates your content — right from the generation controls. Upgraded to GPT-5.4 by default.',
   features: [
     {
-      icon: '🎯',
-      title: 'Context-Aware Adjectives',
-      description: 'Each page now gets a unique adjective that makes sense for the service type. "Licensed Plumber" instead of "Certified House Cleaning" — no more awkward pairings.',
+      icon: '🧠',
+      title: 'Model Selection Dropdown',
+      description: 'A new dropdown next to Generation Mode lets you choose from all available GPT models before generating. Pick the best model for your batch.',
+    },
+    {
+      icon: '🚀',
+      title: 'Upgraded to GPT-5.4',
+      description: 'Default model upgraded from GPT-4o to GPT-5.4 — the latest and most capable model for higher quality, more natural content.',
+    },
+    {
+      icon: '📋',
+      title: 'Full Model List from OpenAI',
+      description: 'Available models are fetched directly from OpenAI and cached. As new models launch, they automatically appear in your dropdown.',
     },
     {
       icon: '⚡',
-      title: 'Single AI Call for Entire Batch',
-      description: 'One lightweight AI call selects adjectives for all pages at once before showing the preview. Fast, cost-efficient, and consistent.',
-    },
-    {
-      icon: '🔗',
-      title: 'Preview-to-Publish Consistency',
-      description: 'The adjectives you see in the preview modal are now the exact same ones used in the generated content. No more mismatches.',
-    },
-    {
-      icon: '✏️',
-      title: 'Still Fully Editable',
-      description: 'You can still edit the primary keyword (including the adjective) in the preview modal before generating. Your edits always take priority.',
+      title: 'Per-Batch Flexibility',
+      description: 'Different batches can use different models. Use a faster model for bulk pages and a premium model for high-value pages.',
     },
   ],
 };

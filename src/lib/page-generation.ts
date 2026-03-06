@@ -290,6 +290,7 @@ export interface PageGenerationParams {
   externalLinkPlacement: string;
   previouslyUsedFAQs?: string[];
   existingAdjective?: string; // If provided, AI reuses this adjective (for regeneration)
+  model?: string; // AI model to use (e.g. "gpt-5.4")
 }
 
 export interface ContentValidationParams extends PageGenerationParams {
@@ -315,6 +316,7 @@ export async function generateContent(params: PageGenerationParams): Promise<any
     externalLinkPlacement: params.externalLinkPlacement,
     previouslyUsedFAQs: params.previouslyUsedFAQs,
     existingAdjective: params.existingAdjective,
+    model: params.model,
   });
 
   return generatedContent;
