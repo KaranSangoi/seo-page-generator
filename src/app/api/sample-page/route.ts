@@ -177,12 +177,16 @@ function replaceElementorContent(
       }
 
       else if (cssId.includes('benefits')) {
-        if (element.widgetType === 'heading' && element.settings.title) {
+        if ((element.widgetType === 'heading' || element.widgetType === 'plumbit-heading') && element.settings.title) {
           // Check if it's the main heading or subheading
           if (cssId.includes('subheading')) {
             element.settings.title = generatedContent.benefitsSubheading;
           } else {
             element.settings.title = generatedContent.benefitsHeading;
+            // plumbit-heading may have sub_title for subheading
+            if (element.widgetType === 'plumbit-heading' && element.settings.sub_title !== undefined) {
+              element.settings.sub_title = generatedContent.benefitsSubheading;
+            }
           }
         }
         // Handle text-editor for subheading
@@ -218,12 +222,16 @@ function replaceElementorContent(
           }
         }
       } else if (cssId.includes('why')) {
-        if (element.widgetType === 'heading' && element.settings.title) {
+        if ((element.widgetType === 'heading' || element.widgetType === 'plumbit-heading') && element.settings.title) {
           // Check if it's the main heading or subheading
           if (cssId.includes('subheading')) {
             element.settings.title = generatedContent.whySubheading;
           } else {
             element.settings.title = generatedContent.whyHeading;
+            // plumbit-heading may have sub_title for subheading
+            if (element.widgetType === 'plumbit-heading' && element.settings.sub_title !== undefined) {
+              element.settings.sub_title = generatedContent.whySubheading;
+            }
           }
         }
         // Handle text-editor for subheading
@@ -259,10 +267,16 @@ function replaceElementorContent(
           }
         }
       } else if (cssId.includes('faq')) {
-        // Handle FAQ section - check by ID first, then adapt to structure
+        // Handle FAQ heading (plumbit-heading or standard heading with faq-heading ID)
+        if (cssId.includes('heading') && (element.widgetType === 'heading' || element.widgetType === 'plumbit-heading') && element.settings.title) {
+          element.settings.title = generatedContent.faqHeading || element.settings.title;
+          if (element.widgetType === 'plumbit-heading' && element.settings.sub_title !== undefined) {
+            element.settings.sub_title = generatedContent.faqSubheading || element.settings.sub_title;
+          }
+        }
 
         // If this is the main FAQ container (ID contains 'questions')
-        if (cssId.includes('questions')) {
+        else if (cssId.includes('questions')) {
           console.log('[DEBUG] Found FAQ container:', {
             cssId: cssId,
             widgetType: element.widgetType,
@@ -292,6 +306,21 @@ function replaceElementorContent(
                 // ElementsKit stores content with <p> tags
                 item.acc_content = `<p>${content}</p>`;
                 console.log(`[DEBUG] Updated ElementsKit FAQ ${index + 1}: ${generatedContent.faqs[index].question.substring(0, 60)}...`);
+              }
+            });
+          }
+          // Check if it uses plumbit accordion structure (accordion_items with item_title/item_desc)
+          else if (element.settings.accordion_items && Array.isArray(element.settings.accordion_items)) {
+            console.log('[DEBUG] FAQ uses plumbit accordion structure, updating accordion_items...');
+            element.settings.accordion_items.forEach((item: any, index: number) => {
+              if (generatedContent.faqs[index]) {
+                item.item_title = generatedContent.faqs[index].question;
+                let content = generatedContent.faqs[index].answer;
+                if (internalLinkSection === 1 && index === 0 && parentPageUrl && service) {
+                  content = insertInternalLink(content, parentPageUrl, service);
+                }
+                item.item_desc = `<p>${content}</p>`;
+                console.log(`[DEBUG] Updated plumbit FAQ ${index + 1}: ${generatedContent.faqs[index].question.substring(0, 60)}...`);
               }
             });
           }
@@ -353,7 +382,7 @@ function replaceElementorContent(
                   if (!nestedChild || !nestedChild.settings) return;
 
                   // Found the question heading
-                  if (nestedChild.widgetType === 'heading' && nestedChild.settings.title) {
+                  if ((nestedChild.widgetType === 'heading' || nestedChild.widgetType === 'plumbit-heading') && nestedChild.settings.title) {
                     nestedChild.settings.title = generatedContent.faqs[faqIndex].question;
                     console.log(`[DEBUG] Updated nested FAQ ${faqIndex + 1} question: ${generatedContent.faqs[faqIndex].question.substring(0, 60)}...`);
                     foundQuestion = true;
@@ -387,7 +416,7 @@ function replaceElementorContent(
         else {
           const faqIndex = parseInt(cssId.match(/\d+/)?.[0] || '0') - 1;
           if (generatedContent.faqs[faqIndex]) {
-            if (element.widgetType === 'heading' && cssId.includes('question')) {
+            if ((element.widgetType === 'heading' || element.widgetType === 'plumbit-heading') && cssId.includes('question')) {
               element.settings.title = generatedContent.faqs[faqIndex].question;
               console.log(`[DEBUG] Updated individual FAQ ${faqIndex} question`);
             }
