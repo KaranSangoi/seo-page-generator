@@ -154,12 +154,14 @@ export function replaceElementorContent(
 
       // Benefits section
       else if (cssId.includes('benefits')) {
-        if (element.widgetType === 'heading' && element.settings.title) {
+        if ((element.widgetType === 'heading' || element.widgetType === 'plumbit-heading') && element.settings.title) {
           if (cssId.includes('subheading')) {
             element.settings.title = generatedContent.benefitsSubheading;
+            if (element.settings.sub_title !== undefined) element.settings.sub_title = generatedContent.benefitsSubheading;
             logUpdate(cssId, element.widgetType, 'benefits subheading', 'Updated');
           } else {
             element.settings.title = generatedContent.benefitsHeading;
+            if (element.settings.sub_title !== undefined) element.settings.sub_title = generatedContent.benefitsSubheading;
             logUpdate(cssId, element.widgetType, 'benefits heading', 'Updated');
           }
         }
@@ -195,12 +197,14 @@ export function replaceElementorContent(
 
       // Why section
       else if (cssId.includes('why')) {
-        if (element.widgetType === 'heading' && element.settings.title) {
+        if ((element.widgetType === 'heading' || element.widgetType === 'plumbit-heading') && element.settings.title) {
           if (cssId.includes('subheading')) {
             element.settings.title = generatedContent.whySubheading;
+            if (element.settings.sub_title !== undefined) element.settings.sub_title = generatedContent.whySubheading;
             logUpdate(cssId, element.widgetType, 'why subheading', 'Updated');
           } else {
             element.settings.title = generatedContent.whyHeading;
+            if (element.settings.sub_title !== undefined) element.settings.sub_title = generatedContent.whySubheading;
             logUpdate(cssId, element.widgetType, 'why heading', 'Updated');
           }
         }
@@ -238,7 +242,7 @@ export function replaceElementorContent(
       else if (cssId.includes('faq')) {
         // Handle FAQ heading (faq-heading)
         if (cssId.includes('heading') && !cssId.includes('subheading') && generatedContent.faqHeading) {
-          if (element.widgetType === 'heading' && element.settings.title !== undefined) {
+          if ((element.widgetType === 'heading' || element.widgetType === 'plumbit-heading') && element.settings.title !== undefined) {
             element.settings.title = generatedContent.faqHeading;
             logUpdate(cssId, element.widgetType, 'faq heading', 'Updated');
           } else if (element.widgetType === 'text-editor') {
@@ -313,6 +317,25 @@ export function replaceElementorContent(
                 tab.tab_content = content;
                 console.log(`[DEBUG] Updated FAQ ${index} in tabs`);
                 logUpdate(cssId, element.widgetType, `faq tab-${index + 1}`, 'Updated question and answer');
+              }
+            });
+          }
+          // Check if it uses accordion_items structure (plumbit-accordion, theme-specific)
+          else if (element.settings.accordion_items && Array.isArray(element.settings.accordion_items)) {
+            console.log('[DEBUG] FAQ uses accordion_items structure (plumbit-accordion), updating items...');
+            element.settings.accordion_items.forEach((item: any, index: number) => {
+              if (generatedContent.faqs[index]) {
+                item.item_title = generatedContent.faqs[index].question;
+                let content = generatedContent.faqs[index].answer;
+                if (internalLinkUrl && companyName) {
+                  const faqKey = `faq-${index + 1}`;
+                  if (internalLinkPlacement === faqKey) {
+                    content = insertInternalLink(content, internalLinkUrl, companyName);
+                  }
+                }
+                item.item_desc = `<p>${content}</p>`;
+                console.log(`[DEBUG] Updated accordion_items FAQ ${index + 1}: ${generatedContent.faqs[index].question.substring(0, 60)}...`);
+                logUpdate(cssId, element.widgetType, `faq accordion-item-${index + 1}`, 'Updated question and answer');
               }
             });
           }
