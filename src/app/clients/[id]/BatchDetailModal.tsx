@@ -5,7 +5,7 @@
  * Shows detailed information about a generation batch including all pages
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getBatchDetailsAction } from './actions';
 
 interface BatchDetailModalProps {
@@ -24,6 +24,7 @@ interface GeneratedPage {
   service: string | null;
   location: string | null;
   primaryKeyword: string | null;
+  generatedContent: string | null;
   createdAt: string;
 }
 
@@ -47,6 +48,8 @@ export default function BatchDetailModal({ batchId, onClose }: BatchDetailModalP
   const [batch, setBatch] = useState<BatchDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [viewingContentPageId, setViewingContentPageId] = useState<string | null>(null);
+  const [copiedAll, setCopiedAll] = useState(false);
 
   // Fetch batch details
   useEffect(() => {
@@ -343,11 +346,15 @@ export default function BatchDetailModal({ batchId, onClose }: BatchDetailModalP
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             Time
                           </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {batch.generatedPages.map((page) => (
-                          <tr key={page.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                          <React.Fragment key={page.id}>
+                          <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td className="px-4 py-3">
                               <div className="text-sm font-medium text-gray-900 dark:text-white">
                                 {page.pageName}
@@ -387,7 +394,141 @@ export default function BatchDetailModal({ batchId, onClose }: BatchDetailModalP
                             <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                               {formatTimeElapsed(page.timeElapsed)}
                             </td>
+                            <td className="px-4 py-3 text-sm">
+                              {page.generatedContent ? (
+                                <button
+                                  onClick={() => setViewingContentPageId(viewingContentPageId === page.id ? null : page.id)}
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
+                                    viewingContentPageId === page.id
+                                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
+                                      : 'text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20'
+                                  }`}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                  {viewingContentPageId === page.id ? 'Hide' : 'View Content'}
+                                </button>
+                              ) : (
+                                <span className="text-gray-400 text-xs">-</span>
+                              )}
+                            </td>
                           </tr>
+                          {viewingContentPageId === page.id && page.generatedContent && (
+                            <tr>
+                              <td colSpan={6} className="px-4 py-4 bg-gray-50 dark:bg-gray-700/30">
+                                {(() => {
+                                  try {
+                                    const content = JSON.parse(page.generatedContent);
+                                    const copyAllContent = () => {
+                                      const lines = [
+                                        `Meta Title: ${content.metaTitle || ''}`,
+                                        `Meta Description: ${content.metaDescription || ''}`,
+                                        `H1: ${content.h1 || ''}`,
+                                        `Hero Description: ${content.heroDescription || ''}`,
+                                        '',
+                                        `Benefits Heading: ${content.benefitsHeading || ''}`,
+                                        `Benefits Subheading: ${content.benefitsSubheading || ''}`,
+                                        ...(content.benefitsBullets || []).map((b: string, i: number) => `Benefit ${i + 1}: ${b.replace(/<[^>]*>/g, '')}`),
+                                        '',
+                                        `Why Heading: ${content.whyHeading || ''}`,
+                                        `Why Subheading: ${content.whySubheading || ''}`,
+                                        ...(content.whyBullets || []).map((b: string, i: number) => `Why ${i + 1}: ${b.replace(/<[^>]*>/g, '')}`),
+                                        '',
+                                        `FAQ Heading: ${content.faqHeading || ''}`,
+                                        ...(content.faqs || []).map((f: any, i: number) => `Q${i + 1}: ${f.question}\nA${i + 1}: ${f.answer}`),
+                                        '',
+                                        content.mapDescription ? `Map Description: ${content.mapDescription}` : '',
+                                      ].filter(Boolean).join('\n');
+                                      navigator.clipboard.writeText(lines);
+                                      setCopiedAll(true);
+                                      setTimeout(() => setCopiedAll(false), 2000);
+                                    };
+                                    return (
+                                      <div className="space-y-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Generated Content — {page.pageName}</h4>
+                                          <button
+                                            onClick={copyAllContent}
+                                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                                          >
+                                            {copiedAll ? 'Copied!' : 'Copy All'}
+                                          </button>
+                                        </div>
+
+                                        {/* Meta */}
+                                        {(content.metaTitle || content.metaDescription) && (
+                                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Meta</div>
+                                            {content.metaTitle && <p className="text-sm text-gray-900 dark:text-white mb-1"><span className="text-gray-500 dark:text-gray-400">Title:</span> {content.metaTitle}</p>}
+                                            {content.metaDescription && <p className="text-sm text-gray-900 dark:text-white"><span className="text-gray-500 dark:text-gray-400">Description:</span> {content.metaDescription}</p>}
+                                          </div>
+                                        )}
+
+                                        {/* Hero */}
+                                        {(content.h1 || content.heroDescription) && (
+                                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Hero</div>
+                                            {content.h1 && <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">{content.h1}</p>}
+                                            {content.heroDescription && <p className="text-sm text-gray-700 dark:text-gray-300">{content.heroDescription}</p>}
+                                          </div>
+                                        )}
+
+                                        {/* Benefits */}
+                                        {(content.benefitsHeading || content.benefitsBullets?.length) && (
+                                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Benefits</div>
+                                            {content.benefitsHeading && <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">{content.benefitsHeading}</p>}
+                                            {content.benefitsSubheading && <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{content.benefitsSubheading}</p>}
+                                            {content.benefitsBullets?.map((b: string, i: number) => (
+                                              <p key={i} className="text-sm text-gray-700 dark:text-gray-300 ml-2 mb-1" dangerouslySetInnerHTML={{ __html: `${i + 1}. ${b}` }} />
+                                            ))}
+                                          </div>
+                                        )}
+
+                                        {/* Why */}
+                                        {(content.whyHeading || content.whyBullets?.length) && (
+                                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Why Choose Us</div>
+                                            {content.whyHeading && <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">{content.whyHeading}</p>}
+                                            {content.whySubheading && <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{content.whySubheading}</p>}
+                                            {content.whyBullets?.map((b: string, i: number) => (
+                                              <p key={i} className="text-sm text-gray-700 dark:text-gray-300 ml-2 mb-1" dangerouslySetInnerHTML={{ __html: `${i + 1}. ${b}` }} />
+                                            ))}
+                                          </div>
+                                        )}
+
+                                        {/* FAQs */}
+                                        {content.faqs?.length > 0 && (
+                                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">FAQs{content.faqHeading ? ` — ${content.faqHeading}` : ''}</div>
+                                            {content.faqs.map((faq: any, i: number) => (
+                                              <div key={i} className="mb-2 last:mb-0">
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">Q{i + 1}: {faq.question}</p>
+                                                <p className="text-sm text-gray-700 dark:text-gray-300 ml-4">{faq.answer}</p>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+
+                                        {/* Map Description */}
+                                        {content.mapDescription && (
+                                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Map Description</div>
+                                            <p className="text-sm text-gray-700 dark:text-gray-300">{content.mapDescription}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  } catch {
+                                    return <p className="text-sm text-red-500">Failed to parse content data</p>;
+                                  }
+                                })()}
+                              </td>
+                            </tr>
+                          )}
+                          </React.Fragment>
                         ))}
                       </tbody>
                     </table>

@@ -627,8 +627,10 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
   const handlePublishPage = async (pageId: string) => {
     const page = contentPreviewPages.find(p => p.pageId === pageId);
     if (!page) return;
+    const currentRetryCount = page.retryCount || 0;
+    if (currentRetryCount >= 5) return;
     setContentPreviewPages(prev => prev.map(p =>
-      p.pageId === pageId ? { ...p, status: 'publishing' } : p
+      p.pageId === pageId ? { ...p, status: 'publishing', error: undefined } : p
     ));
     try {
       const response = await fetch('/api/publish-reviewed', {
@@ -655,8 +657,15 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
       }
     } catch (error) {
       console.error('Publish error:', error);
+      const newRetryCount = currentRetryCount + 1;
+      const technicalError = error instanceof Error ? error.message : 'Failed to publish';
       setContentPreviewPages(prev => prev.map(p =>
-        p.pageId === pageId ? { ...p, status: 'failed', error: error instanceof Error ? error.message : 'Failed' } : p
+        p.pageId === pageId ? {
+          ...p,
+          status: 'failed',
+          error: technicalError,
+          retryCount: newRetryCount,
+        } : p
       ));
     }
   };

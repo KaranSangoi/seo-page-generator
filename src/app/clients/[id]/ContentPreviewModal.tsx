@@ -42,6 +42,7 @@ interface PageContent {
   status: 'pending' | 'generating' | 'regenerating' | 'ready' | 'publishing' | 'published' | 'failed';
   publishedUrl?: string;
   error?: string;
+  retryCount?: number;
 }
 
 interface ContentPreviewModalProps {
@@ -1164,10 +1165,17 @@ export default function ContentPreviewModal({
                     Ready to publish to WordPress
                   </p>
                 )}
-                {selectedPage.error && (
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    ❌ {selectedPage.error}
-                  </p>
+                {selectedPage.status === 'failed' && (
+                  <div>
+                    <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                      Failed to publish: {selectedPage.error || 'Unknown error'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {(selectedPage.retryCount || 0) < 5
+                        ? `Attempt ${selectedPage.retryCount || 0}/5 — you can retry publishing`
+                        : 'Max retries reached — please check WordPress connection and try again later'}
+                    </p>
+                  </div>
                 )}
               </div>
               <div className="flex items-center gap-3">
@@ -1193,6 +1201,22 @@ export default function ContentPreviewModal({
                     className="px-6 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed text-sm font-medium"
                   >
                     Publishing...
+                  </button>
+                )}
+                {selectedPage.status === 'failed' && (selectedPage.retryCount || 0) < 5 && (
+                  <button
+                    onClick={() => onPublishPage(selectedPage.pageId)}
+                    className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium"
+                  >
+                    Retry Publish ({(selectedPage.retryCount || 0) + 1}/5)
+                  </button>
+                )}
+                {selectedPage.status === 'failed' && (selectedPage.retryCount || 0) >= 5 && (
+                  <button
+                    disabled
+                    className="px-6 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed text-sm font-medium"
+                  >
+                    Max retries reached
                   </button>
                 )}
                 {selectedPageIndex < pages.length - 1 && (
