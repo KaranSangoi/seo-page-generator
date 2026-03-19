@@ -19,30 +19,30 @@ interface Announcement {
 
 // Current announcement - update this when you have new features to announce
 const CURRENT_ANNOUNCEMENT: Announcement = {
-  id: 'model-selection-v2.5',
-  version: 'v2.5',
-  title: 'Choose Your AI Model',
-  description: 'You can now pick which AI model generates your content — right from the generation controls. Upgraded to GPT-5.4 by default.',
+  id: 'publish-retry-history-v2.6',
+  version: 'v2.6',
+  title: 'Publish Retry & Content History',
+  description: 'Two new features to improve your workflow — retry failed publishes and view generated content from past batches.',
   features: [
     {
-      icon: '🧠',
-      title: 'Model Selection Dropdown',
-      description: 'A new dropdown next to Generation Mode lets you choose from all available GPT models before generating. Pick the best model for your batch.',
+      icon: '🔄',
+      title: 'Publish Retry',
+      description: 'If publishing a page fails, you now see the exact error and can retry up to 5 times. No more losing the publish option on failure.',
     },
     {
-      icon: '🚀',
-      title: 'Upgraded to GPT-5.4',
-      description: 'Default model upgraded from GPT-4o to GPT-5.4 — the latest and most capable model for higher quality, more natural content.',
+      icon: '📄',
+      title: 'View Content from History',
+      description: 'Open any past batch and click "View Content" on any page to see the full generated content — headings, bullets, FAQs, and more.',
     },
     {
       icon: '📋',
-      title: 'Full Model List from OpenAI',
-      description: 'Available models are fetched directly from OpenAI and cached. As new models launch, they automatically appear in your dropdown.',
+      title: 'Copy All Content',
+      description: 'The content viewer includes a "Copy All" button to quickly copy all generated content as plain text.',
     },
     {
-      icon: '⚡',
-      title: 'Per-Batch Flexibility',
-      description: 'Different batches can use different models. Use a faster model for bulk pages and a premium model for high-value pages.',
+      icon: '⚠️',
+      title: 'Better Error Messages',
+      description: 'Publish failures now show the technical reason (e.g., connection error, template issue) so you know exactly what to fix.',
     },
   ],
 };
