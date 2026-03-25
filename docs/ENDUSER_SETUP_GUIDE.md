@@ -2,7 +2,7 @@
 
 ## Welcome! 👋
 
-This guide will walk you through setting up your WordPress website to work with the SEO Page Generator. Whether you're using **Divi** or **Elementor** as your page builder, we've got you covered with simple, step-by-step instructions.
+This guide will walk you through setting up your WordPress website to work with the SEO Page Generator. Whether you're using **Elementor**, **Divi**, **WPBakery**, **Avada (Fusion Builder)**, or **Classic Editor**, we've got you covered with simple, step-by-step instructions.
 
 ---
 
@@ -22,7 +22,7 @@ By the end of this guide, you'll have:
 Make sure you have:
 
 - **Access to your WordPress admin dashboard** (the backend of your website)
-- **Either Divi or Elementor** page builder installed and active
+- **A supported page builder** installed and active (Elementor, Divi, WPBakery, Avada Fusion Builder, or Classic Editor)
 - **Your login credentials** for WordPress
 - **About 30-45 minutes** to complete the setup
 

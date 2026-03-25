@@ -322,6 +322,7 @@ export default function MetadataTab({ client }: MetadataTabProps) {
                         {displayBuilder === 'elementor' && '🎨'}
                         {displayBuilder === 'divi' && '🔷'}
                         {displayBuilder === 'wpbakery' && '📦'}
+                        {displayBuilder === 'fusion' && '⚡'}
                         {displayBuilder === 'gutenberg' && '🧱'}
                         {displayBuilder === 'beaver-builder' && '🦫'}
                         {displayBuilder === 'oxygen' && '💨'}
@@ -334,13 +335,14 @@ export default function MetadataTab({ client }: MetadataTabProps) {
                             {displayBuilder === 'elementor' && 'Elementor'}
                             {displayBuilder === 'divi' && 'Divi Builder'}
                             {displayBuilder === 'wpbakery' && 'WPBakery Page Builder'}
+                            {displayBuilder === 'fusion' && 'Avada Fusion Builder'}
                             {displayBuilder === 'gutenberg' && 'Gutenberg (Block Editor)'}
                             {displayBuilder === 'beaver-builder' && 'Beaver Builder'}
                             {displayBuilder === 'oxygen' && 'Oxygen Builder'}
                             {displayBuilder === 'html' && 'Plain HTML'}
                             {!displayBuilder && 'Not Detected'}
                           </span>
-                          {displayBuilder === 'elementor' || displayBuilder === 'divi' ? (
+                          {displayBuilder === 'elementor' || displayBuilder === 'divi' || displayBuilder === 'wpbakery' || displayBuilder === 'fusion' || displayBuilder === 'classic-editor' ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent-100 dark:bg-accent-900/40 text-accent-800 dark:text-accent-300">
                               Supported
                             </span>
@@ -594,6 +596,7 @@ export default function MetadataTab({ client }: MetadataTabProps) {
                     {connectionResult.detectedBuilder === 'elementor' && '🎨'}
                     {connectionResult.detectedBuilder === 'divi' && '🔷'}
                     {connectionResult.detectedBuilder === 'wpbakery' && '📦'}
+                    {connectionResult.detectedBuilder === 'fusion' && '⚡'}
                     {connectionResult.detectedBuilder === 'gutenberg' && '🧱'}
                     {connectionResult.detectedBuilder === 'beaver-builder' && '🦫'}
                     {connectionResult.detectedBuilder === 'oxygen' && '💨'}
@@ -621,6 +624,7 @@ export default function MetadataTab({ client }: MetadataTabProps) {
                         {connectionResult.detectedBuilder === 'elementor' && 'Elementor'}
                         {connectionResult.detectedBuilder === 'divi' && 'Divi Builder'}
                         {connectionResult.detectedBuilder === 'wpbakery' && 'WPBakery Page Builder'}
+                        {connectionResult.detectedBuilder === 'fusion' && 'Avada Fusion Builder'}
                         {connectionResult.detectedBuilder === 'gutenberg' && 'Gutenberg (Block Editor)'}
                         {connectionResult.detectedBuilder === 'beaver-builder' && 'Beaver Builder'}
                         {connectionResult.detectedBuilder === 'oxygen' && 'Oxygen Builder'}

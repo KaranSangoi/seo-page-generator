@@ -29,7 +29,7 @@
 - ✅ CSV upload with validation
 - ✅ Bulk page generation with AI (Claude)
 - ✅ WordPress publishing via REST API
-- ✅ Elementor/Divi/WPBakery support
+- ✅ Elementor/Divi/WPBakery/Fusion Builder/Classic Editor support
 - ✅ Real-time progress tracking
 - ✅ Generation history and reports
 - ✅ Sample page generation for template preview
@@ -173,7 +173,7 @@ All clearly marked with `// ==================== V2 FEATURE ====================
 - **Auth:** Clerk
 - **AI:** Claude 3.5 Sonnet (via claude-api.ts)
 - **WordPress:** REST API v2
-- **Page Builders:** Elementor, Divi, WPBakery (auto-detected)
+- **Page Builders:** Elementor, Divi, WPBakery, Avada Fusion Builder, Classic Editor (auto-detected)
 - **Hosting:** Vercel (recommended)
 
 ### Key Dependencies

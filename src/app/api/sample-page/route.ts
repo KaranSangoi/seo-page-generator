@@ -586,7 +586,7 @@ export async function POST(request: NextRequest) {
     if (!isBuilderSupported(pageBuilder as any)) {
       return NextResponse.json(
         {
-          error: `Sample page generation is not yet available for ${pageBuilder} templates.\n\nCurrently supported: Elementor, Divi, WPBakery, Classic Editor\n\nDetected builder: ${pageBuilder}`
+          error: `Sample page generation is not yet available for ${pageBuilder} templates.\n\nCurrently supported: Elementor, Divi, WPBakery, Avada Fusion Builder, Classic Editor\n\nDetected builder: ${pageBuilder}`
         },
         { status: 400 }
       );
@@ -872,6 +872,71 @@ export async function POST(request: NextRequest) {
       updatedMeta = {
         _wpb_vc_js_status: 'true', // Enable WPBakery editor
       };
+    } else if (pageBuilder === 'fusion') {
+      // ==================== FUSION BUILDER (AVADA) PATH ====================
+      console.log('[SAMPLE PAGE] Using Fusion Builder (Avada) path');
+
+      // Import Fusion replacer
+      const { replaceFusionContent } = await import('@/lib/fusion-replacer');
+
+      // Get Fusion content from post_content (RAW, not rendered - contains shortcodes)
+      const fusionContent = templatePage.content?.raw || '';
+
+      console.log('[FUSION DEBUG] Content available:', {
+        hasRaw: !!templatePage.content?.raw,
+        hasRendered: !!templatePage.content?.rendered,
+        rawLength: templatePage.content?.raw?.length || 0,
+        containsShortcodesInRaw: templatePage.content?.raw?.includes('[fusion_') || false,
+      });
+
+      if (!fusionContent || !fusionContent.includes('[fusion_')) {
+        return NextResponse.json(
+          { error: 'No Fusion Builder shortcodes found in template page.\n\nPlease ensure your template page is built with Avada Fusion Builder.\n\nDebug info:\n- Has raw content: ' + !!templatePage.content?.raw + '\n- Content length: ' + (templatePage.content?.raw?.length || 0) + '\n- Contains [fusion_: ' + (templatePage.content?.raw?.includes('[fusion_') || false) },
+          { status: 400 }
+        );
+      }
+
+      // Replace Fusion Builder content
+      const { data: updatedFusionContent } = replaceFusionContent(
+        fusionContent,
+        SAMPLE_CONTENT,
+        'Phoenix, AZ',
+        undefined, // no parent page for sample
+        undefined, // no company name for sample
+        undefined, // no service for sample
+        undefined, // no internal link placement
+        undefined, // no external link placement
+        []         // no omit sections
+      );
+
+      // Add Schema.org JSON-LD for SEO
+      const sampleTitle = SAMPLE_CONTENT.metaTitle.split('|')[0].trim();
+      const schemaData = {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": sampleTitle,
+        "description": SAMPLE_CONTENT.metaDescription,
+        "url": client.clientWebsite
+      };
+      const schemaScript = `<!-- Schema.org JSON-LD for SEO -->\n<script type="application/ld+json">\n${JSON.stringify(schemaData, null, 2)}\n</script>\n\n`;
+
+      // Add HTML meta tags as comment for reference
+      const metaTags = `<!-- SEO Meta Tags (for theme/plugin extraction or manual addition to head)
+<meta name="description" content="${SAMPLE_CONTENT.metaDescription}">
+<meta property="og:title" content="${sampleTitle}">
+<meta property="og:description" content="${SAMPLE_CONTENT.metaDescription}">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${sampleTitle}">
+<meta name="twitter:description" content="${SAMPLE_CONTENT.metaDescription}">
+-->\n\n`;
+
+      // Prepend meta tags and schema to content
+      updatedContent = metaTags + schemaScript + updatedFusionContent;
+      updatedMeta = {
+        // Fusion Builder reads shortcodes from post_content, no special meta needed
+      };
+
     } else if (pageBuilder === 'classic-editor') {
       // ==================== CLASSIC EDITOR PATH ====================
       console.log('[SAMPLE PAGE] Using Classic Editor path');
@@ -928,7 +993,7 @@ export async function POST(request: NextRequest) {
       title: sampleKeywordOnly, // Use keyword only, let WordPress/theme append site name
       slug: slug,
       status: 'publish',
-      content: (pageBuilder === 'divi' || pageBuilder === 'wpbakery' || pageBuilder === 'classic-editor') ? updatedContent : (templatePage.content?.rendered || ''),
+      content: (pageBuilder === 'divi' || pageBuilder === 'wpbakery' || pageBuilder === 'fusion' || pageBuilder === 'classic-editor') ? updatedContent : (templatePage.content?.rendered || ''),
       excerpt: SAMPLE_CONTENT.metaDescription, // Set excerpt to meta description for WordPress SEO
       featured_media: templatePage.featured_media || 0,
       comment_status: 'closed',

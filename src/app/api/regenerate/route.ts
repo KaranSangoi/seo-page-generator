@@ -10,6 +10,7 @@ import { generatePageContent } from '@/lib/claude-api';
 import { validateContent, type ContentValidationParams, determineLinkPlacements } from '@/lib/page-generation';
 import { replaceElementorContent } from '@/lib/elementor-replacer';
 import { replaceDiviContent } from '@/lib/divi-replacer';
+import { replaceFusionContent } from '@/lib/fusion-replacer';
 import { generateStructuredData } from '@/lib/schema-generator';
 import { randomBytes } from 'crypto';
 
@@ -48,14 +49,14 @@ async function getParentPageId(wordpressUrl: string, parentSlug: string, credent
   }
 }
 
-// Helper function to fetch template page (supports both Elementor and Divi)
+// Helper function to fetch template page (supports Elementor, Divi, and Fusion Builder)
 async function fetchTemplatePage(
   wordpressUrl: string,
   templatePageId: string,
   credentials: string
 ): Promise<{
   fullPage: any;
-  builder: 'elementor' | 'divi';
+  builder: 'elementor' | 'divi' | 'fusion';
   templateData: any;
 } | null> {
   if (!templatePageId) return null;
@@ -96,10 +97,22 @@ async function fetchTemplatePage(
         builder: 'divi',
         templateData: templatePage.content?.rendered || '',
       };
-    } else {
-      console.error('Template page must use either Elementor or Divi page builder');
-      return null;
     }
+
+    // Check for Fusion Builder (Avada)
+    const rawContent = templatePage.content?.raw || '';
+    const isFusion = rawContent.includes('[fusion_builder_container') || rawContent.includes('[fusion_builder_row');
+    if (isFusion) {
+      console.log('[REGENERATE] Detected Fusion Builder (Avada)');
+      return {
+        fullPage: templatePage,
+        builder: 'fusion',
+        templateData: rawContent,
+      };
+    }
+
+    console.error('Template page must use Elementor, Divi, or Fusion Builder');
+    return null;
   } catch (error) {
     console.error('Error fetching template page:', error);
     return null;
@@ -143,7 +156,7 @@ async function publishToWordPress(params: {
   // Generate slug based on page type
   const slug = generateSlug(pageType, service, location);
 
-  // Fetch template page (supports both Elementor and Divi)
+  // Fetch template page (supports Elementor, Divi, and Fusion Builder)
   const templateInfo = await fetchTemplatePage(wordpressUrl, templatePageId, credentials);
 
   if (!templateInfo) {
@@ -226,6 +239,27 @@ async function publishToWordPress(params: {
         sectionsUpdated: replacementLog.sectionsUpdated.length,
         totalElements: replacementLog.elementDetails.length,
       });
+    } else if (builder === 'fusion') {
+      // FUSION: Use Fusion replacer
+      const { data, log } = replaceFusionContent(
+        templateData,
+        generatedContent,
+        location,
+        parentPageUrl,
+        companyName,
+        service,
+        internalLinkPlacement,
+        externalLinkPlacement,
+        omitSections || []
+      );
+      updatedData = data;
+      replacementLog = log;
+
+      console.log('[REGENERATE] Fusion replacement log:', {
+        sectionsFound: replacementLog.sectionsFound,
+        sectionsUpdated: replacementLog.sectionsUpdated.length,
+        totalElements: replacementLog.elementDetails.length,
+      });
     }
 
     // Generate schema.org structured data (AFTER content is finalized)
@@ -294,6 +328,10 @@ async function publishToWordPress(params: {
       pagePayload.meta._et_pb_use_builder = 'on';
       pagePayload.meta._et_pb_old_content = ''; // Clear old content
       console.log('[REGENERATE] Injected schema into Divi content');
+    } else if (builder === 'fusion') {
+      // FUSION: Inject schema at the beginning of content
+      pagePayload.content = schemaScript + '\n\n' + updatedData;
+      console.log('[REGENERATE] Injected schema into Fusion content');
     }
 
   } catch (fetchError) {

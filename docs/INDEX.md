@@ -94,7 +94,7 @@ These documents provide the fastest path to understanding the project:
 
 **[BUILDER_AUTO_DETECTION.md](BUILDER_AUTO_DETECTION.md)** - Page Builder Detection
 - Detection algorithm
-- Supported builders (Elementor, Divi, WPBakery)
+- Supported builders (Elementor, Divi, WPBakery, Fusion Builder, Classic Editor)
 - Fallback logic
 - Testing instructions
 - **Use this to understand multi-builder support**

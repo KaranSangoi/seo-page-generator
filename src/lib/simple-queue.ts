@@ -745,7 +745,7 @@ async function duplicateTemplateAndPublish(params: {
                    (templatePage.content?.rendered && templatePage.content.rendered.includes('[et_pb_'));
 
     if (!isElementor && !isDivi) {
-      throw new Error('Template page must use either Elementor or Divi page builder');
+      throw new Error('Template page must use a supported page builder (Elementor, Divi, WPBakery, Fusion Builder, or Classic Editor)');
     }
 
     const builderName = isElementor ? 'Elementor' : 'Divi';

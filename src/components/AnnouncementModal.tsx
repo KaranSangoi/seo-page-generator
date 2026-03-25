@@ -18,31 +18,33 @@ interface Announcement {
 }
 
 // Current announcement - update this when you have new features to announce
+export const CURRENT_VERSION = 'v3.0';
+
 const CURRENT_ANNOUNCEMENT: Announcement = {
-  id: 'publish-retry-history-v2.6',
-  version: 'v2.6',
-  title: 'Publish Retry & Content History',
-  description: 'Two new features to improve your workflow — retry failed publishes and view generated content from past batches.',
+  id: 'fusion-builder-support-v3.0',
+  version: 'v3.0',
+  title: 'Avada Fusion Builder Support',
+  description: 'Full support for Avada\'s Fusion Builder — the 5th page builder now compatible with SEO Page Generator.',
   features: [
     {
-      icon: '🔄',
-      title: 'Publish Retry',
-      description: 'If publishing a page fails, you now see the exact error and can retry up to 5 times. No more losing the publish option on failure.',
+      icon: '⚡',
+      title: 'Fusion Builder (Avada)',
+      description: 'Generate and publish SEO pages on WordPress sites using the Avada theme with Fusion Builder. Auto-detected from your template page.',
     },
     {
-      icon: '📄',
-      title: 'View Content from History',
-      description: 'Open any past batch and click "View Content" on any page to see the full generated content — headings, bullets, FAQs, and more.',
+      icon: '🔍',
+      title: 'Auto-Detection',
+      description: 'Fusion Builder templates are automatically detected when you test your WordPress connection — no manual setup needed.',
     },
     {
-      icon: '📋',
-      title: 'Copy All Content',
-      description: 'The content viewer includes a "Copy All" button to quickly copy all generated content as plain text.',
+      icon: '🧩',
+      title: 'All Sections Supported',
+      description: 'Hero, Benefits, Why, FAQ (accordion/toggles), Map description, and Map iframe (base64-encoded) — all replaced seamlessly.',
     },
     {
-      icon: '⚠️',
-      title: 'Better Error Messages',
-      description: 'Publish failures now show the technical reason (e.g., connection error, template issue) so you know exactly what to fix.',
+      icon: '🏗️',
+      title: '5 Builders Supported',
+      description: 'Elementor, Divi, WPBakery, Avada Fusion Builder, and Classic Editor. The widest page builder support available.',
     },
   ],
 };
@@ -67,6 +69,11 @@ export default function AnnouncementModal() {
       localStorage.setItem('seenAnnouncements', JSON.stringify([]));
       setTimeout(() => setIsOpen(true), 1000);
     }
+
+    // Listen for manual open event (from VersionBadge click)
+    const handleShowAnnouncement = () => setIsOpen(true);
+    window.addEventListener('show-announcement', handleShowAnnouncement);
+    return () => window.removeEventListener('show-announcement', handleShowAnnouncement);
   }, []);
 
   const handleClose = () => {

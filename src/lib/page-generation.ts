@@ -12,6 +12,7 @@ import { replaceElementorContent } from './elementor-replacer';
 import { replaceDiviContent } from './divi-replacer';
 import { replaceWPBakeryContent } from './wpbakery-replacer';
 import { replaceClassicEditorContent } from './classic-editor-replacer';
+import { replaceFusionContent } from './fusion-replacer';
 import { generateStructuredData } from './schema-generator';
 
 // ============================================================================
@@ -452,11 +453,12 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
                           (typeof templatePage.content === 'object' && templatePage.content?.raw?.includes('[vc_'));
   const rawContentCheck = typeof templatePage.content === 'object' ? templatePage.content?.raw || '' : '';
   const hasClassicEditor = rawContentCheck.includes('<!-- SEO_GEN_START:') || rawContentCheck.includes('<!-- SEO_GEN_END:');
+  const hasFusionData = rawContentCheck.includes('[fusion_builder_container') || rawContentCheck.includes('[fusion_builder_row');
 
-  const builderType = hasElementorData ? 'elementor' : hasWPBakeryData ? 'wpbakery' : hasClassicEditor ? 'classic-editor' : hasDiviData ? 'divi' : null;
+  const builderType = hasElementorData ? 'elementor' : hasWPBakeryData ? 'wpbakery' : hasFusionData ? 'fusion' : hasClassicEditor ? 'classic-editor' : hasDiviData ? 'divi' : null;
 
   if (!builderType) {
-    throw new Error('No Elementor, WPBakery, Classic Editor, or Divi data found in template page');
+    throw new Error('No Elementor, WPBakery, Fusion, Classic Editor, or Divi data found in template page');
   }
 
   console.log(`[Publishing] Detected ${builderType} builder`);
@@ -535,6 +537,29 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     replacementLog = log;
 
     console.log('[Publishing] WPBakery replacement summary:', {
+      sectionsFound: replacementLog.sectionsFound,
+      sectionsUpdated: replacementLog.sectionsUpdated,
+      totalElements: replacementLog.elementDetails.length,
+    });
+  } else if (builderType === 'fusion') {
+    // Fusion Builder (Avada)
+    const fusionContent = templatePage.content?.raw || '';
+    const { data, log } = replaceFusionContent(
+      fusionContent,
+      params.generatedContent,
+      params.pageData.location,
+      internalLinkUrl,
+      params.clientName,
+      params.pageData.service,
+      internalLinkPlacement,
+      externalLinkPlacement,
+      params.pageData.omitSections,
+      params.externalLinkUrlOverride
+    );
+    updatedContent = data;
+    replacementLog = log;
+
+    console.log('[Publishing] Fusion Builder replacement summary:', {
       sectionsFound: replacementLog.sectionsFound,
       sectionsUpdated: replacementLog.sectionsUpdated,
       totalElements: replacementLog.elementDetails.length,
@@ -638,6 +663,10 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     // WPBakery: content goes directly into the content field (raw shortcodes)
     pagePayload.content = schemaScript + updatedContent;
     pagePayload.meta._wpb_vc_js_status = 'true'; // Enable WPBakery editor
+  } else if (builderType === 'fusion') {
+    // Fusion Builder (Avada): content goes directly into the content field (shortcodes)
+    pagePayload.content = schemaScript + updatedContent;
+    // Fusion Builder reads shortcodes from post_content, no special meta needed
   } else if (builderType === 'classic-editor') {
     // Classic Editor: content goes directly into the content field (HTML)
     pagePayload.content = schemaScript + updatedContent;

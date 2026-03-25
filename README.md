@@ -27,12 +27,12 @@ Open http://localhost:3000
 
 ## Features
 
-### Core Functionality (v1.2 - Current)
+### Core Functionality (v3.0 - Current)
 - ✅ User authentication (Clerk)
 - ✅ Multi-client management (CRUD)
 - ✅ CSV upload & parsing with validation
 - ✅ AI content generation (Claude/OpenAI)
-- ✅ WordPress publishing (Elementor, Divi, WPBakery)
+- ✅ WordPress publishing (Elementor, Divi, WPBakery, Avada Fusion Builder, Classic Editor)
 - ✅ Real-time progress tracking
 - ✅ Generation history & reports
 - ✅ Time tracking per page
@@ -65,7 +65,7 @@ Open http://localhost:3000
 - **Database:** Neon PostgreSQL (FREE tier)
 - **Auth:** Clerk (FREE tier)
 - **AI:** Claude Code (uses Claude Pro subscription)
-- **WordPress:** REST API + Elementor
+- **WordPress:** REST API + Elementor, Divi, WPBakery, Fusion Builder, Classic Editor
 - **Hosting:** Vercel (FREE tier)
 
 ## Cost
@@ -90,7 +90,7 @@ Open http://localhost:3000
 
 ### Content Guidelines
 - 📄 [SOP Document](docs/SOP.md) - Content structure and requirements
-- 📝 [Template Elements](docs/TEMPLATE_ELEMENTS.md) - Elementor element IDs
+- 📝 [Template Elements](docs/TEMPLATE_ELEMENTS.md) - Template element CSS IDs
 - 🎯 [Adjective System](docs/ADJECTIVE_SYSTEM.md) - How keyword adjectives work
 
 ### Technical Reference

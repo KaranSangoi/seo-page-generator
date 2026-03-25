@@ -274,7 +274,7 @@ export async function testConnectionAction(formData: FormData) {
           successMessage += `\n\n${builderIcon} Page Builder Detected: ${builderName}\nConfidence: ${detection.confidence}\n${supportStatus}`;
 
           if (!builderSupported) {
-            successMessage += `\n\n⚠️ Note: Currently only Elementor and Divi are fully supported. ${builderName} support is coming soon!`;
+            successMessage += `\n\n⚠️ Note: Currently Elementor, Divi, WPBakery, Avada Fusion Builder, and Classic Editor are supported. ${builderName} support is coming soon!`;
           }
 
           // Auto-update the client's page builder if clientId is provided

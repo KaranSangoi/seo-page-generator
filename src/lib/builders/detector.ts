@@ -7,6 +7,7 @@ export type PageBuilder =
   | 'elementor'
   | 'divi'
   | 'wpbakery'
+  | 'fusion'
   | 'classic-editor'
   | 'gutenberg'
   | 'beaver-builder'
@@ -84,7 +85,20 @@ export async function detectPageBuilder(
       };
     }
 
-    // 4. Divi - Check for Divi meta and shortcodes
+    // 4. Fusion Builder (Avada) - Check for fusion shortcodes in raw content
+    //    Avada processes shortcodes server-side, so rendered content is HTML.
+    //    Raw content (context=edit) contains the actual [fusion_*] shortcodes.
+    const rawContent = page.content?.raw || '';
+    if (rawContent.includes('[fusion_builder_container') || rawContent.includes('[fusion_builder_row') ||
+        content.includes('[fusion_builder_container') || content.includes('[fusion_builder_row')) {
+      return {
+        builder: 'fusion',
+        confidence: 'medium',
+        details: 'Detected Fusion Builder (Avada) shortcodes in content',
+      };
+    }
+
+    // 5. Divi - Check for Divi meta and shortcodes
     if (meta._et_pb_use_builder === 'on') {
       return {
         builder: 'divi',
@@ -111,7 +125,6 @@ export async function detectPageBuilder(
     }
 
     // 6. Classic Editor - Check for SEO_GEN markers
-    const rawContent = page.content?.raw || '';
     if (rawContent.includes('<!-- SEO_GEN_START:') || rawContent.includes('<!-- SEO_GEN_END:')) {
       return {
         builder: 'classic-editor',
@@ -160,6 +173,7 @@ export function getBuilderDisplayName(builder: PageBuilder): string {
     'elementor': 'Elementor',
     'divi': 'Divi Builder',
     'wpbakery': 'WPBakery Page Builder',
+    'fusion': 'Avada Fusion Builder',
     'classic-editor': 'Classic Editor (TinyMCE)',
     'gutenberg': 'Gutenberg (Block Editor)',
     'beaver-builder': 'Beaver Builder',
@@ -177,6 +191,7 @@ export function getBuilderIcon(builder: PageBuilder): string {
     'elementor': '🎨',
     'divi': '🔷',
     'wpbakery': '📦',
+    'fusion': '⚡',
     'classic-editor': '📝',
     'gutenberg': '🧱',
     'beaver-builder': '🦫',
@@ -190,15 +205,15 @@ export function getBuilderIcon(builder: PageBuilder): string {
  * Check if builder is supported
  */
 export function isBuilderSupported(builder: PageBuilder): boolean {
-  // Elementor, Divi, WPBakery, and Classic Editor are fully implemented
-  return builder === 'elementor' || builder === 'divi' || builder === 'wpbakery' || builder === 'classic-editor';
+  // Elementor, Divi, WPBakery, Fusion (Avada), and Classic Editor are fully implemented
+  return builder === 'elementor' || builder === 'divi' || builder === 'wpbakery' || builder === 'fusion' || builder === 'classic-editor';
 }
 
 /**
  * Get support status message
  */
 export function getBuilderSupportStatus(builder: PageBuilder): string {
-  if (builder === 'elementor' || builder === 'divi' || builder === 'wpbakery' || builder === 'classic-editor') {
+  if (builder === 'elementor' || builder === 'divi' || builder === 'wpbakery' || builder === 'fusion' || builder === 'classic-editor') {
     return '✅ Fully supported';
   }
   if (builder === 'gutenberg' || builder === 'beaver-builder') {

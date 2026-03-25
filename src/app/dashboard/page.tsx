@@ -6,6 +6,7 @@ import { logoutAction } from '@/app/logout/actions';
 import ClientCard from './ClientCard';
 import SearchClients from './SearchClients';
 import MetadataWarningBanner from '@/components/MetadataWarningBanner';
+import VersionBadge from '@/components/VersionBadge';
 
 // Force dynamic rendering (uses cookies for authentication)
 export const dynamic = 'force-dynamic';
@@ -89,6 +90,7 @@ export default async function DashboardPage() {
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
               SEO Page Generator
             </h1>
+            <VersionBadge />
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-700 dark:text-gray-300">

@@ -1,6 +1,6 @@
 {
   "name": "seo-page-generator",
-  "version": "0.1.0",
+  "version": "3.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -17,6 +17,7 @@
     "@prisma/client": "^5.14.0",
     "axios": "^1.7.2",
     "bcryptjs": "^3.0.2",
+    "docx": "^9.6.1",
     "jose": "^6.1.0",
     "lucide-react": "^0.548.0",
     "next": "14.2.5",

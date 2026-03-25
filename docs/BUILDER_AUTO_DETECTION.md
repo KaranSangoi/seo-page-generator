@@ -57,7 +57,22 @@ Each page builder has **unique signatures** in the WordPress page data that we c
 }
 ```
 
-### 4. Gutenberg (Block Editor)
+### 4. Avada Fusion Builder
+**Post Content (raw)**: Shortcodes starting with `[fusion_`
+**No special meta fields** (Avada processes shortcodes server-side, so `content.rendered` is HTML)
+
+```json
+{
+  "content": {
+    "raw": "[fusion_builder_container][fusion_builder_row][fusion_builder_column][fusion_title id=\"hero-h1\"]<h1>Title</h1>[/fusion_title][/fusion_builder_column][/fusion_builder_row][/fusion_builder_container]",
+    "rendered": "<div class=\"fusion-fullwidth\">..."
+  }
+}
+```
+
+**Note:** Detection must check `content.raw` (not `content.rendered`) because Avada renders shortcodes into HTML on the server.
+
+### 5. Gutenberg (Block Editor)
 **Post Content**: HTML comments with `<!-- wp:`
 **No special meta fields** (native WordPress)
 

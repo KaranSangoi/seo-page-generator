@@ -6,6 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.0.0] - 2026-03-26
+
+### NEW: Avada Fusion Builder Support
+
+**Major Feature Addition:**
+The SEO Page Generator now supports **Avada Fusion Builder**, the page builder bundled with the popular Avada WordPress theme. This is the 5th page builder supported.
+
+**Supported Page Builders:**
+- Elementor
+- Divi Builder
+- WPBakery Page Builder
+- Classic Editor (TinyMCE)
+- **Avada Fusion Builder (NEW)**
+
+### Added
+
+#### Fusion Builder Integration (`src/lib/fusion-replacer.ts`)
+- **Full content replacement** via CSS ID matching on `[fusion_title]`, `[fusion_text]`, `[fusion_accordion]`, and `[fusion_code]` shortcodes
+- **All sections supported:** Hero (H1 + description), Benefits (heading, subheading, bullets), Why (heading, subheading, bullets), FAQ (heading, description, accordion toggles), Map (description + base64-encoded iframe)
+- **Builder auto-detection** recognizes `[fusion_builder_container]` / `[fusion_builder_row]` shortcodes in raw page content
+- **Sample page generation** for Fusion Builder templates
+- **Batch publishing** and **single-page regeneration** support
+
+#### Detection Updates (`src/lib/builders/detector.ts`)
+- Added `fusion` to `PageBuilder` type
+- Detection checks both `content.raw` and `content.rendered` for Fusion shortcodes (Avada renders shortcodes server-side)
+- Display name: "Avada Fusion Builder", icon: lightning bolt
+
+#### Route Updates
+- `src/app/api/sample-page/route.ts` - Fusion Builder path for sample pages
+- `src/lib/page-generation.ts` - Fusion Builder path for bulk generation
+- `src/app/api/regenerate/route.ts` - Fusion Builder path for single-page regeneration
+
+#### UI Updates
+- Announcement modal updated to v2.7
+- MetadataTab shows Fusion Builder icon, name, and "Supported" badge
+- Connection test messages updated to reflect all 5 supported builders
+
+---
+
 ## [2.3.0] - 2025-01-18
 
 ### 🎉 NEW: AI-Powered Adjective Selection & Enhanced Content Fields
