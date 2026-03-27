@@ -7,6 +7,9 @@ import { generatePageContent, validateContent, validateAndFixContent, regenerate
 import { prisma } from './prisma';
 import { generateStructuredData } from './schema-generator';
 import { replaceDiviContent } from './divi-replacer';
+import { replaceFusionContent } from './fusion-replacer';
+import { replaceWPBakeryContent } from './wpbakery-replacer';
+import { replaceClassicEditorContent } from './classic-editor-replacer';
 
 interface PageJob {
   batchId: string;
@@ -743,12 +746,17 @@ async function duplicateTemplateAndPublish(params: {
     const isElementor = !!templatePage.meta?._elementor_data;
     const isDivi = templatePage.meta?._et_pb_use_builder === 'on' ||
                    (templatePage.content?.rendered && templatePage.content.rendered.includes('[et_pb_'));
+    const rawContent = templatePage.content?.raw || '';
+    const isWPBakery = templatePage.meta?._wpb_vc_js_status === 'true' ||
+                       rawContent.includes('[vc_row') || rawContent.includes('[vc_column');
+    const isFusion = rawContent.includes('[fusion_builder_container') || rawContent.includes('[fusion_builder_row');
+    const isClassicEditor = rawContent.includes('<!-- SEO_GEN_START:') || rawContent.includes('<!-- SEO_GEN_END:');
 
-    if (!isElementor && !isDivi) {
+    if (!isElementor && !isDivi && !isWPBakery && !isFusion && !isClassicEditor) {
       throw new Error('Template page must use a supported page builder (Elementor, Divi, WPBakery, Fusion Builder, or Classic Editor)');
     }
 
-    const builderName = isElementor ? 'Elementor' : 'Divi';
+    const builderName = isElementor ? 'Elementor' : isDivi ? 'Divi' : isWPBakery ? 'WPBakery' : isFusion ? 'Fusion Builder' : 'Classic Editor';
     console.log(`[Publishing] Detected ${builderName} page builder`);
 
     // Fetch sitemap for intelligent internal linking
@@ -779,7 +787,7 @@ async function duplicateTemplateAndPublish(params: {
 
     // Parse and replace content based on builder
     let updatedElementorData: any = null;
-    let updatedDiviContent: string | null = null;
+    let updatedShortcodeContent: string | null = null;
     let replacementLog: any = null;
 
     if (isElementor) {
@@ -800,8 +808,8 @@ async function duplicateTemplateAndPublish(params: {
       updatedElementorData = result.data;
       replacementLog = result.log;
     } else if (isDivi) {
-      // DIVI: Use new Divi replacer
-      const diviContent = templatePage.content?.rendered || '';
+      // DIVI: Use Divi replacer
+      const diviContent = templatePage.content?.raw || templatePage.content?.rendered || '';
       const result = replaceDiviContent(
         diviContent,
         generatedContent,
@@ -813,7 +821,55 @@ async function duplicateTemplateAndPublish(params: {
         externalLinkPlacement,
         pageData.omitSections
       );
-      updatedDiviContent = result.data;
+      updatedShortcodeContent = result.data;
+      replacementLog = result.log;
+    } else if (isFusion) {
+      // FUSION BUILDER (Avada): Use Fusion replacer
+      const fusionContent = templatePage.content?.raw || '';
+      const result = replaceFusionContent(
+        fusionContent,
+        generatedContent,
+        pageData.location,
+        internalLinkUrl,
+        clientData.clientName,
+        pageData.service,
+        internalLinkPlacement,
+        externalLinkPlacement,
+        pageData.omitSections
+      );
+      updatedShortcodeContent = result.data;
+      replacementLog = result.log;
+    } else if (isWPBakery) {
+      // WPBAKERY: Use WPBakery replacer
+      const wpbakeryContent = templatePage.content?.raw || '';
+      const result = replaceWPBakeryContent(
+        wpbakeryContent,
+        generatedContent,
+        pageData.location,
+        internalLinkUrl,
+        clientData.clientName,
+        pageData.service,
+        internalLinkPlacement,
+        externalLinkPlacement,
+        pageData.omitSections
+      );
+      updatedShortcodeContent = result.data;
+      replacementLog = result.log;
+    } else if (isClassicEditor) {
+      // CLASSIC EDITOR: Use Classic Editor replacer
+      const classicContent = templatePage.content?.raw || '';
+      const result = replaceClassicEditorContent(
+        classicContent,
+        generatedContent,
+        pageData.location,
+        internalLinkUrl,
+        clientData.clientName,
+        pageData.service,
+        internalLinkPlacement,
+        externalLinkPlacement,
+        pageData.omitSections
+      );
+      updatedShortcodeContent = result.data;
       replacementLog = result.log;
     }
 
@@ -846,9 +902,9 @@ async function duplicateTemplateAndPublish(params: {
           widgetType: 'html',
         });
       }
-    } else if (isDivi && updatedDiviContent) {
-      // DIVI: Inject script at the beginning of content
-      updatedDiviContent = metaDescriptionScript + '\n\n' + updatedDiviContent;
+    } else if (updatedShortcodeContent) {
+      // DIVI/FUSION/WPBAKERY/CLASSIC: Inject script at the beginning of content
+      updatedShortcodeContent = metaDescriptionScript + '\n\n' + updatedShortcodeContent;
     }
 
     // Generate schema.org structured data
@@ -902,9 +958,19 @@ async function duplicateTemplateAndPublish(params: {
       pagePayload.meta._wp_page_template = templatePage.meta?._wp_page_template || 'elementor_canvas';
     } else if (isDivi) {
       // DIVI: Update content with modified shortcodes and inject schema
-      pagePayload.content = schemaScript + updatedDiviContent;
+      pagePayload.content = schemaScript + updatedShortcodeContent;
       pagePayload.meta._et_pb_use_builder = 'on';
       pagePayload.meta._et_pb_old_content = ''; // Clear old content
+    } else if (isFusion) {
+      // FUSION BUILDER: Shortcodes go in content field
+      pagePayload.content = schemaScript + updatedShortcodeContent;
+    } else if (isWPBakery) {
+      // WPBAKERY: Shortcodes go in content field
+      pagePayload.content = schemaScript + updatedShortcodeContent;
+      pagePayload.meta._wpb_vc_js_status = 'true';
+    } else if (isClassicEditor) {
+      // CLASSIC EDITOR: HTML goes in content field
+      pagePayload.content = schemaScript + updatedShortcodeContent;
     }
 
     // Add SEO plugin fields - ONLY meta title and meta description
