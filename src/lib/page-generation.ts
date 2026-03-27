@@ -121,12 +121,15 @@ export async function fetchElementorTemplate(
     const rawContent = typeof templatePage.content === 'object' ? templatePage.content?.raw || '' : '';
     const hasClassicEditorMarkers = rawContent.includes('<!-- SEO_GEN_START:') || rawContent.includes('<!-- SEO_GEN_END:');
 
-    if (!hasElementorData && !hasDiviData && !hasWPBakeryData && !hasClassicEditorMarkers) {
-      console.error('No Elementor, Divi, WPBakery, or Classic Editor data found in template page');
+    // Check for Fusion Builder (Avada) shortcodes in raw content
+    const hasFusionData = rawContent.includes('[fusion_builder_container') || rawContent.includes('[fusion_builder_row');
+
+    if (!hasElementorData && !hasDiviData && !hasWPBakeryData && !hasFusionData && !hasClassicEditorMarkers) {
+      console.error('No Elementor, Divi, WPBakery, Fusion, or Classic Editor data found in template page');
       return null;
     }
 
-    const detectedBuilder = hasElementorData ? 'Elementor' : hasWPBakeryData ? 'WPBakery' : hasClassicEditorMarkers ? 'Classic Editor' : 'Divi';
+    const detectedBuilder = hasElementorData ? 'Elementor' : hasWPBakeryData ? 'WPBakery' : hasFusionData ? 'Fusion Builder' : hasClassicEditorMarkers ? 'Classic Editor' : 'Divi';
     console.log(`[FETCH TEMPLATE] Detected builder: ${detectedBuilder}`);
 
     // Return full template page for publishing
