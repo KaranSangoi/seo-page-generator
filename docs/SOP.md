@@ -115,6 +115,19 @@
 - Optimized with primary keyword
 - **Must be unique** across pages for same company
 
+**Angle Selection (pick 3 of 6 per page):**
+
+Each page must use 3 out of these 6 angles for its bullet points:
+1. Detail Focus (deep cleaning, overlooked areas)
+2. Convenience Focus (scheduling, timelines)
+3. Health Focus (air quality, sanitation)
+4. Property Type Focus (apartments, condos, homes)
+5. Process Focus (methods, workflow, tools)
+6. Reliability Focus (consistency, professionalism)
+
+- **Do NOT repeat** the same 3-angle combination across multiple pages
+- Each bullet must include at least ONE of: local insight, process detail, real-world scenario
+
 ---
 
 ### Why Section
@@ -157,6 +170,18 @@
 - Optimized with primary keyword
 - **Must be unique** across pages for same company
 
+**Angle Selection (pick 3 of 6 per page):**
+
+Each page must use 3 out of these 6 angles for its bullet points:
+1. Environmental Factors (humidity, dust, climate)
+2. Lifestyle Needs (moving timelines, stress)
+3. Property Conditions (vacancy, turnover)
+4. Health & Safety (allergens, hygiene)
+5. Local Living Standards (HOA, expectations)
+6. Readiness & Convenience (move-in readiness)
+
+- **Do NOT repeat** the same 3-angle combination across multiple pages
+
 **Example (Location Service - Correct):**
 <b>Prevents Weather Damage:</b> Hiring a roof repair specialist in Austin protects your home from Texas heat, storms, and humidity that can cause leaks and structural damage.
 
@@ -193,47 +218,81 @@
   - ❌ Don't say: "We provide..."
   - Better for SEO visibility and brand recognition
 
-**SERP Optimization (Critical for Featured Snippets & PAA):**
+**FAQ Buckets (pick 3 different per page):**
 
-1. **Question Format:**
-   - Natural language (how people search)
-   - Start with: "How much", "How long", "Do you", "What", "When", "Can I"
-   - Include service + location in question
-   - Target common customer concerns: cost, time, availability, process
+Choose 3 different buckets per page. Each bucket has multiple SERP-style question variations — pick different ones across pages for maximum diversity:
 
-2. **Answer Format:**
-   - **First sentence:** Direct answer (1-2 sentences, 15-25 words)
-   - **Second part:** Supporting details with specifics (25-35 words)
-   - **Total length:** 50-75 words per answer
-   - Include location name 2-3 times naturally
-   - End with benefit or call-to-action element
+1. **Necessity** — Why the service is needed
+   - "Do I need [service] for my [property type] in [location]?"
+   - "When should I get [service] in [location]?"
+   - "How do I know if my [property type] needs [service] in [location]?"
+   - "What happens if I skip [service] in [location]?"
+   - "Is [service] necessary for older homes in [location]?"
 
-3. **Topic Coverage (Choose 3 from these common patterns):**
-   - **Cost/Pricing:** "How much does [service] cost in [location]?"
-   - **Timeframe:** "How long does [service] take in [location]?"
-   - **Availability:** "Do you offer emergency/24-7 [service] in [location]?"
-   - **Process:** "What does the [service] process involve in [location]?"
-   - **Coverage Area:** "Do you serve [location] and surrounding areas?"
-   - **Materials/Methods:** "What materials/methods do you use for [service]?"
+2. **Timing** — Duration, scheduling, urgency
+   - "How long does [service] take in [location]?"
+   - "What is the best time of year for [service] in [location]?"
+   - "How often should I schedule [service] in [location]?"
+   - "Can I get same-day [service] in [location]?"
+   - "How far in advance should I book [service] in [location]?"
+
+3. **Scope** — What's included, process details
+   - "What does [service] include in [location]?"
+   - "What is the [service] process like in [location]?"
+   - "What areas of my property does [service] cover in [location]?"
+   - "What materials or methods are used for [service] in [location]?"
+   - "Does [service] in [location] include cleanup and inspection?"
+
+4. **Property Type** — Specific to building/property types
+   - "Does [service] work for apartments and condos in [location]?"
+   - "Is [service] available for commercial properties in [location]?"
+   - "What [service] options are there for rental properties in [location]?"
+   - "Can [service] be done on multi-story buildings in [location]?"
+   - "How is [service] different for new construction vs older homes in [location]?"
+
+5. **Problem-Based** — Specific issues and solutions
+   - "What problems can [service] fix in [location]?"
+   - "How does [service] prevent damage to homes in [location]?"
+   - "What are signs I need emergency [service] in [location]?"
+   - "Can [service] fix [common problem] in [location]?"
+   - "What causes [common issue] that requires [service] in [location]?"
+
+6. **Expectations** — Cost, results, what to expect
+   - "How much does [service] cost in [location]?"
+   - "What results should I expect from [service] in [location]?"
+   - "How do I prepare my property for [service] in [location]?"
+   - "What should I look for when hiring for [service] in [location]?"
+   - "Are there warranties or guarantees for [service] in [location]?"
+
+**MANDATORY:** At least 2 of the 3 FAQs must include a **property type** or **local scenario**.
+
+**Question Format:**
+- Natural language (how people actually search)
+- Include service + location in question (without adjective from primary keyword)
+- Target real customer concerns — not promotional
+
+**Answer Format:**
+- **First sentence:** Direct answer (1-2 sentences, 15-25 words)
+- **Second part:** Supporting details with specifics (25-35 words)
+- **Total length:** 50-75 words per answer
+- Use keyword variations — do NOT repeat full keyword every time
+- Vary sentence structure across answers
+- End with benefit or call-to-action element
 
 **Examples (Commercial Glass Repair in Seattle, WA):**
 
-**Q1:** "How much does commercial glass repair cost in Seattle?"
-**A1:** "Commercial glass repair in Seattle typically costs between $200-$800, depending on the size and type of damage. [Company Name] provides free quotes and same-day service for most repairs, offering competitive pricing with high-quality materials to ensure glass is restored to perfect condition, minimizing business disruption."
+**Q1 (Expectations):** "How much does commercial glass repair cost in Seattle?"
+**A1:** "Commercial glass repair in Seattle typically ranges from $200-$800, depending on glass type and damage extent. Storefronts and large panels cost more than small office partitions. [Company Name] provides free on-site assessments and transparent quotes, helping Seattle businesses budget accurately for glass restoration."
 
-**Q2:** "How long does commercial glass repair take in Seattle?"
-**A2:** "Most commercial glass repairs in Seattle are completed within 2-4 hours. For emergency situations, [Company Name] can often complete repairs the same day. The experienced technicians work efficiently while maintaining the highest quality standards, getting businesses back to normal quickly and safely."
+**Q2 (Property Type):** "Is glass repair available for high-rise offices in Seattle?"
+**A2:** "Yes, commercial glass repair in Seattle covers high-rise offices, ground-level storefronts, and multi-story buildings. Specialized equipment is used for elevated installations. [Company Name] serves commercial properties throughout Seattle with crews trained for all building types and access requirements."
 
-**Q3:** "Do you offer emergency glass repair services in Seattle?"
-**A3:** "Yes, [Company Name] provides 24/7 emergency commercial glass repair services throughout Seattle and surrounding areas. The rapid response team can be on-site within 1-2 hours for urgent situations. Broken glass poses security and safety risks, so [Company Name] prioritizes emergency calls to protect businesses and property."
+**Q3 (Problem-Based):** "What are signs I need emergency glass repair in Seattle?"
+**A3:** "Cracked storefronts, shattered entry doors, and broken office partitions all signal urgent glass repair needs in Seattle. Exposed openings create security and weather risks. [Company Name] offers rapid-response service across Seattle to secure damaged commercial glass and prevent further property damage."
 
 **Bad Example (Too promotional):**
 ❌ Q: "Why choose [Company Name] for glass repair?"
 ❌ A: "Because we have 20 years of experience and the best team!" (Not SERP-optimized)
-
-**Good Example (SERP-optimized):**
-✅ Q: "What types of commercial glass can be repaired in Seattle?"
-✅ A: "Most commercial glass types can be repaired in Seattle, including storefront windows, office partitions, entrance doors, and display glass. Small cracks, chips, and minor damage are typically repairable, while severely shattered glass requires replacement. [Company Name] assesses each situation and recommends the most cost-effective solution for specific business needs."
 
 **Note:** All examples use "[Company Name]" instead of "we/our" for better SEO visibility and brand recognition.
 
@@ -419,6 +478,27 @@ Row 41-50:  Responsive, Timely, Prompt, Efficient, Effective,
 **Technical Details:**
 
 See: `docs/ADJECTIVE_SYSTEM.md` for complete implementation details
+
+---
+
+## Keyword Usage Rule
+
+- Use exact primary keyword **5-7 times MAX** across the page
+- Do NOT force keyword in every section
+- Use natural variations throughout content
+
+---
+
+## No-Hallucination Rule
+
+**DO NOT include:**
+- Fake stats or numbers
+- Fake guarantees
+- Unverifiable claims
+
+**ONLY use:**
+- General service knowledge
+- Logical assumptions
 
 ---
 

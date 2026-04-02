@@ -18,33 +18,33 @@ interface Announcement {
 }
 
 // Current announcement - update this when you have new features to announce
-export const CURRENT_VERSION = 'v3.0';
+export const CURRENT_VERSION = 'v3.1';
 
 const CURRENT_ANNOUNCEMENT: Announcement = {
-  id: 'fusion-builder-support-v3.0',
-  version: 'v3.0',
-  title: 'Avada Fusion Builder Support',
-  description: 'Full support for Avada\'s Fusion Builder — the 5th page builder now compatible with SEO Page Generator.',
+  id: 'seo-sop-upgrade-v3.1',
+  version: 'v3.1',
+  title: 'Smarter SEO Content Generation',
+  description: 'Updated content SOP with structured angles, FAQ diversity buckets, and keyword optimization rules for higher-quality bulk pages.',
   features: [
     {
-      icon: '⚡',
-      title: 'Fusion Builder (Avada)',
-      description: 'Generate and publish SEO pages on WordPress sites using the Avada theme with Fusion Builder. Auto-detected from your template page.',
+      icon: '🎯',
+      title: 'Benefits & Why Section Angles',
+      description: 'Bullet points now follow a structured angle system — 6 angles per section, pick 3 per page. No repeated combos across pages for maximum content diversity.',
     },
     {
-      icon: '🔍',
-      title: 'Auto-Detection',
-      description: 'Fusion Builder templates are automatically detected when you test your WordPress connection — no manual setup needed.',
+      icon: '❓',
+      title: 'FAQ Diversity Buckets',
+      description: '6 thematic buckets (Necessity, Timing, Scope, Property Type, Problem-Based, Expectations) each with multiple SERP-style question variations. At least 2 FAQs must include a property type or local scenario.',
     },
     {
-      icon: '🧩',
-      title: 'All Sections Supported',
-      description: 'Hero, Benefits, Why, FAQ (accordion/toggles), Map description, and Map iframe (base64-encoded) — all replaced seamlessly.',
+      icon: '🔑',
+      title: 'Keyword Usage Cap',
+      description: 'Primary keyword limited to 5-7 uses per page with natural variations throughout. Prevents keyword stuffing and improves content readability.',
     },
     {
-      icon: '🏗️',
-      title: '5 Builders Supported',
-      description: 'Elementor, Divi, WPBakery, Avada Fusion Builder, and Classic Editor. The widest page builder support available.',
+      icon: '🛡️',
+      title: 'No-Hallucination Rule',
+      description: 'AI is now explicitly instructed to avoid fake stats, guarantees, and unverifiable claims. Only general service knowledge and logical assumptions allowed.',
     },
   ],
 };

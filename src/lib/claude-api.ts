@@ -139,6 +139,26 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
    ❌ WRONG: "Custom Solutions: We provide..."
    ❌ WRONG: "**Custom Solutions:** We provide..."
    ✅ CORRECT: "<b>Custom Solutions:</b> We provide..."
+
+   **BENEFITS BULLET ANGLES (pick 3 of 6 per page):**
+   Each page must use 3 out of these 6 angles for benefits bullets:
+   - Detail Focus (deep cleaning, overlooked areas)
+   - Convenience Focus (scheduling, timelines)
+   - Health Focus (air quality, sanitation)
+   - Property Type Focus (apartments, condos, homes)
+   - Process Focus (methods, workflow, tools)
+   - Reliability Focus (consistency, professionalism)
+   Do NOT repeat the same combination across pages. Each bullet must include at least ONE: local insight, process detail, or real-world scenario.
+
+   **WHY SECTION BULLET ANGLES (pick 3 of 6 per page):**
+   Each page must use 3 out of these 6 angles for why bullets:
+   - Environmental Factors (humidity, dust, climate)
+   - Lifestyle Needs (moving timelines, stress)
+   - Property Conditions (vacancy, turnover)
+   - Health & Safety (allergens, hygiene)
+   - Local Living Standards (HOA, expectations)
+   - Readiness & Convenience (move-in readiness)
+   Do NOT repeat the same combination across pages.
 4. **Map Description:** Must be 50-60 words (STRICT - count your words!)
 5. **ADJECTIVE SELECTION - CRITICAL:**
    - You MUST select ONE appropriate adjective for this service that:
@@ -163,6 +183,15 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
 8. **FAQs:** Generate SEO-relevant questions that real customers would actually search on Google.
    - **CRITICAL: Each FAQ must be UNIQUE across all pages in this batch - be creative and diverse**
    - **DO NOT use promotional questions** (avoid "why choose us", "what makes you special", etc.)
+   - **FAQ BUCKETS (pick 3 different per page):**
+     1. Necessity — why the service is needed (e.g., "Do I need...", "When should I get...", "What happens if I skip...")
+     2. Timing — duration, scheduling, urgency (e.g., "How long does...", "Best time of year for...", "How often should...")
+     3. Scope — what's included, process (e.g., "What does... include", "What materials are used for...", "What areas does... cover")
+     4. Property Type — specific to building/property types (e.g., "Does... work for apartments", "Is... available for commercial", "How is... different for new vs older homes")
+     5. Problem-Based — issues and solutions (e.g., "What problems can... fix", "What are signs I need emergency...", "How does... prevent damage")
+     6. Expectations — cost, results, preparation (e.g., "How much does... cost", "What results should I expect", "What should I look for when hiring")
+   - **MANDATORY:** At least 2 of 3 FAQs must include a property type or local scenario
+   - **VARIETY:** Each bucket has many possible question styles — pick DIFFERENT ones across pages, never repeat the same pattern
    - **FAQ Questions:**
      - Use the service WITHOUT the adjective from the primary keyword
      - Example: If primary keyword is "Professional Plumber in Carlsbad, CA", use "plumber in Carlsbad, CA" in questions
@@ -174,8 +203,12 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
      - **Latter half (20-35 words):** Naturally mention ${companyName} and how they handle this. Make it organic, not forced.
      - Total: 50-75 words
      - Use company name instead of "we/our/us"
+     - Use keyword variations — do NOT repeat full keyword every time
+     - Vary sentence structure across answers
 9. **Tone:** Professional, helpful, and authoritative
 10. **Quality:** High-quality, unique content that provides value to readers
+11. **KEYWORD USAGE CAP:** Use the exact primary keyword 5-7 times MAX across the entire page. Do NOT force keyword in every section. Use natural variations throughout content.
+12. **NO-HALLUCINATION RULE:** Do NOT include fake stats, fake guarantees, or unverifiable claims. ONLY use general service knowledge and logical assumptions.
 
 **CRITICAL HEADING FORMATS:**
 - **H1:** Use the PRIMARY KEYWORD exactly as provided. DO NOT add company name to H1.
@@ -360,11 +393,23 @@ Generate completely DIFFERENT FAQ questions - NOT similar to the ones above. Be 
     : ""
 }
 **FAQ REQUIREMENTS:**
+- Pick 3 DIFFERENT buckets from: Necessity, Timing, Scope, Property Type, Problem-Based, Expectations
+- MANDATORY: At least 2 of 3 FAQs must include a property type or local scenario
 - Every question must include the phrase: "${service} in ${location}" (service WITHOUT adjective)
-- If previouslyUsedFAQs are shown above, ask about different topics
+- Use DIFFERENT question styles within each bucket across pages — never repeat the same pattern
+- If previouslyUsedFAQs are shown above, ask about different topics AND use different buckets
 - Generate SEO-relevant questions that real customers would search
 - NO company name in questions
 - Answers: First half (30-40 words) = general/educational, Latter half (20-35 words) = mention ${companyName}
+- Use keyword variations in answers — do NOT repeat full keyword every time
+- Vary sentence structure across answers
+**KEYWORD USAGE:** Use the exact primary keyword 5-7 times MAX. Do NOT force it in every section. Use natural variations.
+**NO-HALLUCINATION:** No fake stats, guarantees, or unverifiable claims. Only general service knowledge and logical assumptions.
+${includeBenefits ? `**BENEFITS ANGLES:** Pick 3 of these 6 angles for your benefits bullets (do NOT reuse the same combo as other pages):
+Detail Focus, Convenience Focus, Health Focus, Property Type Focus, Process Focus, Reliability Focus
+Each bullet must include at least ONE: local insight, process detail, or real-world scenario.` : ""}
+${includeWhy ? `**WHY SECTION ANGLES:** Pick 3 of these 6 angles for your why bullets (do NOT reuse the same combo as other pages):
+Environmental Factors, Lifestyle Needs, Property Conditions, Health & Safety, Local Living Standards, Readiness & Convenience` : ""}
 **Sections to Include:**
 - Meta Title & Description
 - H1 (your selected primary keyword)
