@@ -131,7 +131,29 @@ export async function testConnectionAction(formData: FormData): Promise<{ succes
       };
     }
 
-    const userData = await response.json();
+    // Verify response is JSON before parsing
+    const contentType = response.headers.get('content-type') || '';
+    const responseText = await response.text();
+
+    if (!contentType.includes('application/json') && responseText.trimStart().startsWith('<')) {
+      console.log('Response is HTML, not JSON. Content-Type:', contentType);
+      console.log('Response preview:', responseText.substring(0, 200));
+      return {
+        success: false,
+        message: `❌ WordPress REST API returned HTML instead of JSON\n\nThe site responded but returned an HTML page instead of API data. This usually means something is intercepting the REST API request.\n\n✅ Steps to fix:\n1. Check if a security plugin (Wordfence, Sucuri, iThemes) is blocking REST API requests\n2. Check if the site has a WAF or firewall that requires browser verification\n3. Try accessing ${baseUrl}/wp-json/wp/v2/users/me in your browser while logged in\n4. If you see a login page, the REST API may be behind authentication walls\n5. Disable any "Disable REST API" plugins temporarily\n\n⚠️ If the site works but this test fails, use "Skip connection test" below.`,
+      };
+    }
+
+    let userData;
+    try {
+      userData = JSON.parse(responseText);
+    } catch {
+      return {
+        success: false,
+        message: `❌ Invalid response from WordPress\n\nThe site returned an unexpected response that isn't valid JSON.\n\n✅ Steps to fix:\n1. Try accessing ${baseUrl}/wp-json/wp/v2 in your browser\n2. Check if WordPress REST API is enabled\n3. Check for security plugins blocking API access\n\n⚠️ If the site works but this test fails, use "Skip connection test" below.`,
+      };
+    }
+
     console.log('Connection successful! User:', userData.name);
 
     return {
