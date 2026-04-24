@@ -17,6 +17,10 @@ import { randomBytes } from 'crypto';
 // Force dynamic rendering (uses cookies for authentication)
 export const dynamic = 'force-dynamic';
 
+// Regenerate: full content generation (OpenAI) + WordPress publish.
+// Roughly equivalent to one preview page + one publish, so ~60-90s worst case.
+export const maxDuration = 180;
+
 // Helper function to generate slug
 function generateSlug(pageType: string, service: string, location: string): string {
   const isBroadStroke = pageType === 'Broad Stroke' || pageType === 'Nested Broad Stroke';

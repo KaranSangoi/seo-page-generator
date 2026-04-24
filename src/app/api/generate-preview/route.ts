@@ -25,21 +25,30 @@ import { getAdjectiveForRow } from '@/lib/adjectives';
 // Force dynamic rendering (uses cookies for authentication)
 export const dynamic = 'force-dynamic';
 
+// Serverless timeout: 5 pages × ~15-30s each = up to 150s; allow headroom.
+// Pro plan allows up to 300s. Without this the function is killed at 15s default.
+export const maxDuration = 300;
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  let user: Awaited<ReturnType<typeof getCurrentUser>> = null;
+  let clientId: string | undefined;
 
   try {
-    const user = await getCurrentUser();
+    user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { clientId, pages, csvFilename, model } = body;
+    const { pages, csvFilename, model } = body;
+    clientId = body.clientId;
 
     if (!clientId || !pages || !Array.isArray(pages)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
+
+    console.log(`[PREVIEW] 🚀 START user=${user.email} clientId=${clientId} pages=${pages.length} model=${model}`);
 
     // Fetch client
     const client = await prisma.client.findFirst({
@@ -76,9 +85,11 @@ export async function POST(request: NextRequest) {
 
     for (let index = 0; index < pages.length; index++) {
       const page = pages[index];
+      const pageStartTime = Date.now();
 
       try {
-        console.log(`[PREVIEW] Generating page ${index + 1}/${pages.length}: ${page.service} in ${page.location}`);
+        const elapsedSoFar = Math.floor((Date.now() - startTime) / 1000);
+        console.log(`[PREVIEW] ▶️ Page ${index + 1}/${pages.length} start @ ${elapsedSoFar}s elapsed — ${page.service} in ${page.location}`);
 
         // Calculate link placements (for accurate preview)
         const omitMap = (page.omitSections || []).includes('Map');
@@ -232,10 +243,41 @@ export async function POST(request: NextRequest) {
           console.log(`[PREVIEW] Stored ${newFAQs.length} FAQs from page ${index + 1}. Total tracked: ${previouslyUsedFAQs.length}`);
         }
 
-        console.log(`[PREVIEW] ✅ Page ${index + 1}/${pages.length} generated successfully`);
+        const pageDuration = Math.floor((Date.now() - pageStartTime) / 1000);
+        console.log(`[PREVIEW] ✅ Page ${index + 1}/${pages.length} generated in ${pageDuration}s`);
 
       } catch (error) {
-        console.error(`[PREVIEW] ❌ Error generating page ${index + 1}:`, error);
+        const pageDuration = Math.floor((Date.now() - pageStartTime) / 1000);
+        const errMsg = error instanceof Error ? error.message : 'Failed to generate content';
+        console.error(`[PREVIEW] ❌ Page ${index + 1}/${pages.length} failed after ${pageDuration}s: ${errMsg}`);
+        console.error(error);
+
+        // Log to database for visibility in admin error logs
+        try {
+          await prisma.errorLog.create({
+            data: {
+              userId: user.id,
+              clientId: client.id,
+              errorType: 'preview_generation',
+              errorMessage: errMsg,
+              stackTrace: error instanceof Error ? error.stack : null,
+              context: JSON.stringify({
+                batchId: batch.id,
+                rowNumber: page.rowNumber,
+                pageType: page.pageType,
+                service: page.service,
+                location: page.location,
+                pageIndex: index + 1,
+                totalPages: pages.length,
+                pageDurationSec: pageDuration,
+                totalElapsedSec: Math.floor((Date.now() - startTime) / 1000),
+              }),
+            },
+          });
+        } catch (logErr) {
+          console.error('[PREVIEW] Failed to write error log:', logErr);
+        }
+
         const failedPage: {
           pageId: string;
           pageName: string;
@@ -246,6 +288,7 @@ export async function POST(request: NextRequest) {
           rawData: any;
           status: string;
           error: string;
+          errorPhase: string;
           dbId?: string;
         } = {
           pageId: `preview_${page.rowNumber}`,
@@ -256,7 +299,8 @@ export async function POST(request: NextRequest) {
           content: null,
           rawData: page,
           status: 'failed',
-          error: error instanceof Error ? error.message : 'Failed to generate content',
+          error: errMsg,
+          errorPhase: 'generation', // Distinguishes from publish failures in the UI
         };
         generatedPages.push(failedPage);
 
@@ -286,7 +330,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`[PREVIEW] ✅ All ${pages.length} pages generated!`);
+    const totalSec = Math.floor((Date.now() - startTime) / 1000);
+    const okCount = generatedPages.filter(p => p.status === 'ready').length;
+    const failCount = generatedPages.filter(p => p.status === 'failed').length;
+    console.log(`[PREVIEW] 🏁 DONE in ${totalSec}s — ${okCount} ready, ${failCount} failed (budget: ${maxDuration}s)`);
 
     // Pages are already saved to database as they completed (progressive saves)
     // generatedPages array now has dbId for each page
@@ -314,11 +361,37 @@ export async function POST(request: NextRequest) {
       message: 'Content generated successfully. Review and publish when ready.',
     });
   } catch (error) {
-    console.error('Preview generation error:', error);
+    const totalSec = Math.floor((Date.now() - startTime) / 1000);
+    const errMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`[PREVIEW] 💥 Top-level failure after ${totalSec}s: ${errMsg}`);
+    console.error(error);
+
+    // Persist top-level failure so it's visible in admin error logs
+    if (user) {
+      try {
+        await prisma.errorLog.create({
+          data: {
+            userId: user.id,
+            clientId: clientId ?? null,
+            errorType: 'preview_generation_fatal',
+            errorMessage: errMsg,
+            stackTrace: error instanceof Error ? error.stack : null,
+            context: JSON.stringify({
+              totalElapsedSec: totalSec,
+              budgetSec: maxDuration,
+              endpoint: '/api/generate-preview',
+            }),
+          },
+        });
+      } catch (logErr) {
+        console.error('[PREVIEW] Failed to write fatal error log:', logErr);
+      }
+    }
+
     return NextResponse.json(
       {
         error: 'Failed to generate preview',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: errMsg,
       },
       { status: 500 }
     );

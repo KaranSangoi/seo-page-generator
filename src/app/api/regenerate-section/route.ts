@@ -11,6 +11,9 @@ import { regenerateField } from '@/lib/claude-api';
 // Force dynamic rendering (uses cookies for authentication)
 export const dynamic = 'force-dynamic';
 
+// One OpenAI call for a single section — usually <30s but add headroom.
+export const maxDuration = 90;
+
 /**
  * Calculate similarity between two strings using Jaccard similarity
  * Returns a value between 0 (completely different) and 1 (identical)

@@ -10,6 +10,10 @@ import { prisma } from '@/lib/prisma';
 // Force dynamic rendering (uses cookies for authentication)
 export const dynamic = 'force-dynamic';
 
+// Sample page fetches the template + publishes a single page via WP REST API.
+// WP round-trips can exceed the 15s default on slow hosts.
+export const maxDuration = 120;
+
 // Sample content for test page
 const SAMPLE_CONTENT = {
   h1: 'Professional Service Provider in Your Location',

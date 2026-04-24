@@ -568,7 +568,18 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           }),
         }),
       });
-      if (!response.ok) throw new Error('Failed to generate preview');
+      if (!response.ok) {
+        // Try to surface the server-side error details instead of a generic string
+        let serverMsg = `HTTP ${response.status}`;
+        try {
+          const errBody = await response.json();
+          serverMsg = errBody.details || errBody.error || serverMsg;
+        } catch {
+          // Response body wasn't JSON (timeout, empty, HTML error page) — fall back to status text
+          serverMsg = `HTTP ${response.status} ${response.statusText || ''}`.trim();
+        }
+        throw new Error(serverMsg);
+      }
       const data = await response.json();
       if (data.success) {
         // Store batch ID for FAQ uniqueness checking during regeneration
@@ -578,11 +589,19 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
       }
     } catch (error) {
       console.error('Preview generation error:', error);
+      const rawMsg = error instanceof Error ? error.message : 'Failed to generate preview';
+      // Browser 'Failed to fetch' = request never completed (network error or serverless timeout).
+      // Rephrase so the user understands what to try next.
+      const isLikelyTimeout = /failed to fetch|network|timeout|aborted/i.test(rawMsg);
+      const friendlyMsg = isLikelyTimeout
+        ? `${rawMsg} — the request timed out before the server responded. Try a smaller batch (1-3 pages) or use "Generate Directly" mode.`
+        : rawMsg;
       // Update all pages to failed status
       setContentPreviewPages(prev => prev.map(p => ({
         ...p,
         status: 'failed',
-        error: error instanceof Error ? error.message : 'Failed to generate preview'
+        error: friendlyMsg,
+        errorPhase: 'generation', // Preview step failed, not publish step
       })));
     } finally {
       setIsGeneratingPreview(false);
@@ -658,12 +677,17 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
     } catch (error) {
       console.error('Publish error:', error);
       const newRetryCount = currentRetryCount + 1;
-      const technicalError = error instanceof Error ? error.message : 'Failed to publish';
+      const rawError = error instanceof Error ? error.message : 'Failed to publish';
+      const isLikelyTimeout = /failed to fetch|network|timeout|aborted/i.test(rawError);
+      const friendlyError = isLikelyTimeout
+        ? `${rawError} — the WordPress request timed out. Try again; if it keeps failing, your WP host may be slow.`
+        : rawError;
       setContentPreviewPages(prev => prev.map(p =>
         p.pageId === pageId ? {
           ...p,
           status: 'failed',
-          error: technicalError,
+          error: friendlyError,
+          errorPhase: 'publish' as const,
           retryCount: newRetryCount,
         } : p
       ));

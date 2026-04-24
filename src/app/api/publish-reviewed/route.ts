@@ -13,21 +13,32 @@ import { publishToWordPress, type PublishParams } from '@/lib/page-generation';
 // Force dynamic rendering (uses cookies for authentication)
 export const dynamic = 'force-dynamic';
 
+// WordPress API round-trips (template fetch, page create, SEO meta update) can
+// take 20-60s on slow hosts. Default 15s Vercel timeout bites here.
+export const maxDuration = 120;
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  let user: Awaited<ReturnType<typeof getCurrentUser>> = null;
+  let dbId: string | undefined;
+  let clientId: string | undefined;
 
   try {
-    const user = await getCurrentUser();
+    user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { clientId, pageData, generatedContent, primaryKeyword, dbId, externalLinkUrl } = body;
+    const { pageData, generatedContent, primaryKeyword, externalLinkUrl } = body;
+    clientId = body.clientId;
+    dbId = body.dbId;
 
     if (!clientId || !pageData || !generatedContent) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
+
+    console.log(`[PUBLISH] 🚀 START user=${user.email} clientId=${clientId} pageRow=${pageData.rowNumber} service="${pageData.service}" location="${pageData.location}"`);
 
     // Fetch client
     const client = await prisma.client.findFirst({
@@ -90,6 +101,9 @@ export async function POST(request: NextRequest) {
     // Publish using shared function (same logic as v1)
     const pageUrl = await publishToWordPress(publishParams);
 
+    const publishSec = Math.floor((Date.now() - startTime) / 1000);
+    console.log(`[PUBLISH] ✅ Published in ${publishSec}s → ${pageUrl}`);
+
     // Update page record in database if dbId provided
     if (dbId) {
       try {
@@ -103,7 +117,7 @@ export async function POST(request: NextRequest) {
           },
         });
       } catch (dbError) {
-        console.error('Failed to update page record:', dbError);
+        console.error('[PUBLISH] Failed to update page record:', dbError);
         // Don't fail the whole operation if DB update fails
       }
     }
@@ -114,27 +128,54 @@ export async function POST(request: NextRequest) {
       message: 'Page published successfully',
     });
   } catch (error) {
-    console.error('Publish error:', error);
+    const totalSec = Math.floor((Date.now() - startTime) / 1000);
+    const errMsg = error instanceof Error ? error.message : 'Publishing failed';
+    console.error(`[PUBLISH] ❌ Failed after ${totalSec}s: ${errMsg}`);
+    console.error(error);
 
-    // Update page record with error if dbId provided
-    if ((error as any).dbId) {
+    // Update page record with error (use dbId from request, not error object)
+    if (dbId) {
       try {
         await prisma.generatedPage.update({
-          where: { id: (error as any).dbId },
+          where: { id: dbId },
           data: {
             status: 'failed',
-            errorMessage: error instanceof Error ? error.message : 'Publishing failed',
+            errorMessage: errMsg,
+            timeElapsed: Date.now() - startTime,
           },
         });
       } catch (dbError) {
-        console.error('Failed to update error in DB:', dbError);
+        console.error('[PUBLISH] Failed to update error in DB:', dbError);
+      }
+    }
+
+    // Log to errorLog for admin visibility
+    if (user) {
+      try {
+        await prisma.errorLog.create({
+          data: {
+            userId: user.id,
+            clientId: clientId ?? null,
+            errorType: 'publish',
+            errorMessage: errMsg,
+            stackTrace: error instanceof Error ? error.stack : null,
+            context: JSON.stringify({
+              dbId,
+              endpoint: '/api/publish-reviewed',
+              durationSec: totalSec,
+              budgetSec: maxDuration,
+            }),
+          },
+        });
+      } catch (logErr) {
+        console.error('[PUBLISH] Failed to write error log:', logErr);
       }
     }
 
     return NextResponse.json(
       {
         error: 'Failed to publish page',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: errMsg,
       },
       { status: 500 }
     );

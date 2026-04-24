@@ -42,6 +42,9 @@ interface PageContent {
   status: 'pending' | 'generating' | 'regenerating' | 'ready' | 'publishing' | 'published' | 'failed';
   publishedUrl?: string;
   error?: string;
+  // 'generation' = failed during AI content generation; 'publish' = failed while pushing to WordPress.
+  // Drives the error label and whether the Retry button is a publish retry or a regen retry.
+  errorPhase?: 'generation' | 'publish';
   retryCount?: number;
 }
 
@@ -1168,13 +1171,23 @@ export default function ContentPreviewModal({
                 {selectedPage.status === 'failed' && (
                   <div>
                     <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                      Failed to publish: {selectedPage.error || 'Unknown error'}
+                      {selectedPage.errorPhase === 'generation'
+                        ? 'Content generation failed'
+                        : 'Failed to publish'}
+                      : {selectedPage.error || 'Unknown error'}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {(selectedPage.retryCount || 0) < 5
+                      {selectedPage.errorPhase === 'generation'
+                        ? 'Close this modal and click "Review Pages & Generate Preview" again to retry.'
+                        : (selectedPage.retryCount || 0) < 5
                         ? `Attempt ${selectedPage.retryCount || 0}/5 — you can retry publishing`
                         : 'Max retries reached — please check WordPress connection and try again later'}
                     </p>
+                    {selectedPage.error && /failed to fetch|network|timeout/i.test(selectedPage.error) && (
+                      <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                        💡 Likely cause: the request timed out before the server responded. Try a smaller batch (1-3 pages) or switch to &quot;Generate Directly&quot; mode which runs in the background.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -1203,7 +1216,7 @@ export default function ContentPreviewModal({
                     Publishing...
                   </button>
                 )}
-                {selectedPage.status === 'failed' && (selectedPage.retryCount || 0) < 5 && (
+                {selectedPage.status === 'failed' && selectedPage.errorPhase !== 'generation' && (selectedPage.retryCount || 0) < 5 && (
                   <button
                     onClick={() => onPublishPage(selectedPage.pageId)}
                     className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium"
@@ -1211,7 +1224,7 @@ export default function ContentPreviewModal({
                     Retry Publish ({(selectedPage.retryCount || 0) + 1}/5)
                   </button>
                 )}
-                {selectedPage.status === 'failed' && (selectedPage.retryCount || 0) >= 5 && (
+                {selectedPage.status === 'failed' && selectedPage.errorPhase !== 'generation' && (selectedPage.retryCount || 0) >= 5 && (
                   <button
                     disabled
                     className="px-6 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed text-sm font-medium"

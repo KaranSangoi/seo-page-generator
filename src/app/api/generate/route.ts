@@ -12,6 +12,11 @@ import { randomBytes } from 'crypto';
 // Force dynamic rendering (uses cookies for authentication)
 export const dynamic = 'force-dynamic';
 
+// The POST handler queues and processes the batch in the same function context.
+// Without this, Vercel kills the function ~15s after the response is sent,
+// which silently terminates in-flight page generation for bigger batches.
+export const maxDuration = 300;
+
 export async function POST(request: NextRequest) {
   try {
     // Authenticate user
