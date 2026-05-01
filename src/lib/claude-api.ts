@@ -127,18 +127,18 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
    - Use appropriate connector based on keyword type (e.g., "is your trusted" for professions like "Contractor", "provides expert" for services like "roof repair")
    - CRITICAL: Ensure the sentence is grammatically correct - don't use "provides contractor" (wrong), use "is your trusted contractor" (correct)
 2. **Hero Description:** Must be 50-60 words (STRICT - count your words!)
-   Example (52 words): "Our professional dumpster rental services in Phoenix provide reliable waste management solutions for residential and commercial projects. With same-day delivery, flexible rental periods, and competitive pricing, we make waste disposal easy. Contact us today for a free quote and experience hassle-free service from Phoenix's most trusted waste management company."
-3. **Bullet Points:** Each must be ≥30 words (STRICT - count your words! Aim for 40-50 words)
+   Example (53 words): "${companyName} provides professional dumpster rental services across Phoenix, delivering reliable waste management for residential builds, kitchen remodels, and commercial cleanouts. Same-day delivery, flexible rental periods, and transparent pricing make ${companyName} a trusted choice for Phoenix property owners who need dependable disposal without scheduling delays."
+3. **Bullet Points:** Each must be ≥35 words (STRICT - count your words! Aim for 40-50 words)
    **CRITICAL FORMAT:** Each bullet MUST start with "<b>Topic Name:</b>" tag
    - Do NOT forget the opening "<b>" and closing "</b>" tags
    - Do NOT use other formats like bold markdown or asterisks
    - The format is: "<b>Topic:</b> Description text"
 
-   Example (50 words): "<b>Custom Glass Solutions for All Commercial Needs:</b> As a professional commercial glass installer in Sumner, WA, we provide storefront glass, office partitions, entrance doors, and display windows. Every installation is measured and fitted to exact specifications, ensuring seamless integration with your building's design and long-lasting durability across all commercial applications."
+   Example (51 words): "<b>Custom Glass Solutions for All Commercial Needs:</b> ${companyName} installs storefront glass, office partitions, entrance doors, and display windows for Sumner businesses. Every installation is measured and fitted to exact specifications by ${companyName} crews, ensuring seamless integration with the building's design and long-lasting durability across all commercial applications."
 
    ❌ WRONG: "Custom Solutions: We provide..."
    ❌ WRONG: "**Custom Solutions:** We provide..."
-   ✅ CORRECT: "<b>Custom Solutions:</b> We provide..."
+   ✅ CORRECT: "<b>Custom Solutions:</b> ${companyName} provides..."
 
    **BENEFITS BULLET ANGLES (pick 3 of 6 per page):**
    Each page must use 3 out of these 6 angles for benefits bullets:
@@ -199,16 +199,31 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
      - Phrase questions asking ABOUT the service (good grammar), not treating service as a subject performing actions
      - NO company name in questions
    - **FAQ Answers - NATURAL STRUCTURE (NOT PROMOTIONAL):**
-     - **First half (30-40 words):** Answer in a GENERAL, educational way. Provide useful information without mentioning the company.
-     - **Latter half (20-35 words):** Naturally mention ${companyName} and how they handle this. Make it organic, not forced.
-     - Total: 50-75 words
-     - Use company name instead of "we/our/us"
-     - Use keyword variations — do NOT repeat full keyword every time
-     - Vary sentence structure across answers
+     - **First half (20-30 words):** Direct, general, educational answer. Do NOT mention the company.
+     - **Latter half (20-30 words):** Naturally connect to ${companyName} using the full company name.
+     - Total: 40-60 words (STRICT — count carefully)
+     - Use full company name "${companyName}" — never "we", "our", or "us"
+     - Use keyword variations — do NOT repeat the exact full keyword. If the question already contains the exact keyword, the answer must use variations only.
 9. **Tone:** Professional, helpful, and authoritative
 10. **Quality:** High-quality, unique content that provides value to readers
-11. **KEYWORD USAGE CAP:** Use the exact primary keyword 5-7 times MAX across the entire page. Do NOT force keyword in every section. Use natural variations throughout content.
-12. **NO-HALLUCINATION RULE:** Do NOT include fake stats, fake guarantees, or unverifiable claims. ONLY use general service knowledge and logical assumptions.
+11. **KEYWORD USAGE CAP (STRICT):** Use the exact primary keyword 5-7 times MAX across the entire page. Do NOT force the keyword into bullets, FAQs, or every section. Use natural variations everywhere else. If a sentence feels forced because of the keyword, remove it.
+12. **ZERO KEYWORD STUFFING (STRICT):**
+   - At MOST 1 of the 3 Benefits bullets may contain the exact primary keyword. The other 2 must use variations (the service alone, the location alone, or a synonym phrase).
+   - At MOST 1 of the 3 Why bullets may contain the exact primary keyword.
+   - At MOST 1 of the 3 FAQ questions may contain the exact primary keyword.
+   - When a FAQ question already contains the exact keyword, that FAQ's answer MUST use variations only — do NOT repeat the exact keyword in the same Q+A pair.
+   - Across all 3 FAQ answers combined, the exact primary keyword may appear 0 or 1 time total — never more.
+13. **COMPANY NAME USAGE (MANDATORY, SITE-WIDE):**
+   - Always use the full company name "${companyName}".
+   - DO NOT use "we", "our", "us", "ours", "ourselves" anywhere on the page — not in hero, not in bullets, not in FAQ answers, not in map description.
+   - Every reference to the business must say "${companyName}" naturally.
+14. **BENEFITS BULLETS — COMPANY-FOCUSED (STRICT):**
+   - Every Benefits bullet must explicitly name "${companyName}" at least once.
+   - Focus on execution, reliability, process, and real delivery by ${companyName}.
+   - Each bullet must include at least ONE of: a local insight, a process detail, or a real-world scenario.
+15. **WHY BULLETS — SERVICE-FOCUSED (STRICT):**
+   - Why bullets are about why the service matters in the location. They must NOT mention "${companyName}" at all.
+16. **NO-HALLUCINATION RULE:** Do NOT include fake stats, fake guarantees, or unverifiable claims. ONLY use general service knowledge and logical assumptions.
 
 **CRITICAL HEADING FORMATS:**
 - **H1:** Use the PRIMARY KEYWORD exactly as provided. DO NOT add company name to H1.
@@ -259,11 +274,11 @@ Always return ONLY valid JSON with this exact structure (omit sections as instru
   "heroDescription": "string (50-60 words)",
   "benefitsHeading": "string",
   "benefitsSubheading": "string (3-6 words max, short punchy phrase)",
-  "benefitsBullets": ["<b>Topic:</b> text (30+ words)", "<b>Topic:</b> text (30+ words)", "<b>Topic:</b> text (30+ words)"],
+  "benefitsBullets": ["<b>Topic:</b> text (35+ words, names ${companyName})", "<b>Topic:</b> text (35+ words, names ${companyName})", "<b>Topic:</b> text (35+ words, names ${companyName})"],
   "benefitsImgAlt": "string (10-20 words, scenario-specific: describe a real situation where customer benefits from this service, e.g., 'Technician installing new tankless water heater in modern Carlsbad kitchen' NOT generic 'plumber in Carlsbad')",
   "whyHeading": "string",
   "whySubheading": "string (3-6 words max, short punchy phrase)",
-  "whyBullets": ["<b>Topic:</b> text (30+ words)", "<b>Topic:</b> text (30+ words)", "<b>Topic:</b> text (30+ words)"],
+  "whyBullets": ["<b>Topic:</b> text (35+ words, NO company mention)", "<b>Topic:</b> text (35+ words, NO company mention)", "<b>Topic:</b> text (35+ words, NO company mention)"],
   "whyImgAlt": "string (10-20 words, expertise-focused: show depth of skill/professionalism, e.g., 'Experienced plumber diagnosing complex pipe issue with specialized equipment' NOT generic 'why choose us')",
   "faqHeading": "string (FAQ section heading, include primary keyword, e.g., 'Frequently Asked Questions About [Service] in [Location]')",
   "faqDescription": "string (20-30 words, brief intro to FAQ section mentioning service and location)",
@@ -400,10 +415,13 @@ Generate completely DIFFERENT FAQ questions - NOT similar to the ones above. Be 
 - If previouslyUsedFAQs are shown above, ask about different topics AND use different buckets
 - Generate SEO-relevant questions that real customers would search
 - NO company name in questions
-- Answers: First half (30-40 words) = general/educational, Latter half (20-35 words) = mention ${companyName}
-- Use keyword variations in answers — do NOT repeat full keyword every time
+- Answers: 40-60 words total. First half (20-30 words) = direct/general answer (no company). Latter half (20-30 words) = naturally connect to ${companyName}.
+- Use keyword variations in answers — do NOT repeat full keyword. If the question already contains the exact keyword, the answer must use variations only.
 - Vary sentence structure across answers
-**KEYWORD USAGE:** Use the exact primary keyword 5-7 times MAX. Do NOT force it in every section. Use natural variations.
+- Never use "we", "our", or "us" anywhere in answers — always say "${companyName}"
+**KEYWORD USAGE (STRICT):** Use the exact primary keyword 5-7 times MAX across the page. Do NOT force it in every section. Use natural variations.
+**ZERO KEYWORD STUFFING (STRICT):** Max 1 of 3 Benefits bullets, max 1 of 3 Why bullets, and max 1 of 3 FAQ questions may contain the exact primary keyword. Across all 3 FAQ answers combined, the exact keyword appears at most 1 time total (and never in the same Q+A pair where the question already has it).
+**COMPANY NAME (STRICT):** Use "${companyName}" everywhere the business is referenced. Do NOT use "we", "our", or "us" anywhere on the page. Every Benefits bullet MUST name "${companyName}". Why bullets MUST NOT mention "${companyName}".
 **NO-HALLUCINATION:** No fake stats, guarantees, or unverifiable claims. Only general service knowledge and logical assumptions.
 ${includeBenefits ? `**BENEFITS ANGLES:** Pick 3 of these 6 angles for your benefits bullets (do NOT reuse the same combo as other pages):
 Detail Focus, Convenience Focus, Health Focus, Property Type Focus, Process Focus, Reliability Focus
@@ -694,9 +712,9 @@ export function validateContent(
   if (!omitSections.includes("Benefits")) {
     content.benefitsBullets.forEach((bullet, idx) => {
       const words = bullet.split(/\s+/).length;
-      if (words < 30) {
+      if (words < 35) {
         errors.push(
-          `Benefits bullet ${idx + 1} has ${words} words (minimum 30)`
+          `Benefits bullet ${idx + 1} has ${words} words (minimum 35)`
         );
       }
     });
@@ -706,8 +724,8 @@ export function validateContent(
   if (!omitSections.includes("Why")) {
     content.whyBullets.forEach((bullet, idx) => {
       const words = bullet.split(/\s+/).length;
-      if (words < 30) {
-        errors.push(`Why bullet ${idx + 1} has ${words} words (minimum 30)`);
+      if (words < 35) {
+        errors.push(`Why bullet ${idx + 1} has ${words} words (minimum 35)`);
       }
     });
   }
@@ -1056,11 +1074,11 @@ export async function validateAndFixContent(
         );
       }
 
-      // Check answer length (should be 50-75 words)
+      // Check answer length (should be 40-60 words per SOP v2)
       const answerWords = faq.answer.split(/\s+/).length;
-      if (answerWords < 40 || answerWords > 90) {
+      if (answerWords < 40 || answerWords > 60) {
         faqIssues.push(
-          `FAQ ${idx + 1} answer has ${answerWords} words (should be 50-75)`
+          `FAQ ${idx + 1} answer has ${answerWords} words (should be 40-60)`
         );
       }
 
@@ -1166,17 +1184,15 @@ export async function validateAndFixContent(
     });
   }
 
-  // 9. Bullet point lengths (target 30+ words, only retry if critically low)
+  // 9. Bullet point lengths (SOP v2: minimum 35 words, retry if below floor)
   const bulletIssues: string[] = [];
 
   if (!omitSections.includes("Benefits")) {
     fixed.benefitsBullets.forEach((bullet, idx) => {
       const words = bullet.split(/\s+/).length;
-      if (words < 26) {
+      if (words < 35) {
         bulletIssues.push(
-          `Benefits bullet ${
-            idx + 1
-          } has ${words} words (target 30+, minimum 26)`
+          `Benefits bullet ${idx + 1} has ${words} words (minimum 35)`
         );
       }
     });
@@ -1185,12 +1201,63 @@ export async function validateAndFixContent(
   if (!omitSections.includes("Why")) {
     fixed.whyBullets.forEach((bullet, idx) => {
       const words = bullet.split(/\s+/).length;
-      if (words < 26) {
+      if (words < 35) {
         bulletIssues.push(
-          `Why bullet ${idx + 1} has ${words} words (target 30+, minimum 26)`
+          `Why bullet ${idx + 1} has ${words} words (minimum 35)`
         );
       }
     });
+  }
+
+  // 10. SOP v2: Bullet stuffing cap, company-mention rules, pronoun bans
+  const pronounRegex = /\b(we|our|ours|ourselves|us)\b/i;
+  const lowerKeyword = primaryKeyword.toLowerCase();
+  const lowerCompany = companyName.toLowerCase();
+
+  if (!omitSections.includes("Benefits")) {
+    let benefitsKeywordHits = 0;
+    fixed.benefitsBullets.forEach((bullet, idx) => {
+      const lower = bullet.toLowerCase();
+      if (lower.includes(lowerKeyword)) benefitsKeywordHits++;
+      if (!lower.includes(lowerCompany)) {
+        bulletIssues.push(
+          `Benefits bullet ${idx + 1} must name "${companyName}" (Benefits = company-focused)`
+        );
+      }
+      if (pronounRegex.test(bullet)) {
+        bulletIssues.push(
+          `Benefits bullet ${idx + 1} uses "we/our/us" — replace with "${companyName}"`
+        );
+      }
+    });
+    if (benefitsKeywordHits > 1) {
+      bulletIssues.push(
+        `Stuffing cap: ${benefitsKeywordHits} of 3 Benefits bullets contain the exact primary keyword (max 1 allowed)`
+      );
+    }
+  }
+
+  if (!omitSections.includes("Why")) {
+    let whyKeywordHits = 0;
+    fixed.whyBullets.forEach((bullet, idx) => {
+      const lower = bullet.toLowerCase();
+      if (lower.includes(lowerKeyword)) whyKeywordHits++;
+      if (lower.includes(lowerCompany)) {
+        bulletIssues.push(
+          `Why bullet ${idx + 1} must NOT mention "${companyName}" (Why = service-focused)`
+        );
+      }
+      if (pronounRegex.test(bullet)) {
+        bulletIssues.push(
+          `Why bullet ${idx + 1} uses "we/our/us" — Why bullets should not reference the business at all`
+        );
+      }
+    });
+    if (whyKeywordHits > 1) {
+      bulletIssues.push(
+        `Stuffing cap: ${whyKeywordHits} of 3 Why bullets contain the exact primary keyword (max 1 allowed)`
+      );
+    }
   }
 
   if (bulletIssues.length > 0) {
@@ -1198,6 +1265,81 @@ export async function validateAndFixContent(
       field: "bullets",
       reason: bulletIssues.join("; "),
     });
+  }
+
+  // 11. SOP v2: FAQ stuffing cap + pronoun ban
+  if (!omitSections.includes("FAQ")) {
+    const faqStuffingIssues: string[] = [];
+    let faqQuestionKeywordHits = 0;
+    let faqAnswerKeywordHits = 0;
+
+    fixed.faqs.forEach((faq, idx) => {
+      const qLower = faq.question.toLowerCase();
+      const aLower = faq.answer.toLowerCase();
+      const qHasKeyword = qLower.includes(lowerKeyword);
+      const aHasKeyword = aLower.includes(lowerKeyword);
+
+      if (qHasKeyword) faqQuestionKeywordHits++;
+      if (aHasKeyword) faqAnswerKeywordHits++;
+
+      // Q+A overlap — if Q has exact keyword, A must use variations only
+      if (qHasKeyword && aHasKeyword) {
+        faqStuffingIssues.push(
+          `FAQ ${idx + 1}: question already contains the exact primary keyword — answer must use variations only`
+        );
+      }
+
+      if (pronounRegex.test(faq.answer)) {
+        faqStuffingIssues.push(
+          `FAQ ${idx + 1} answer uses "we/our/us" — replace with "${companyName}"`
+        );
+      }
+    });
+
+    if (faqQuestionKeywordHits > 1) {
+      faqStuffingIssues.push(
+        `Stuffing cap: ${faqQuestionKeywordHits} of 3 FAQ questions contain the exact primary keyword (max 1 allowed)`
+      );
+    }
+    if (faqAnswerKeywordHits > 1) {
+      faqStuffingIssues.push(
+        `Stuffing cap: exact primary keyword appears in ${faqAnswerKeywordHits} of 3 FAQ answers (max 1 across all answers)`
+      );
+    }
+
+    if (faqStuffingIssues.length > 0) {
+      // Merge into existing faq retry if one already queued, else add fresh
+      const existing = needsRetry.find((r) => r.field === "faqs");
+      if (existing) {
+        existing.reason = `${existing.reason}; ${faqStuffingIssues.join("; ")}`;
+      } else {
+        needsRetry.push({
+          field: "faqs",
+          reason: faqStuffingIssues.join("; "),
+        });
+      }
+    }
+  }
+
+  // 12. SOP v2: Pronoun ban in hero & map (those sections also reference the business)
+  if (pronounRegex.test(fixed.heroDescription)) {
+    needsRetry.push({
+      field: "heroDescription",
+      reason: `Hero description uses "we/our/us" — replace with "${companyName}"`,
+    });
+  }
+  if (
+    !omitSections.includes("Map") &&
+    fixed.mapDescription &&
+    pronounRegex.test(fixed.mapDescription)
+  ) {
+    const existing = needsRetry.find((r) => r.field === "mapDescription");
+    const reason = `Map description uses "we/our/us" — replace with "${companyName}"`;
+    if (existing) {
+      existing.reason = `${existing.reason}; ${reason}`;
+    } else {
+      needsRetry.push({ field: "mapDescription", reason });
+    }
   }
 
   return {
@@ -1298,9 +1440,12 @@ Please regenerate ONLY the 3 FAQs following these STRICT requirements:
 - NO company name in questions
 
 **FAQ ANSWER FORMAT (NATURAL, NOT PROMOTIONAL):**
-- **First half (30-40 words):** General, educational answer. Do NOT mention company.
-- **Latter half (20-35 words):** Naturally mention "${companyName}" and how they handle this.
-- Total: 50-75 words
+- **First half (20-30 words):** Direct, general, educational answer. Do NOT mention company.
+- **Latter half (20-30 words):** Naturally connect to "${companyName}" using full company name.
+- Total: 40-60 words (STRICT)
+- Never use "we", "our", or "us" — always say "${companyName}"
+- If a question already contains the exact primary keyword, the answer must use variations only — do NOT repeat the exact keyword in the same Q+A pair
+- Across all 3 FAQ answers combined, the exact primary keyword may appear at most 1 time total
 - Be natural and organic, not promotional${linkInstruction}
 
 Return ONLY a JSON object with this structure:
@@ -1392,19 +1537,23 @@ The primary keyword "${primaryKeyword}" is pre-determined. DO NOT modify it.
 - ❌ DO NOT change the adjective
 
 **Bullet Point Requirements:**
-1. Each bullet MUST be at least 30 words (aim for 40-50 words for safety)
+1. Each bullet MUST be at least 35 words (aim for 40-50 words for safety)
 2. Each bullet MUST start with "<b>Topic Name:</b>" format (HTML bold tags)
-3. Include the exact primary keyword "${primaryKeyword}" naturally in the text
-4. Provide specific, valuable information about the service
-5. Professional, informative tone
+3. STUFFING CAP: At MOST 1 of the 3 Benefits bullets and 1 of the 3 Why bullets may contain the exact primary keyword "${primaryKeyword}". Other bullets must use variations.
+4. Benefits bullets MUST name "${companyName}" in every bullet (company-focused).
+5. Why bullets MUST NOT mention "${companyName}" (service-focused).
+6. Never use "we", "our", or "us" — always say "${companyName}".
+7. Each bullet must include at least one: local insight, process detail, or real-world scenario.
+8. Provide specific, valuable information about the service.
+9. Professional, informative tone.
 
 **Example Format:**
-"<b>Custom Glass Solutions for All Commercial Needs:</b> As a professional commercial glass installer in Sumner, WA, we provide storefront glass, office partitions, entrance doors, and display windows. Every installation is measured and fitted to exact specifications, ensuring seamless integration with your building's design and long-lasting durability across all commercial applications."
+"<b>Custom Glass Solutions for All Commercial Needs:</b> ${companyName} installs storefront glass, office partitions, entrance doors, and display windows for Sumner businesses. Every project is measured and fitted to exact specifications by ${companyName} crews, ensuring seamless integration with the building's design and long-lasting durability across all commercial applications."
 
 Return ONLY a JSON object with this structure (regenerate ALL 6 bullets):
 {
-  "benefitsBullets": ["<b>Topic:</b> 30+ words here...", "<b>Topic:</b> 30+ words here...", "<b>Topic:</b> 30+ words here..."],
-  "whyBullets": ["<b>Topic:</b> 30+ words here...", "<b>Topic:</b> 30+ words here...", "<b>Topic:</b> 30+ words here..."]
+  "benefitsBullets": ["<b>Topic:</b> 35+ words, names ${companyName}", "<b>Topic:</b> 35+ words, names ${companyName}", "<b>Topic:</b> 35+ words, names ${companyName}"],
+  "whyBullets": ["<b>Topic:</b> 35+ words, NO company mention", "<b>Topic:</b> 35+ words, NO company mention", "<b>Topic:</b> 35+ words, NO company mention"]
 }`;
   }
   // Individual field regeneration
@@ -1529,14 +1678,16 @@ Return ONLY a JSON object:
 **Location:** ${location}
 
 **Requirements:**
-- MUST be at least 30 words (aim for 40-50 words)
+- MUST be at least 35 words (aim for 40-50 words)
 - MUST start with "<b>Topic Name:</b>" format (HTML bold tags)
-- Include the exact primary keyword naturally if relevant
-- Provide specific, valuable information
+- MUST name "${companyName}" naturally in this bullet (Benefits = company-focused)
+- Never use "we", "our", or "us" — always say "${companyName}"
+- Use a keyword variation; do NOT force the exact primary keyword (other Benefits bullets may already contain it)
+- Include at least one: local insight, process detail, or real-world scenario
 - Professional tone${linkInstruction}
 
 Return ONLY a JSON object with the single bullet:
-{"benefitsBullet": "<b>Topic:</b> 30+ words here..."}`;
+{"benefitsBullet": "<b>Topic:</b> 35+ words, names ${companyName}"}`;
   } else if (field.startsWith("whyBullet-")) {
     const bulletIndex = parseInt(field.split("-")[1]) - 1;
     const currentBullet = previousContent.whyBullets[bulletIndex] || "";
@@ -1558,14 +1709,16 @@ Return ONLY a JSON object with the single bullet:
 **Location:** ${location}
 
 **Requirements:**
-- MUST be at least 30 words (aim for 40-50 words)
+- MUST be at least 35 words (aim for 40-50 words)
 - MUST start with "<b>Topic Name:</b>" format (HTML bold tags)
-- Include the exact primary keyword naturally if relevant
-- Provide specific, valuable information about why this service matters
+- MUST NOT mention "${companyName}" (Why = service-focused, not company-focused)
+- Never use "we", "our", or "us"
+- Use a keyword variation; do NOT force the exact primary keyword
+- Include at least one: local environmental factor, property condition, or local living standard
 - Professional tone${linkInstruction}
 
 Return ONLY a JSON object with the single bullet:
-{"whyBullet": "<b>Topic:</b> 30+ words here..."}`;
+{"whyBullet": "<b>Topic:</b> 35+ words, no company mention"}`;
   } else if (field.startsWith("faq-")) {
     const faqIndex = parseInt(field.split("-")[1]) - 1;
     const currentFaq = previousContent.faqs[faqIndex] || {
@@ -1601,7 +1754,9 @@ A: ${currentFaq.answer}
 - NO company name in question
 - Question should be what real customers search on Google
 - Use good grammar - ask ABOUT the service
-- Answer: 50-75 words (First half = general/educational 30-40 words, Latter half = mention ${companyName} naturally 20-35 words)
+- Answer: 40-60 words total (First half 20-30 words = direct/general, Latter half 20-30 words = naturally connect to ${companyName})
+- Never use "we", "our", or "us" — always say "${companyName}"
+- Use keyword variations in the answer; do NOT repeat the exact primary keyword
 - Be creative and SEO-relevant, NOT promotional${linkInstruction}
 
 Return ONLY a JSON object with the single FAQ:
