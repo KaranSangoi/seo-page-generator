@@ -71,7 +71,7 @@ export function replaceDiviContent(
     console.log(`  After: ${after}...`);
   }
   console.log('[DIVI REPLACER] Found module IDs in template:', foundModuleIds);
-  console.log('[DIVI REPLACER] Expected module IDs:', ['hero-h1', 'hero-description', 'benefits', 'why', 'faq', 'map']);
+  console.log('[DIVI REPLACER] Expected module IDs:', ['hero-h1', 'hero-description', 'benefits', 'why', 'faq', 'map-description', 'map-iframe']);
 
   // Helper: Generate city website URL for external link
   const generateCityWebsiteUrl = (loc: string): string => {
@@ -297,14 +297,48 @@ ${bullets.map(bullet => `<li>${bullet}</li>`).join('\n')}
   }
 
   // ==================== MAP SECTION ====================
+  // Mirrors the Elementor map handling: two separate modules.
+  //   - module_id="map-description": et_pb_text holding the AI-written blurb
+  //   - module_id="map-iframe": et_pb_code holding the Google Maps embed
+  // The iframe is built from `location` here (the generation pipeline never
+  // produces a `mapIframe` field), exactly like the Elementor replacer does.
   if (!omit.includes('map')) {
-    // Map iframe replacement - Find ANY module with module_id="map"
-    const mapPattern = /(\[et_pb_\w+[^\]]*module_id="map"[^\]]*\])([\s\S]*?)(\[\/et_pb_\w+\])/g;
-    const mapMatches = content.match(mapPattern);
-    console.log('[DIVI REPLACER] Map pattern match:', !!mapMatches);
-    if (mapMatches && generatedContent.mapIframe) {
-      logUpdate('map', 'any_module', 'map iframe', 'replaced');
-      content = content.replace(mapPattern, `$1${generatedContent.mapIframe}$3`);
+    // --- Map description (et_pb_text module_id="map-description") ---
+    const mapDescPattern = /(\[et_pb_\w+[^\]]*module_id="map-description"[^\]]*\])([\s\S]*?)(\[\/et_pb_\w+\])/g;
+    const mapDescMatches = content.match(mapDescPattern);
+    console.log('[DIVI REPLACER] Map description pattern match:', !!mapDescMatches);
+    if (mapDescMatches && generatedContent.mapDescription) {
+      let descText = generatedContent.mapDescription;
+      if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
+        descText = insertInternalLink(descText, internalLinkUrl, companyName);
+        logUpdate('map-description', 'any_module', 'map description', 'replaced with internal link');
+      } else {
+        logUpdate('map-description', 'any_module', 'map description', 'replaced');
+      }
+      content = content.replace(mapDescPattern, `$1<p>${descText}</p>$3`);
+    }
+
+    // --- Map iframe (et_pb_code module_id="map-iframe") ---
+    const mapIframePattern = /(\[et_pb_\w+[^\]]*module_id="map-iframe"[^\]]*\])([\s\S]*?)(\[\/et_pb_\w+\])/g;
+    const mapIframeMatches = content.match(mapIframePattern);
+    console.log('[DIVI REPLACER] Map iframe pattern match:', !!mapIframeMatches);
+    if (mapIframeMatches) {
+      if (location) {
+        const encodedLocation = encodeURIComponent(location);
+        // Keyword-stuffed iframe content for SEO (matches Elementor behaviour)
+        const keywords = [
+          service ? `${service} in ${location}` : location,
+          service ? `${service} near me` : '',
+          service || '',
+        ].filter(Boolean).join(',');
+        const mapUrl = `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
+        const iframe = `<iframe src="${mapUrl}" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade">${keywords}</iframe>`;
+
+        logUpdate('map-iframe', 'et_pb_code', 'map iframe', `built from location: ${location}`);
+        content = content.replace(mapIframePattern, `$1${iframe}$3`);
+      } else {
+        logUpdate('map-iframe', 'et_pb_code', 'map iframe', 'FAILED - no location provided');
+      }
     }
   }
 
