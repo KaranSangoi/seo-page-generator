@@ -25,7 +25,8 @@ export class DiviStrategy implements PageBuilderStrategy {
     const { wordpressUrl, wpUsername, wpAppPassword } = credentials;
 
     let cleanUrl = wordpressUrl.trim().replace(/\/wp-json\/?.*$/, '').replace(/\/$/, '');
-    const url = `${cleanUrl}/wp-json/wp/v2/pages/${templateId}?context=edit`;
+    // _cb cache-buster: avoid stale cached template from WP edge/page cache.
+    const url = `${cleanUrl}/wp-json/wp/v2/pages/${templateId}?context=edit&_cb=${Date.now()}`;
 
     const auth = Buffer.from(`${wpUsername}:${wpAppPassword}`).toString('base64');
     const response = await fetch(url, {

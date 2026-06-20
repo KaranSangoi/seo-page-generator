@@ -37,7 +37,8 @@ export async function detectPageBuilder(
   cleanWpUrl = cleanWpUrl.replace(/\/wp-admin\/?.*$/, '');
   cleanWpUrl = cleanWpUrl.replace(/\/$/, '');
 
-  const url = `${cleanWpUrl}/wp-json/wp/v2/pages/${templatePageId}?context=edit`;
+  // _cb cache-buster: avoid stale cached template from WP edge/page cache.
+  const url = `${cleanWpUrl}/wp-json/wp/v2/pages/${templatePageId}?context=edit&_cb=${Date.now()}`;
 
   try {
     const response = await fetch(url, {

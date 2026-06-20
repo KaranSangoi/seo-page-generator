@@ -122,7 +122,8 @@ async function fetchElementorTemplate(wordpressUrl: string, templatePageId: stri
   if (!templatePageId) return null;
 
   try {
-    const templateUrl = `${wordpressUrl}/wp-json/wp/v2/pages/${templatePageId}?context=edit`;
+    // _cb cache-buster: avoid stale cached template from WP edge/page cache.
+    const templateUrl = `${wordpressUrl}/wp-json/wp/v2/pages/${templatePageId}?context=edit&_cb=${Date.now()}`;
     const response = await fetch(templateUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,
@@ -729,7 +730,8 @@ async function duplicateTemplateAndPublish(params: {
   }
 
   try {
-    const templateUrl = `${clientData.wordpressUrl}/wp-json/wp/v2/pages/${clientData.templatePageId}?context=edit`;
+    // _cb cache-buster: avoid stale cached template from WP edge/page cache.
+    const templateUrl = `${clientData.wordpressUrl}/wp-json/wp/v2/pages/${clientData.templatePageId}?context=edit&_cb=${Date.now()}`;
     const templateResponse = await fetch(templateUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,

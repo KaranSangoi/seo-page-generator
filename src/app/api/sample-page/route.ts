@@ -600,8 +600,10 @@ export async function POST(request: NextRequest) {
     const wpApiUrl = `${client.wordpressUrl}/wp-json/wp/v2/pages`;
     const credentials = Buffer.from(`${client.wpUsername}:${client.wpAppPassword}`).toString('base64');
 
-    // Fetch template page with edit context to get meta fields
-    const templateUrl = `${client.wordpressUrl}/wp-json/wp/v2/pages/${client.templatePageId}?context=edit`;
+    // Fetch template page with edit context to get meta fields.
+    // _cb cache-buster: WordPress edge/page caches REST GETs by URL and can
+    // serve a stale template (e.g. missing a recently-added map section).
+    const templateUrl = `${client.wordpressUrl}/wp-json/wp/v2/pages/${client.templatePageId}?context=edit&_cb=${Date.now()}`;
     const templateResponse = await fetch(templateUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,

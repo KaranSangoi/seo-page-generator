@@ -92,7 +92,8 @@ export async function fetchElementorTemplate(
   if (!templatePageId) return null;
 
   try {
-    const templateUrl = `${wordpressUrl}/wp-json/wp/v2/pages/${templatePageId}?context=edit`;
+    // _cb cache-buster: avoid stale cached template from WP edge/page cache.
+    const templateUrl = `${wordpressUrl}/wp-json/wp/v2/pages/${templatePageId}?context=edit&_cb=${Date.now()}`;
     const response = await fetch(templateUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,
