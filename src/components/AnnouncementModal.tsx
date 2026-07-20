@@ -18,33 +18,23 @@ interface Announcement {
 }
 
 // Current announcement - update this when you have new features to announce
-export const CURRENT_VERSION = 'v3.1';
+export const CURRENT_VERSION = 'v3.2';
 
 const CURRENT_ANNOUNCEMENT: Announcement = {
-  id: 'seo-sop-upgrade-v3.1',
-  version: 'v3.1',
-  title: 'Smarter SEO Content Generation',
-  description: 'Updated content SOP with structured angles, FAQ diversity buckets, and keyword optimization rules for higher-quality bulk pages.',
+  id: 'history-tab-improvements-v3.2',
+  version: 'v3.2',
+  title: 'Better Content Review in History',
+  description: 'The batch history view now shows every generated field and lets you copy any of them individually.',
   features: [
     {
-      icon: '🎯',
-      title: 'Benefits & Why Section Angles',
-      description: 'Bullet points now follow a structured angle system — 6 angles per section, pick 3 per page. No repeated combos across pages for maximum content diversity.',
+      icon: '🖼️',
+      title: 'Image Alt Text Now Visible',
+      description: 'Benefits and Why section image alt text now appears when viewing past batch content. The text was always saved — it just was not being displayed, so older batches will show it too.',
     },
     {
-      icon: '❓',
-      title: 'FAQ Diversity Buckets',
-      description: '6 thematic buckets (Necessity, Timing, Scope, Property Type, Problem-Based, Expectations) each with multiple SERP-style question variations. At least 2 FAQs must include a property type or local scenario.',
-    },
-    {
-      icon: '🔑',
-      title: 'Keyword Usage Cap',
-      description: 'Primary keyword limited to 5-7 uses per page with natural variations throughout. Prevents keyword stuffing and improves content readability.',
-    },
-    {
-      icon: '🛡️',
-      title: 'No-Hallucination Rule',
-      description: 'AI is now explicitly instructed to avoid fake stats, guarantees, and unverifiable claims. Only general service knowledge and logical assumptions allowed.',
+      icon: '📋',
+      title: 'Copy Any Field Individually',
+      description: 'Every field in the history view now has its own copy button — meta title, H1, hero, headings, each bullet, each FAQ, alt text, and map description. HTML tags are stripped automatically. This replaces the old "Copy All" button.',
     },
   ],
 };

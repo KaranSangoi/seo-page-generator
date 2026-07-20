@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.2.0] - 2026-07-20
+
+### Fixed
+
+#### Image Alt Text Missing from History View (`src/app/clients/[id]/BatchDetailModal.tsx`)
+- **Benefits and Why image alt text now render** when viewing generated content from a past batch
+- Root cause was display-only: `benefitsImgAlt` and `whyImgAlt` were correctly persisted to `generated_pages.generatedContent`, but `BatchDetailModal` never rendered them (`ContentPreviewModal` did). Existing batches show the alt text immediately — no regeneration or backfill needed
+- Section visibility conditions now also account for alt text, so a section renders even if it only has alt text
+
+### Added
+
+#### Per-Field Copy Buttons in History View (`src/app/clients/[id]/BatchDetailModal.tsx`)
+- New `CopyFieldButton` and `FieldRow` components provide an inline copy button on every content field, mirroring the affordance in `ContentPreviewModal`
+- Covered fields: meta title, meta description, H1, hero description, benefits heading/subheading/each bullet/alt text, why heading/subheading/each bullet/alt text, each FAQ (question + answer), map description
+- HTML tags are stripped on copy, since bullets are stored as HTML
+- Each button owns its own "copied" state, so feedback is independent per field
+
+### Removed
+
+#### "Copy All" Button in History View (`src/app/clients/[id]/BatchDetailModal.tsx`)
+- Removed the per-page **Copy All** button, along with the `copyAllContent` handler and `copiedAll` state — made redundant by per-field copy buttons
+
+#### Announcement (`src/components/AnnouncementModal.tsx`)
+- Bumped to `v3.2` with a new announcement id (`history-tab-improvements-v3.2`) so the modal re-shows to users who dismissed v3.1
+
+---
+
 ## [3.0.0] - 2026-03-26
 
 ### NEW: Avada Fusion Builder Support
