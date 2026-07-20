@@ -224,6 +224,17 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
 15. **WHY BULLETS — SERVICE-FOCUSED (STRICT):**
    - Why bullets are about why the service matters in the location. They must NOT mention "${companyName}" at all.
 16. **NO-HALLUCINATION RULE:** Do NOT include fake stats, fake guarantees, or unverifiable claims. ONLY use general service knowledge and logical assumptions.
+17. **IMAGE ALT TEXT — MUST INCLUDE THE SERVICE (STRICT):**
+   - Both "benefitsImgAlt" and "whyImgAlt" MUST include the page's SERVICE term (the service portion of the primary keyword, e.g. "roof repair", "metal roofing", "realtor").
+   - Include it NATURALLY, as part of describing what is happening in the image — this is a description of a photo, NOT a keyword slot.
+   - The service may appear as a natural variation or inflection (e.g. "roof repair" → "repairing a roof", "metal roofing" → "metal roof"). Grammar wins over exact-match.
+   - Do NOT stuff the full primary keyword verbatim, and do NOT append the location just to have it there. Alt text is for describing the image to screen readers and search engines.
+   - Still describe a concrete scenario with a subject and an action. Never output a bare keyword phrase.
+   ✅ Good (service = "roof repair"): "Roofer repairing damaged shingles above a leaking second-floor bedroom"
+   ✅ Good (service = "metal roofing"): "Crew installing standing seam metal roofing panels on a suburban home"
+   ✅ Good (service = "realtor"): "Realtor showing a young couple through a sunlit living room during an open house"
+   ❌ Bad (service missing): "Technician working on a house exterior in the afternoon"
+   ❌ Bad (keyword stuffed): "Reliable Metal Roofing in New Berlin, WI metal roofing contractor"
 
 **CRITICAL HEADING FORMATS:**
 - **H1:** Use the PRIMARY KEYWORD exactly as provided. DO NOT add company name to H1.
@@ -275,11 +286,11 @@ Always return ONLY valid JSON with this exact structure (omit sections as instru
   "benefitsHeading": "string",
   "benefitsSubheading": "string (3-6 words max, short punchy phrase)",
   "benefitsBullets": ["<b>Topic:</b> text (35+ words, names ${companyName})", "<b>Topic:</b> text (35+ words, names ${companyName})", "<b>Topic:</b> text (35+ words, names ${companyName})"],
-  "benefitsImgAlt": "string (10-20 words, scenario-specific: describe a real situation where customer benefits from this service, e.g., 'Technician installing new tankless water heater in modern Carlsbad kitchen' NOT generic 'plumber in Carlsbad')",
+  "benefitsImgAlt": "string (10-20 words, scenario-specific: describe a real situation where customer benefits from this service. MUST naturally include the page's SERVICE term (natural inflections allowed) — see SOP rule 17. e.g., 'Technician installing a new tankless water heater in a modern Carlsbad kitchen' NOT generic 'plumber in Carlsbad')",
   "whyHeading": "string",
   "whySubheading": "string (3-6 words max, short punchy phrase)",
   "whyBullets": ["<b>Topic:</b> text (35+ words, NO company mention)", "<b>Topic:</b> text (35+ words, NO company mention)", "<b>Topic:</b> text (35+ words, NO company mention)"],
-  "whyImgAlt": "string (10-20 words, expertise-focused: show depth of skill/professionalism, e.g., 'Experienced plumber diagnosing complex pipe issue with specialized equipment' NOT generic 'why choose us')",
+  "whyImgAlt": "string (10-20 words, expertise-focused: show depth of skill/professionalism. MUST naturally include the page's SERVICE term (natural inflections allowed) — see SOP rule 17. e.g., 'Experienced plumber diagnosing a complex pipe issue with specialized leak detection equipment' NOT generic 'why choose us')",
   "faqHeading": "string (FAQ section heading, include primary keyword, e.g., 'Frequently Asked Questions About [Service] in [Location]')",
   "faqDescription": "string (20-30 words, brief intro to FAQ section mentioning service and location)",
   "faqs": [{"question": "string", "answer": "string"}, {"question": "string", "answer": "string"}, {"question": "string", "answer": "string"}],
@@ -395,6 +406,10 @@ Once you select your adjective, your PRIMARY KEYWORD becomes: "[Adjective] ${ser
 4. Use your EXACT primary keyword multiple times throughout bullets, FAQs, and BOTH section headings
 5. When referencing in natural text, you may use "${service}" alone, but when stating the full keyword, use your primary keyword exactly
 6. Make headings unique and engaging - avoid repetitive formats across pages
+7. Image alt text ("benefitsImgAlt" and "whyImgAlt") MUST each mention "${service}" naturally while describing the photo:
+   - A natural inflection of "${service}" is fine if it reads better (grammar wins over exact match)
+   - Do NOT paste the full primary keyword and do NOT tack on "${location}" just to include it
+   - Keep it a real scenario with a subject and an action — not a keyword phrase
 ${linkInstructions}
 ${
   previouslyUsedFAQs && previouslyUsedFAQs.length > 0
@@ -1037,6 +1052,47 @@ export async function validateAndFixContent(
     }
     if (!hasKeyword) {
       warnings.push(`Why heading missing primary keyword: "${primaryKeyword}"`);
+    }
+  }
+
+  // 5b. CHECK: Image alt text mentions the service (SOP rule 17)
+  // Deliberately lenient: alt text is meant to read naturally, so an inflected
+  // form ("roof repair" -> "roofer repairing") must count as a match. We only
+  // warn when a service word is clearly absent, to avoid noisy false positives.
+  const altMentionsService = (alt: string): boolean => {
+    const stopWords = new Set(["in", "of", "and", "the", "a", "an", "for", "to"]);
+    const serviceWords = service
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length > 2 && !stopWords.has(w));
+
+    if (serviceWords.length === 0) return true;
+
+    const altWords = alt.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+
+    // A service word matches if some alt word shares a stem with it in either
+    // direction ("roof" matches "roofer"; "roofing" matches "roof").
+    return serviceWords.every((sw) =>
+      altWords.some((aw) => {
+        const shorter = aw.length <= sw.length ? aw : sw;
+        const longer = aw.length <= sw.length ? sw : aw;
+        return shorter.length >= 4 && longer.startsWith(shorter);
+      })
+    );
+  };
+
+  if (!omitSections.includes("Benefits") && fixed.benefitsImgAlt) {
+    if (!altMentionsService(fixed.benefitsImgAlt)) {
+      warnings.push(
+        `Benefits image alt text missing service "${service}": "${fixed.benefitsImgAlt}"`
+      );
+    }
+  }
+  if (!omitSections.includes("Why") && fixed.whyImgAlt) {
+    if (!altMentionsService(fixed.whyImgAlt)) {
+      warnings.push(
+        `Why image alt text missing service "${service}": "${fixed.whyImgAlt}"`
+      );
     }
   }
 

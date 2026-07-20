@@ -10,18 +10,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
-#### Image Alt Text Missing from History View (`src/app/clients/[id]/BatchDetailModal.tsx`)
+#### Image Alt Text Missing from History View (`src/app/clients/[id]/BatchContentModal.tsx`)
 - **Benefits and Why image alt text now render** when viewing generated content from a past batch
 - Root cause was display-only: `benefitsImgAlt` and `whyImgAlt` were correctly persisted to `generated_pages.generatedContent`, but `BatchDetailModal` never rendered them (`ContentPreviewModal` did). Existing batches show the alt text immediately — no regeneration or backfill needed
 - Section visibility conditions now also account for alt text, so a section renders even if it only has alt text
 
 ### Added
 
-#### Per-Field Copy Buttons in History View (`src/app/clients/[id]/BatchDetailModal.tsx`)
+#### Preview-Style History Content Viewer (`src/app/clients/[id]/BatchContentModal.tsx`)
+- **New read-only viewer** mirroring `ContentPreviewModal`'s layout: page sidebar, collapsible sections (Meta / Hero / Benefits / Why / FAQ / Map), header with primary keyword + AI-selected adjective + published URL, and Previous/Next navigation
+- Replaces the previous inline expanding table row in `BatchDetailModal`, which rendered content cramped inside a `colSpan={6}` cell
+- **Deliberately read-only** — no edit, regenerate, or publish actions. History records what was already shipped; regenerating from here would re-publish and overwrite the live WordPress page
+- Malformed `generatedContent` JSON degrades to a per-page error message rather than breaking the whole modal
+
+#### Per-Field Copy Buttons (`src/app/clients/[id]/BatchContentModal.tsx`)
 - New `CopyFieldButton` and `FieldRow` components provide an inline copy button on every content field, mirroring the affordance in `ContentPreviewModal`
 - Covered fields: meta title, meta description, H1, hero description, benefits heading/subheading/each bullet/alt text, why heading/subheading/each bullet/alt text, each FAQ (question + answer), map description
 - HTML tags are stripped on copy, since bullets are stored as HTML
 - Each button owns its own "copied" state, so feedback is independent per field
+
+#### Image Alt Text Must Include the Service (`src/lib/claude-api.ts`)
+- **New SOP rule 17** requires `benefitsImgAlt` and `whyImgAlt` to include the page's service term naturally while still describing a concrete scenario (subject + action)
+- Natural inflections count ("roof repair" → "roofer repairing", "metal roofing" → "metal roof") — grammar wins over exact match
+- Explicitly forbids pasting the full primary keyword or appending the location just to include it, to avoid turning alt text into a keyword slot
+- Reinforced in the per-page user prompt, where the actual `service` value is interpolated by name (the system prompt does not have `service` in scope)
+- Updated both JSON schema field descriptions to reference the rule
+- **New validation warning** when alt text omits the service. The check is deliberately lenient — it stem-matches in both directions and only warns when a service word is clearly absent, so natural phrasing does not trigger false positives
+- Affects newly generated pages only; existing published pages are unchanged
 
 ### Removed
 
