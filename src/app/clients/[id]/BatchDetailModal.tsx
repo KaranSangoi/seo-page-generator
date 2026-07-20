@@ -7,58 +7,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { getBatchDetailsAction } from './actions';
+import BatchContentModal from './BatchContentModal';
 
 interface BatchDetailModalProps {
   batchId: string;
   onClose: () => void;
-}
-
-/**
- * Inline copy-to-clipboard button for a single content field.
- * Owns its own "copied" state so each field gives independent feedback,
- * mirroring the per-field copy affordance in ContentPreviewModal.
- */
-function CopyFieldButton({ value, label }: { value: string; label: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      // Strip HTML tags for clean copy (bullets are stored as HTML)
-      await navigator.clipboard.writeText(value.replace(/<[^>]*>/g, ''));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
-
-  return (
-    <button
-      onClick={handleCopy}
-      title={copied ? 'Copied!' : `Copy ${label}`}
-      className="flex-shrink-0 p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
-    >
-      {copied ? (
-        <svg className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-        </svg>
-      ) : (
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-        </svg>
-      )}
-    </button>
-  );
-}
-
-/** A single content field: its rendered value plus an inline copy button. */
-function FieldRow({ label, copyValue, children }: { label: string; copyValue: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-2">
-      <div className="flex-1 min-w-0">{children}</div>
-      <CopyFieldButton value={copyValue} label={label} />
-    </div>
-  );
 }
 
 interface GeneratedPage {
@@ -444,163 +397,20 @@ export default function BatchDetailModal({ batchId, onClose }: BatchDetailModalP
                             <td className="px-4 py-3 text-sm">
                               {page.generatedContent ? (
                                 <button
-                                  onClick={() => setViewingContentPageId(viewingContentPageId === page.id ? null : page.id)}
-                                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
-                                    viewingContentPageId === page.id
-                                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
-                                      : 'text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20'
-                                  }`}
+                                  onClick={() => setViewingContentPageId(page.id)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg transition-colors text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20"
                                 >
                                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                   </svg>
-                                  {viewingContentPageId === page.id ? 'Hide' : 'View Content'}
+                                  View Content
                                 </button>
                               ) : (
                                 <span className="text-gray-400 text-xs">-</span>
                               )}
                             </td>
                           </tr>
-                          {viewingContentPageId === page.id && page.generatedContent && (
-                            <tr>
-                              <td colSpan={6} className="px-4 py-4 bg-gray-50 dark:bg-gray-700/30">
-                                {(() => {
-                                  try {
-                                    const content = JSON.parse(page.generatedContent);
-                                    return (
-                                      <div className="space-y-3">
-                                        <div className="flex items-center justify-between mb-2">
-                                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Generated Content — {page.pageName}</h4>
-                                        </div>
-
-                                        {/* Meta */}
-                                        {(content.metaTitle || content.metaDescription) && (
-                                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Meta</div>
-                                            {content.metaTitle && (
-                                              <FieldRow label="Meta Title" copyValue={content.metaTitle}>
-                                                <p className="text-sm text-gray-900 dark:text-white mb-1"><span className="text-gray-500 dark:text-gray-400">Title:</span> {content.metaTitle}</p>
-                                              </FieldRow>
-                                            )}
-                                            {content.metaDescription && (
-                                              <FieldRow label="Meta Description" copyValue={content.metaDescription}>
-                                                <p className="text-sm text-gray-900 dark:text-white"><span className="text-gray-500 dark:text-gray-400">Description:</span> {content.metaDescription}</p>
-                                              </FieldRow>
-                                            )}
-                                          </div>
-                                        )}
-
-                                        {/* Hero */}
-                                        {(content.h1 || content.heroDescription) && (
-                                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Hero</div>
-                                            {content.h1 && (
-                                              <FieldRow label="H1" copyValue={content.h1}>
-                                                <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">{content.h1}</p>
-                                              </FieldRow>
-                                            )}
-                                            {content.heroDescription && (
-                                              <FieldRow label="Hero Description" copyValue={content.heroDescription}>
-                                                <p className="text-sm text-gray-700 dark:text-gray-300">{content.heroDescription}</p>
-                                              </FieldRow>
-                                            )}
-                                          </div>
-                                        )}
-
-                                        {/* Benefits */}
-                                        {(content.benefitsHeading || content.benefitsBullets?.length || content.benefitsImgAlt) && (
-                                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Benefits</div>
-                                            {content.benefitsHeading && (
-                                              <FieldRow label="Benefits Heading" copyValue={content.benefitsHeading}>
-                                                <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">{content.benefitsHeading}</p>
-                                              </FieldRow>
-                                            )}
-                                            {content.benefitsSubheading && (
-                                              <FieldRow label="Benefits Subheading" copyValue={content.benefitsSubheading}>
-                                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{content.benefitsSubheading}</p>
-                                              </FieldRow>
-                                            )}
-                                            {content.benefitsBullets?.map((b: string, i: number) => (
-                                              <FieldRow key={i} label={`Benefit ${i + 1}`} copyValue={b}>
-                                                <p className="text-sm text-gray-700 dark:text-gray-300 ml-2 mb-1" dangerouslySetInnerHTML={{ __html: `${i + 1}. ${b}` }} />
-                                              </FieldRow>
-                                            ))}
-                                            {content.benefitsImgAlt && (
-                                              <div className="mt-2">
-                                                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Image Alt Text</div>
-                                                <FieldRow label="Benefits Image Alt Text" copyValue={content.benefitsImgAlt}>
-                                                  <p className="text-sm text-gray-900 dark:text-white bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800">{content.benefitsImgAlt}</p>
-                                                </FieldRow>
-                                              </div>
-                                            )}
-                                          </div>
-                                        )}
-
-                                        {/* Why */}
-                                        {(content.whyHeading || content.whyBullets?.length || content.whyImgAlt) && (
-                                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Why Choose Us</div>
-                                            {content.whyHeading && (
-                                              <FieldRow label="Why Heading" copyValue={content.whyHeading}>
-                                                <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">{content.whyHeading}</p>
-                                              </FieldRow>
-                                            )}
-                                            {content.whySubheading && (
-                                              <FieldRow label="Why Subheading" copyValue={content.whySubheading}>
-                                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{content.whySubheading}</p>
-                                              </FieldRow>
-                                            )}
-                                            {content.whyBullets?.map((b: string, i: number) => (
-                                              <FieldRow key={i} label={`Why ${i + 1}`} copyValue={b}>
-                                                <p className="text-sm text-gray-700 dark:text-gray-300 ml-2 mb-1" dangerouslySetInnerHTML={{ __html: `${i + 1}. ${b}` }} />
-                                              </FieldRow>
-                                            ))}
-                                            {content.whyImgAlt && (
-                                              <div className="mt-2">
-                                                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Image Alt Text</div>
-                                                <FieldRow label="Why Image Alt Text" copyValue={content.whyImgAlt}>
-                                                  <p className="text-sm text-gray-900 dark:text-white bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800">{content.whyImgAlt}</p>
-                                                </FieldRow>
-                                              </div>
-                                            )}
-                                          </div>
-                                        )}
-
-                                        {/* FAQs */}
-                                        {content.faqs?.length > 0 && (
-                                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">FAQs{content.faqHeading ? ` — ${content.faqHeading}` : ''}</div>
-                                            {content.faqs.map((faq: any, i: number) => (
-                                              <FieldRow key={i} label={`FAQ ${i + 1}`} copyValue={`Q: ${faq.question}\nA: ${faq.answer}`}>
-                                                <div className="mb-2 last:mb-0">
-                                                  <p className="text-sm font-medium text-gray-900 dark:text-white">Q{i + 1}: {faq.question}</p>
-                                                  <p className="text-sm text-gray-700 dark:text-gray-300 ml-4">{faq.answer}</p>
-                                                </div>
-                                              </FieldRow>
-                                            ))}
-                                          </div>
-                                        )}
-
-                                        {/* Map Description */}
-                                        {content.mapDescription && (
-                                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Map Description</div>
-                                            <FieldRow label="Map Description" copyValue={content.mapDescription}>
-                                              <p className="text-sm text-gray-700 dark:text-gray-300">{content.mapDescription}</p>
-                                            </FieldRow>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  } catch {
-                                    return <p className="text-sm text-red-500">Failed to parse content data</p>;
-                                  }
-                                })()}
-                              </td>
-                            </tr>
-                          )}
                           </React.Fragment>
                         ))}
                       </tbody>
@@ -652,6 +462,15 @@ export default function BatchDetailModal({ batchId, onClose }: BatchDetailModalP
           </button>
         </div>
       </div>
+
+      {/* Preview-style read-only content viewer */}
+      {viewingContentPageId && batch && (
+        <BatchContentModal
+          pages={batch.generatedPages.filter((p) => p.generatedContent)}
+          initialPageId={viewingContentPageId}
+          onClose={() => setViewingContentPageId(null)}
+        />
+      )}
     </div>
   );
 }
