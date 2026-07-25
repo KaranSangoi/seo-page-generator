@@ -24,8 +24,13 @@ const CURRENT_ANNOUNCEMENT: Announcement = {
   id: 'history-tab-improvements-v3.2',
   version: 'v3.2',
   title: 'Better Content Review in History',
-  description: 'The batch history view now shows every generated field and lets you copy any of them individually.',
+  description: 'Viewing content from a past batch now uses the same full-screen layout as the content preview — with every field visible and copyable.',
   features: [
+    {
+      icon: '🗂️',
+      title: 'Preview-Style History View',
+      description: 'Clicking "View Content" on a past batch now opens a full-screen viewer with a page sidebar, collapsible sections, and Previous/Next navigation — matching the content preview layout instead of the old cramped inline table row.',
+    },
     {
       icon: '🖼️',
       title: 'Image Alt Text Now Visible',
@@ -34,7 +39,17 @@ const CURRENT_ANNOUNCEMENT: Announcement = {
     {
       icon: '📋',
       title: 'Copy Any Field Individually',
-      description: 'Every field in the history view now has its own copy button — meta title, H1, hero, headings, each bullet, each FAQ, alt text, and map description. HTML tags are stripped automatically. This replaces the old "Copy All" button.',
+      description: 'Every field has its own copy button — meta title, H1, hero, headings, each bullet, each FAQ, alt text, and map description. HTML tags are stripped automatically. This replaces the old "Copy All" button.',
+    },
+    {
+      icon: '🔒',
+      title: 'History Stays Read-Only',
+      description: 'The history viewer intentionally has no edit, regenerate, or publish buttons — it is a record of what was already shipped, so it cannot overwrite your live WordPress pages.',
+    },
+    {
+      icon: '🏷️',
+      title: 'Alt Text Now Includes Service + Local Keyword',
+      description: 'Benefits and Why image alt text now weave in both the service and the page\'s location naturally. The Benefits alt carries the primary keyword as a natural "[Service] in [Location]" phrase (e.g. "HVAC Contractor in North Las Vegas - NV inspecting a rooftop cooling system"), and the location\'s state is auto-formatted with a hyphen instead of a comma. Applies to newly generated pages.',
     },
   ],
 };

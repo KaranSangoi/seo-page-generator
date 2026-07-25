@@ -224,17 +224,19 @@ function buildSystemPrompt(params: ContentGenerationParams): string {
 15. **WHY BULLETS — SERVICE-FOCUSED (STRICT):**
    - Why bullets are about why the service matters in the location. They must NOT mention "${companyName}" at all.
 16. **NO-HALLUCINATION RULE:** Do NOT include fake stats, fake guarantees, or unverifiable claims. ONLY use general service knowledge and logical assumptions.
-17. **IMAGE ALT TEXT — MUST INCLUDE THE SERVICE (STRICT):**
-   - Both "benefitsImgAlt" and "whyImgAlt" MUST include the page's SERVICE term (the service portion of the primary keyword, e.g. "roof repair", "metal roofing", "realtor").
-   - Include it NATURALLY, as part of describing what is happening in the image — this is a description of a photo, NOT a keyword slot.
-   - The service may appear as a natural variation or inflection (e.g. "roof repair" → "repairing a roof", "metal roofing" → "metal roof"). Grammar wins over exact-match.
-   - Do NOT stuff the full primary keyword verbatim, and do NOT append the location just to have it there. Alt text is for describing the image to screen readers and search engines.
-   - Still describe a concrete scenario with a subject and an action. Never output a bare keyword phrase.
-   ✅ Good (service = "roof repair"): "Roofer repairing damaged shingles above a leaking second-floor bedroom"
-   ✅ Good (service = "metal roofing"): "Crew installing standing seam metal roofing panels on a suburban home"
-   ✅ Good (service = "realtor"): "Realtor showing a young couple through a sunlit living room during an open house"
-   ❌ Bad (service missing): "Technician working on a house exterior in the afternoon"
-   ❌ Bad (keyword stuffed): "Reliable Metal Roofing in New Berlin, WI metal roofing contractor"
+17. **IMAGE ALT TEXT — MUST INCLUDE SERVICE + LOCATION (STRICT):**
+   - Both "benefitsImgAlt" and "whyImgAlt" MUST include BOTH (a) the page's SERVICE term and (b) the page's LOCATION, woven naturally into a description of the photo. This is a photo description, NOT a keyword slot.
+   - The service may appear as a natural variation or inflection (e.g. "roof repair" → "repairing a roof", "metal roofing" → "metal roof"). Grammar wins over exact-match — EXCEPT in "benefitsImgAlt" (see next point).
+   - **"benefitsImgAlt" MUST contain the exact contiguous phrase "[SERVICE] in [LOCATION]"** as a natural part of the sentence (e.g. "HVAC Contractor in North Las Vegas - NV"). Use the service EXACTLY as given here and put the word "in" directly between the service and the location. It still has to read as a real scene, not a bare keyword.
+   - "whyImgAlt" only needs the service and location present naturally — they do NOT have to be adjacent, and inflections are fine there.
+   - LOCATION FORMAT (STRICT): when the location has a parent (e.g. a state after the city), separate the parts with a HYPHEN " - ", NEVER a comma. Write "North Las Vegas - NV", NOT "North Las Vegas, NV".
+   - Always describe a concrete scenario with a subject and an action. Never output a bare keyword phrase.
+   ✅ Good benefitsImgAlt (service "HVAC Contractor", location "North Las Vegas - NV"): "HVAC Contractor in North Las Vegas - NV inspecting a rooftop cooling system before summer"
+   ✅ Good benefitsImgAlt (service "roof repair", location "New Berlin - WI"): "Roof repair in New Berlin - WI underway as a crew replaces storm-damaged shingles"
+   ✅ Good whyImgAlt (service "HVAC Contractor", location "North Las Vegas - NV"): "HVAC contractor diagnosing airflow issues in a North Las Vegas - NV attic system"
+   ❌ Bad benefitsImgAlt (service and location not adjacent): "HVAC contractor inspecting a cooling unit beside a North Las Vegas - NV home"
+   ❌ Bad (comma instead of hyphen): "HVAC Contractor in North Las Vegas, NV inspecting a cooling system"
+   ❌ Bad (service or location missing): "Technician working on a house exterior in the afternoon"
 
 **CRITICAL HEADING FORMATS:**
 - **H1:** Use the PRIMARY KEYWORD exactly as provided. DO NOT add company name to H1.
@@ -286,11 +288,11 @@ Always return ONLY valid JSON with this exact structure (omit sections as instru
   "benefitsHeading": "string",
   "benefitsSubheading": "string (3-6 words max, short punchy phrase)",
   "benefitsBullets": ["<b>Topic:</b> text (35+ words, names ${companyName})", "<b>Topic:</b> text (35+ words, names ${companyName})", "<b>Topic:</b> text (35+ words, names ${companyName})"],
-  "benefitsImgAlt": "string (10-20 words, scenario-specific: describe a real situation where customer benefits from this service. MUST naturally include the page's SERVICE term (natural inflections allowed) — see SOP rule 17. e.g., 'Technician installing a new tankless water heater in a modern Carlsbad kitchen' NOT generic 'plumber in Carlsbad')",
+  "benefitsImgAlt": "string (10-20 words, scenario-specific. MUST contain the exact contiguous phrase '[SERVICE] in [LOCATION]' (service, then 'in', then the hyphenated location, e.g. 'HVAC Contractor in North Las Vegas - NV') woven into a real scene — see SOP rule 17. Location parent hyphenated NOT comma. e.g., 'HVAC Contractor in North Las Vegas - NV inspecting a rooftop cooling system before summer')",
   "whyHeading": "string",
   "whySubheading": "string (3-6 words max, short punchy phrase)",
   "whyBullets": ["<b>Topic:</b> text (35+ words, NO company mention)", "<b>Topic:</b> text (35+ words, NO company mention)", "<b>Topic:</b> text (35+ words, NO company mention)"],
-  "whyImgAlt": "string (10-20 words, expertise-focused: show depth of skill/professionalism. MUST naturally include the page's SERVICE term (natural inflections allowed) — see SOP rule 17. e.g., 'Experienced plumber diagnosing a complex pipe issue with specialized leak detection equipment' NOT generic 'why choose us')",
+  "whyImgAlt": "string (10-20 words, expertise-focused: show depth of skill/professionalism. MUST naturally include BOTH the page's SERVICE term (natural inflections allowed) AND its LOCATION, with the location's parent hyphenated e.g. 'North Las Vegas - NV' NOT 'North Las Vegas, NV' — see SOP rule 17. e.g., 'Experienced plumber diagnosing a complex pipe issue in a Carlsbad - CA home with specialized leak detection equipment')",
   "faqHeading": "string (FAQ section heading, include primary keyword, e.g., 'Frequently Asked Questions About [Service] in [Location]')",
   "faqDescription": "string (20-30 words, brief intro to FAQ section mentioning service and location)",
   "faqs": [{"question": "string", "answer": "string"}, {"question": "string", "answer": "string"}, {"question": "string", "answer": "string"}],
@@ -375,6 +377,10 @@ Return your chosen adjective in the "selectedAdjective" field.`;
   const exampleAdjective = existingAdjective || "Professional";
   const examplePrimaryKeyword = `${exampleAdjective} ${service} in ${location}`;
 
+  // Location with its parent (state) hyphenated, for use in image alt text
+  // (e.g. "Westville, IN" -> "Westville - IN"). SOP rule 17.
+  const locationHyphenated = location.replace(/\s*,\s*/g, " - ");
+
   return `Generate content for this specific page:
 
 **Company Name:** ${companyName}
@@ -406,10 +412,11 @@ Once you select your adjective, your PRIMARY KEYWORD becomes: "[Adjective] ${ser
 4. Use your EXACT primary keyword multiple times throughout bullets, FAQs, and BOTH section headings
 5. When referencing in natural text, you may use "${service}" alone, but when stating the full keyword, use your primary keyword exactly
 6. Make headings unique and engaging - avoid repetitive formats across pages
-7. Image alt text ("benefitsImgAlt" and "whyImgAlt") MUST each mention "${service}" naturally while describing the photo:
-   - A natural inflection of "${service}" is fine if it reads better (grammar wins over exact match)
-   - Do NOT paste the full primary keyword and do NOT tack on "${location}" just to include it
-   - Keep it a real scenario with a subject and an action — not a keyword phrase
+7. Image alt text ("benefitsImgAlt" and "whyImgAlt") MUST each mention BOTH "${service}" AND the location "${locationHyphenated}", naturally, while describing the photo:
+   - "benefitsImgAlt" MUST contain the exact contiguous phrase "${service} in ${locationHyphenated}" (service, then the word "in", then the hyphenated location) woven into a real scene — e.g. "${service} in ${locationHyphenated} inspecting [something specific]"
+   - "whyImgAlt" only needs "${service}" and "${locationHyphenated}" present naturally (not necessarily adjacent); a natural inflection of "${service}" is fine there
+   - Write the location EXACTLY as "${locationHyphenated}" — a HYPHEN between the city and its parent, NOT a comma
+   - Keep both a real scenario with a subject and an action — not a bare keyword phrase
 ${linkInstructions}
 ${
   previouslyUsedFAQs && previouslyUsedFAQs.length > 0
@@ -1055,7 +1062,19 @@ export async function validateAndFixContent(
     }
   }
 
-  // 5b. CHECK: Image alt text mentions the service (SOP rule 17)
+  // 5b. Image alt text: enforce hyphenated location + warn on missing service/location (SOP rule 17)
+
+  // AUTO-FIX: the location's parent must be hyphen-separated, not comma-separated
+  // ("Westville, IN" -> "Westville - IN"). This is pure formatting, so we correct
+  // it deterministically rather than relying on the model. Only the page's own
+  // location string is rewritten, so other commas in the sentence are untouched.
+  const hyphenatedLocation = location.replace(/\s*,\s*/g, " - ");
+  const enforceHyphenLocation = (alt: string): string => {
+    if (!alt || hyphenatedLocation === location) return alt;
+    const escaped = location.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return alt.replace(new RegExp(escaped, "gi"), hyphenatedLocation);
+  };
+
   // Deliberately lenient: alt text is meant to read naturally, so an inflected
   // form ("roof repair" -> "roofer repairing") must count as a match. We only
   // warn when a service word is clearly absent, to avoid noisy false positives.
@@ -1081,17 +1100,60 @@ export async function validateAndFixContent(
     );
   };
 
+  // The city (portion before the first comma) must appear verbatim; it has no
+  // internal comma, so the hyphen auto-fix never disturbs it.
+  const altMentionsLocation = (alt: string): boolean => {
+    const city = location.split(",")[0].trim().toLowerCase();
+    if (city.length < 3) return true;
+    return alt.toLowerCase().includes(city);
+  };
+
+  // Benefits alt must carry the primary keyword as the contiguous phrase
+  // "<service> in <hyphenated location>" (whitespace-insensitive). Runs after
+  // the hyphen auto-fix, so we look for the hyphen form.
+  const altHasKeywordPhrase = (alt: string): boolean => {
+    const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+    return norm(alt).includes(norm(`${service} in ${hyphenatedLocation}`));
+  };
+
   if (!omitSections.includes("Benefits") && fixed.benefitsImgAlt) {
-    if (!altMentionsService(fixed.benefitsImgAlt)) {
+    const fixedAlt = enforceHyphenLocation(fixed.benefitsImgAlt);
+    if (fixedAlt !== fixed.benefitsImgAlt) {
+      fixed.benefitsImgAlt = fixedAlt;
+      autoFixed.push("benefitsImgAlt");
+    }
+    if (!altHasKeywordPhrase(fixed.benefitsImgAlt)) {
       warnings.push(
-        `Benefits image alt text missing service "${service}": "${fixed.benefitsImgAlt}"`
+        `Benefits image alt text should contain the phrase "${service} in ${hyphenatedLocation}": "${fixed.benefitsImgAlt}"`
       );
+    } else {
+      // Phrase present implies service + location, so only check these otherwise.
+      if (!altMentionsService(fixed.benefitsImgAlt)) {
+        warnings.push(
+          `Benefits image alt text missing service "${service}": "${fixed.benefitsImgAlt}"`
+        );
+      }
+      if (!altMentionsLocation(fixed.benefitsImgAlt)) {
+        warnings.push(
+          `Benefits image alt text missing location "${location}": "${fixed.benefitsImgAlt}"`
+        );
+      }
     }
   }
   if (!omitSections.includes("Why") && fixed.whyImgAlt) {
+    const fixedAlt = enforceHyphenLocation(fixed.whyImgAlt);
+    if (fixedAlt !== fixed.whyImgAlt) {
+      fixed.whyImgAlt = fixedAlt;
+      autoFixed.push("whyImgAlt");
+    }
     if (!altMentionsService(fixed.whyImgAlt)) {
       warnings.push(
         `Why image alt text missing service "${service}": "${fixed.whyImgAlt}"`
+      );
+    }
+    if (!altMentionsLocation(fixed.whyImgAlt)) {
+      warnings.push(
+        `Why image alt text missing location "${location}": "${fixed.whyImgAlt}"`
       );
     }
   }
