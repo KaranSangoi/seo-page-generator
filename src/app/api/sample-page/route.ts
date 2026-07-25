@@ -153,21 +153,17 @@ function replaceElementorContent(
 
       // Hero description - match IDs containing 'hero' and 'description' (check FIRST - more specific)
       if (cssId.includes('hero') && cssId.includes('description')) {
-        // Handle text-editor widgets
-        if (element.settings.editor) {
-          let content = generatedContent.heroDescription;
-          if (internalLinkSection === 0 && parentPageUrl && service) {
-            content = insertInternalLink(content, parentPageUrl, service);
-          }
-          element.settings.editor = content;
+        let content = generatedContent.heroDescription;
+        if (internalLinkSection === 0 && parentPageUrl && service) {
+          content = insertInternalLink(content, parentPageUrl, service);
         }
-        // Handle heading widgets
-        else if (element.settings.title) {
-          let content = generatedContent.heroDescription;
-          if (internalLinkSection === 0 && parentPageUrl && service) {
-            content = insertInternalLink(content, parentPageUrl, service);
-          }
+        // Write based on widget TYPE, not on whether the field already holds a
+        // value — an empty template widget has no `editor`/`title` key yet must
+        // still be populated. (Empty hero-description text-editor was skipped.)
+        if (element.widgetType === 'heading') {
           element.settings.title = content;
+        } else {
+          element.settings.editor = content;
         }
       }
 

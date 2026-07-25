@@ -112,30 +112,21 @@ export function replaceElementorContent(
 
       // Hero description - match IDs containing 'hero' and 'description' (check FIRST - more specific)
       if (cssId.includes('hero') && cssId.includes('description')) {
-        // Handle text-editor widgets
-        if (element.settings.editor) {
-          let content = generatedContent.heroDescription;
-          if (internalLinkPlacement === 'hero' && internalLinkUrl && companyName) {
-            content = insertInternalLink(content, internalLinkUrl, companyName);
-            logUpdate(cssId, element.widgetType, 'hero description (text-editor)', 'Updated with internal link');
-          } else {
-            logUpdate(cssId, element.widgetType, 'hero description (text-editor)', 'Updated without link');
-          }
-          element.settings.editor = content;
+        let content = generatedContent.heroDescription;
+        const withLink = internalLinkPlacement === 'hero' && internalLinkUrl && companyName;
+        if (withLink) {
+          content = insertInternalLink(content, internalLinkUrl, companyName);
         }
-        // Handle heading widgets
-        else if (element.settings.title) {
-          let content = generatedContent.heroDescription;
-          if (internalLinkPlacement === 'hero' && internalLinkUrl && companyName) {
-            content = insertInternalLink(content, internalLinkUrl, companyName);
-            logUpdate(cssId, element.widgetType, 'hero description (heading)', 'Updated with internal link');
-          } else {
-            logUpdate(cssId, element.widgetType, 'hero description (heading)', 'Updated without link');
-          }
+        // Write to the widget's content field based on widget TYPE, not on
+        // whether the field already holds a value. An empty widget in the
+        // template has no `editor`/`title` key yet still must be populated —
+        // previously an empty hero-description text-editor was skipped entirely.
+        if (element.widgetType === 'heading') {
           element.settings.title = content;
-        }
-        else {
-          logUpdate(cssId, element.widgetType, 'hero description', 'FAILED - no editor or title setting');
+          logUpdate(cssId, element.widgetType, 'hero description (heading)', withLink ? 'Updated with internal link' : 'Updated without link');
+        } else {
+          element.settings.editor = content;
+          logUpdate(cssId, element.widgetType, 'hero description (text-editor)', withLink ? 'Updated with internal link' : 'Updated without link');
         }
       }
 
