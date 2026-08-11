@@ -415,6 +415,9 @@ export interface PublishParams {
   batchSize: number;
   // Optional override for external link URL (user-edited)
   externalLinkUrlOverride?: string;
+  // Effective link color (hex) for generated internal/external links. Null =
+  // keep theme default styling.
+  linkColor?: string | null;
 }
 
 /**
@@ -509,7 +512,8 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
       internalLinkPlacement,
       externalLinkPlacement,
       params.pageData.omitSections,
-      params.externalLinkUrlOverride
+      params.externalLinkUrlOverride,
+      params.linkColor
     );
     updatedContent = data;
     replacementLog = log;
@@ -535,7 +539,8 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
       internalLinkPlacement,
       externalLinkPlacement,
       params.pageData.omitSections,
-      params.externalLinkUrlOverride
+      params.externalLinkUrlOverride,
+      params.linkColor
     );
     updatedContent = data;
     replacementLog = log;
@@ -558,7 +563,8 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
       internalLinkPlacement,
       externalLinkPlacement,
       params.pageData.omitSections,
-      params.externalLinkUrlOverride
+      params.externalLinkUrlOverride,
+      params.linkColor
     );
     updatedContent = data;
     replacementLog = log;
@@ -581,7 +587,8 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
       internalLinkPlacement,
       externalLinkPlacement,
       params.pageData.omitSections,
-      params.externalLinkUrlOverride
+      params.externalLinkUrlOverride,
+      params.linkColor
     );
     updatedContent = data;
     replacementLog = log;
@@ -604,7 +611,8 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
       internalLinkPlacement,
       externalLinkPlacement,
       params.pageData.omitSections,
-      params.externalLinkUrlOverride
+      params.externalLinkUrlOverride,
+      params.linkColor
     );
     updatedContent = data;
     replacementLog = log;

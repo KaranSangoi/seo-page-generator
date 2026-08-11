@@ -12,6 +12,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { sanitizeLinkColor } from '@/lib/link-style';
 
 interface FormState {
   error?: string;
@@ -220,6 +221,9 @@ export async function createClientAction(
     const businessAddress = (formData.get('businessAddress') as string) || null;
     const businessType = (formData.get('businessType') as string) || null;
     const gbpUrl = (formData.get('gbpUrl') as string) || null;
+    // Default link color (hex) applied to generated links. Sanitized to prevent
+    // injection into inline styles; invalid/empty values become null.
+    const linkColor = sanitizeLinkColor(formData.get('linkColor') as string);
 
     // Remove spaces from application password (WordPress shows them with spaces)
     wpAppPassword = wpAppPassword.replace(/\s/g, '');
@@ -285,6 +289,7 @@ export async function createClientAction(
         businessAddress,
         businessType,
         gbpUrl,
+        linkColor,
       },
     });
 

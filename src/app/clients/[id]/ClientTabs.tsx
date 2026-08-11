@@ -27,6 +27,7 @@ interface Client {
   businessAddress: string | null;
   businessType: string | null;
   gbpUrl: string | null;
+  linkColor: string | null;
 }
 
 interface ClientTabsProps {
@@ -87,7 +88,7 @@ export default function ClientTabs({ client }: ClientTabsProps) {
       {/* Tab Content */}
       <div className="mt-6">
         {activeTab === 'metadata' && <MetadataTab client={client} />}
-        {activeTab === 'generate' && <GeneratePagesTab clientId={client.id} />}
+        {activeTab === 'generate' && <GeneratePagesTab clientId={client.id} clientLinkColor={client.linkColor} />}
         {activeTab === 'history' && <HistoryTab clientId={client.id} />}
       </div>
     </div>

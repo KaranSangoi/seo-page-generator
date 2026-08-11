@@ -85,6 +85,9 @@ export default function NewClientPage() {
   const [businessTypeSearch, setBusinessTypeSearch] = useState('');
   const [businessTypeOpen, setBusinessTypeOpen] = useState(false);
   const [selectedBusinessType, setSelectedBusinessType] = useState('');
+  // Optional default link color for generated links (opt-in).
+  const [linkColorEnabled, setLinkColorEnabled] = useState(false);
+  const [linkColor, setLinkColor] = useState('#1a73e8');
 
   // Handle redirect after successful client creation
   useEffect(() => {
@@ -415,6 +418,39 @@ export default function NewClientPage() {
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     Find this by opening your Google Business Profile and copying the URL
                   </p>
+                </div>
+
+                {/* Link Color (default for generated internal/external links) */}
+                <div>
+                  <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Link Color
+                    <InfoIcon content="Optional. Color applied to generated internal & external links as an inline style. Leave off to keep your theme's default link styling. Can be overridden per batch when generating." />
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={linkColorEnabled}
+                        onChange={(e) => setLinkColorEnabled(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      Set a custom link color
+                    </label>
+                    {linkColorEnabled && (
+                      <>
+                        <input
+                          type="color"
+                          value={linkColor}
+                          onChange={(e) => setLinkColor(e.target.value)}
+                          className="h-9 w-14 cursor-pointer rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                          aria-label="Link color"
+                        />
+                        <span className="text-xs font-mono text-gray-500 dark:text-gray-400">{linkColor}</span>
+                      </>
+                    )}
+                  </div>
+                  {/* Submitted value: empty when disabled so the server stores null (keep theme default) */}
+                  <input type="hidden" name="linkColor" value={linkColorEnabled ? linkColor : ''} />
                 </div>
               </div>
             </div>

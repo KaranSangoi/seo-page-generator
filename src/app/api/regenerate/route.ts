@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma';
 import { generatePageContent } from '@/lib/claude-api';
 import { validateContent, type ContentValidationParams, determineLinkPlacements } from '@/lib/page-generation';
 import { replaceElementorContent } from '@/lib/elementor-replacer';
+import { resolveLinkColor } from '@/lib/link-style';
 import { replaceDiviContent } from '@/lib/divi-replacer';
 import { replaceFusionContent } from '@/lib/fusion-replacer';
 import { generateStructuredData } from '@/lib/schema-generator';
@@ -146,8 +147,9 @@ async function publishToWordPress(params: {
   internalLinkPlacement?: string;
   externalLinkPlacement?: string;
   omitSections?: string[];
+  linkColor?: string | null;
 }): Promise<string> {
-  const { wordpressUrl, wpUsername, wpAppPassword, templatePageId, pageType, service, location, parentSlug, generatedContent, primaryKeyword, seoPlugin, companyName, companyWebsite, businessPhone, businessAddress, businessType, gbpUrl, internalLinkPlacement, externalLinkPlacement, omitSections } = params;
+  const { wordpressUrl, wpUsername, wpAppPassword, templatePageId, pageType, service, location, parentSlug, generatedContent, primaryKeyword, seoPlugin, companyName, companyWebsite, businessPhone, businessAddress, businessType, gbpUrl, internalLinkPlacement, externalLinkPlacement, omitSections, linkColor } = params;
 
   const wpApiUrl = `${wordpressUrl}/wp-json/wp/v2/pages`;
   const credentials = Buffer.from(`${wpUsername}:${wpAppPassword}`).toString('base64');
@@ -213,7 +215,9 @@ async function publishToWordPress(params: {
         service,
         internalLinkPlacement,
         externalLinkPlacement,
-        omitSections || []
+        omitSections || [],
+        undefined,
+        linkColor
       );
       updatedData = data;
       replacementLog = log;
@@ -234,7 +238,9 @@ async function publishToWordPress(params: {
         service,
         internalLinkPlacement,
         externalLinkPlacement,
-        omitSections || []
+        omitSections || [],
+        undefined,
+        linkColor
       );
       updatedData = data;
       replacementLog = log;
@@ -255,7 +261,9 @@ async function publishToWordPress(params: {
         service,
         internalLinkPlacement,
         externalLinkPlacement,
-        omitSections || []
+        omitSections || [],
+        undefined,
+        linkColor
       );
       updatedData = data;
       replacementLog = log;
@@ -635,6 +643,8 @@ export async function POST(request: NextRequest) {
       internalLinkPlacement,
       externalLinkPlacement,
       omitSections: [], // TODO: Store this in DB
+      // Per-batch override wins over the client default; either may be null.
+      linkColor: resolveLinkColor(page.batch.linkColor, client.linkColor),
     });
 
     // Mark as success

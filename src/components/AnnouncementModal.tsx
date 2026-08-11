@@ -18,38 +18,33 @@ interface Announcement {
 }
 
 // Current announcement - update this when you have new features to announce
-export const CURRENT_VERSION = 'v3.2';
+export const CURRENT_VERSION = 'v3.3';
 
 const CURRENT_ANNOUNCEMENT: Announcement = {
-  id: 'history-tab-improvements-v3.2',
-  version: 'v3.2',
-  title: 'Better Content Review in History',
-  description: 'Viewing content from a past batch now uses the same full-screen layout as the content preview — with every field visible and copyable.',
+  id: 'link-color-v3.3',
+  version: 'v3.3',
+  title: 'Set the Color of Generated Links',
+  description: 'Choose the color used for the internal and external links added to your generated pages — as a client default, and optionally overridden per batch.',
   features: [
     {
-      icon: '🗂️',
-      title: 'Preview-Style History View',
-      description: 'Clicking "View Content" on a past batch now opens a full-screen viewer with a page sidebar, collapsible sections, and Previous/Next navigation — matching the content preview layout instead of the old cramped inline table row.',
+      icon: '🎨',
+      title: 'Client Default Link Color',
+      description: 'Set a default link color on each client (in the client settings). Every batch, sample, and regeneration for that client applies it to the internal & external links as an inline style.',
     },
     {
-      icon: '🖼️',
-      title: 'Image Alt Text Now Visible',
-      description: 'Benefits and Why section image alt text now appears when viewing past batch content. The text was always saved — it just was not being displayed, so older batches will show it too.',
+      icon: '🎯',
+      title: 'Per-Batch Override',
+      description: 'On the Generate Pages screen you can override the color just for that batch, without changing the client default.',
     },
     {
-      icon: '📋',
-      title: 'Copy Any Field Individually',
-      description: 'Every field has its own copy button — meta title, H1, hero, headings, each bullet, each FAQ, alt text, and map description. HTML tags are stripped automatically. This replaces the old "Copy All" button.',
+      icon: '🌗',
+      title: 'Opt-In — Nothing Changes Unless You Set It',
+      description: 'Leave it off and links keep your theme\'s default styling, exactly as before. The color is only applied when you choose one.',
     },
     {
-      icon: '🔒',
-      title: 'History Stays Read-Only',
-      description: 'The history viewer intentionally has no edit, regenerate, or publish buttons — it is a record of what was already shipped, so it cannot overwrite your live WordPress pages.',
-    },
-    {
-      icon: '🏷️',
-      title: 'Alt Text Now Includes Service + Local Keyword',
-      description: 'Benefits and Why image alt text now weave in both the service and the page\'s location naturally. The Benefits alt carries the primary keyword as a natural "[Service] in [Location]" phrase (e.g. "HVAC Contractor in North Las Vegas - NV inspecting a rooftop cooling system"), and the location\'s state is auto-formatted with a hyphen instead of a comma. Applies to newly generated pages.',
+      icon: '🛡️',
+      title: 'Safe by Design',
+      description: 'Colors are validated to hex values before being written into your pages, so the styling can\'t be abused to inject anything unwanted.',
     },
   ],
 };

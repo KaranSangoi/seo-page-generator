@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { clientId, pages, model } = body;
+    const { clientId, pages, model, linkColor: batchLinkColor } = body;
 
     if (!clientId || !pages || !Array.isArray(pages) || pages.length === 0) {
       return NextResponse.json(
@@ -74,6 +74,9 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       pages: pagesWithRowNumber,
       model, // User-selected AI model
+      // Per-batch link color override (hex); resolved against the client default
+      // inside queueBatchGeneration.
+      batchLinkColor,
       clientData: {
         clientName: client.clientName,
         clientWebsite: client.clientWebsite,
@@ -87,6 +90,8 @@ export async function POST(request: NextRequest) {
         businessAddress: client.businessAddress ?? undefined,
         businessType: client.businessType ?? undefined,
         gbpUrl: client.gbpUrl ?? undefined,
+        // Client default link color (resolved against the batch override downstream)
+        linkColor: client.linkColor,
       },
     });
 

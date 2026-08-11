@@ -8,6 +8,8 @@
  *   map-description (map iframe is in a [fusion_code] block, found by proximity)
  */
 
+import { linkStyleValue } from './link-style';
+
 export interface FusionReplacementLog {
   sectionsFound: string[];
   sectionsUpdated: string[];
@@ -137,9 +139,9 @@ function generateCityWebsiteUrl(loc: string): string {
 }
 
 // Helper: Insert internal link (first mention of company name)
-function insertInternalLink(text: string, linkUrl: string, companyName: string): string {
+function insertInternalLink(text: string, linkUrl: string, companyName: string, linkColor?: string | null): string {
   if (!text || !linkUrl || !companyName) return text;
-  const linkHtml = `<a href="${linkUrl}" style="text-decoration: underline; display: inline;">${companyName}</a>`;
+  const linkHtml = `<a href="${linkUrl}" style="${linkStyleValue(linkColor)}">${companyName}</a>`;
   const companyPattern = new RegExp(`\\b${companyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
   if (companyPattern.test(text)) {
     return text.replace(companyPattern, linkHtml);
@@ -148,9 +150,9 @@ function insertInternalLink(text: string, linkUrl: string, companyName: string):
 }
 
 // Helper: Insert external link (first mention of location)
-function insertExternalLink(text: string, location: string, cityWebsiteUrl: string): string {
+function insertExternalLink(text: string, location: string, cityWebsiteUrl: string, linkColor?: string | null): string {
   if (!text || !location || !cityWebsiteUrl) return text;
-  const linkHtml = `<a href="${cityWebsiteUrl}" target="_blank" style="text-decoration: underline; display: inline;">${location}</a>`;
+  const linkHtml = `<a href="${cityWebsiteUrl}" target="_blank" style="${linkStyleValue(linkColor)}">${location}</a>`;
   const locationPattern = new RegExp(`\\b${location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
   if (locationPattern.test(text)) {
     return text.replace(locationPattern, linkHtml);
@@ -168,7 +170,8 @@ export function replaceFusionContent(
   internalLinkPlacement?: string,
   externalLinkPlacement?: string,
   omitSections?: string[],
-  externalLinkUrlOverride?: string
+  externalLinkUrlOverride?: string,
+  linkColor?: string | null
 ): { data: string; log: FusionReplacementLog } {
   if (!postContent || typeof postContent !== 'string') {
     return {
@@ -234,10 +237,10 @@ export function replaceFusionContent(
       let descText = generatedContent.heroDescription || '';
 
       if (internalLinkPlacement === 'hero' && internalLinkUrl && companyName) {
-        descText = insertInternalLink(descText, internalLinkUrl, companyName);
+        descText = insertInternalLink(descText, internalLinkUrl, companyName, linkColor);
       }
       if (externalLinkPlacement === 'hero' && location && cityWebsiteUrl) {
-        descText = insertExternalLink(descText, location, cityWebsiteUrl);
+        descText = insertExternalLink(descText, location, cityWebsiteUrl, linkColor);
       }
 
       content = content.substring(0, heroDesc.startPos) +
@@ -285,10 +288,10 @@ export function replaceFusionContent(
       let bulletsHtml: string;
 
       if (internalLinkPlacement === 'benefits' && internalLinkUrl && companyName && bullets.length > 0) {
-        bullets[0] = insertInternalLink(bullets[0], internalLinkUrl, companyName);
+        bullets[0] = insertInternalLink(bullets[0], internalLinkUrl, companyName, linkColor);
       }
       if (externalLinkPlacement === 'benefits' && location && cityWebsiteUrl && bullets.length > 0) {
-        bullets[0] = insertExternalLink(bullets[0], location, cityWebsiteUrl);
+        bullets[0] = insertExternalLink(bullets[0], location, cityWebsiteUrl, linkColor);
       }
 
       bulletsHtml = `<ul>\n${bullets.map((b: string) => `<li>${b}</li>`).join('\n')}\n</ul>`;
@@ -335,10 +338,10 @@ export function replaceFusionContent(
       const bullets = generatedContent.whyBullets || [];
 
       if (internalLinkPlacement === 'why' && internalLinkUrl && companyName && bullets.length > 0) {
-        bullets[0] = insertInternalLink(bullets[0], internalLinkUrl, companyName);
+        bullets[0] = insertInternalLink(bullets[0], internalLinkUrl, companyName, linkColor);
       }
       if (externalLinkPlacement === 'why' && location && cityWebsiteUrl && bullets.length > 0) {
-        bullets[0] = insertExternalLink(bullets[0], location, cityWebsiteUrl);
+        bullets[0] = insertExternalLink(bullets[0], location, cityWebsiteUrl, linkColor);
       }
 
       const bulletsHtml = `<ul>\n${bullets.map((b: string) => `<li>${b}</li>`).join('\n')}\n</ul>`;
@@ -419,10 +422,10 @@ export function replaceFusionContent(
       let mapText = generatedContent.mapDescription;
 
       if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
-        mapText = insertInternalLink(mapText, internalLinkUrl, companyName);
+        mapText = insertInternalLink(mapText, internalLinkUrl, companyName, linkColor);
       }
       if (externalLinkPlacement === 'map' && location && cityWebsiteUrl) {
-        mapText = insertExternalLink(mapText, location, cityWebsiteUrl);
+        mapText = insertExternalLink(mapText, location, cityWebsiteUrl, linkColor);
       }
 
       content = content.substring(0, mapDesc.startPos) +

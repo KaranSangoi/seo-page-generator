@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { linkStyleValue, linkColorAttr, sanitizeLinkColor } from '@/lib/link-style';
 
 // Force dynamic rendering (uses cookies for authentication)
 export const dynamic = 'force-dynamic';
@@ -82,24 +83,24 @@ async function getParentPageId(wordpressUrl: string, parentSlug: string, credent
 }
 
 // Helper to insert internal link
-function insertInternalLink(text: string, parentPageUrl: string, service: string): string {
+function insertInternalLink(text: string, parentPageUrl: string, service: string, linkColor?: string | null): string {
   if (!text || !parentPageUrl || !service) return text;
 
-  const linkText = `<a href="${parentPageUrl}">${service}</a>`;
+  const linkText = `<a href="${parentPageUrl}"${linkColorAttr(linkColor)}>${service}</a>`;
   const servicePattern = new RegExp(`\\b${service}\\b`, 'i');
 
   if (servicePattern.test(text)) {
     return text.replace(servicePattern, linkText);
   }
 
-  return text + ` Learn more about our <a href="${parentPageUrl}">${service}</a> services.`;
+  return text + ` Learn more about our <a href="${parentPageUrl}"${linkColorAttr(linkColor)}>${service}</a> services.`;
 }
 
 // Helper to insert external link
-function insertExternalLink(text: string, location: string, cityWebsiteUrl: string): string {
+function insertExternalLink(text: string, location: string, cityWebsiteUrl: string, linkColor?: string | null): string {
   if (!text || !location || !cityWebsiteUrl) return text;
 
-  const linkHtml = `<a href="${cityWebsiteUrl}" target="_blank" style="text-decoration: underline; display: inline;">${location}</a>`;
+  const linkHtml = `<a href="${cityWebsiteUrl}" target="_blank" style="${linkStyleValue(linkColor)}">${location}</a>`;
   const locationPattern = new RegExp(`\\b${location}\\b`, 'i');
 
   if (locationPattern.test(text)) {
@@ -127,7 +128,8 @@ function replaceElementorContent(
   parentPageUrl?: string,
   service?: string,
   rowNumber?: number,
-  externalLinkSection?: string
+  externalLinkSection?: string,
+  linkColor?: string | null
 ): any {
   if (!elementorData || !Array.isArray(elementorData)) return elementorData;
 
@@ -155,7 +157,7 @@ function replaceElementorContent(
       if (cssId.includes('hero') && cssId.includes('description')) {
         let content = generatedContent.heroDescription;
         if (internalLinkSection === 0 && parentPageUrl && service) {
-          content = insertInternalLink(content, parentPageUrl, service);
+          content = insertInternalLink(content, parentPageUrl, service, linkColor);
         }
         // Write based on widget TYPE, not on whether the field already holds a
         // value — an empty template widget has no `editor`/`title` key yet must
@@ -199,7 +201,7 @@ function replaceElementorContent(
               let content = generatedContent.benefitsBullets[bulletIndex];
               // Add external link if this matches the external link section
               if (finalExternalLinkSection && cssId.includes(finalExternalLinkSection) && location && cityWebsiteUrl) {
-                content = insertExternalLink(content, location, cityWebsiteUrl);
+                content = insertExternalLink(content, location, cityWebsiteUrl, linkColor);
               }
               element.settings.editor = content;
             }
@@ -214,7 +216,7 @@ function replaceElementorContent(
                 // Add external link if this matches the external link section
                 const sectionKey = `benefits-${index + 1}`;
                 if (finalExternalLinkSection === sectionKey && location && cityWebsiteUrl) {
-                  content = insertExternalLink(content, location, cityWebsiteUrl);
+                  content = insertExternalLink(content, location, cityWebsiteUrl, linkColor);
                 }
                 item.text = content;
               }
@@ -244,7 +246,7 @@ function replaceElementorContent(
               let content = generatedContent.whyBullets[bulletIndex];
               // Add external link if this matches the external link section
               if (finalExternalLinkSection && cssId.includes(finalExternalLinkSection) && location && cityWebsiteUrl) {
-                content = insertExternalLink(content, location, cityWebsiteUrl);
+                content = insertExternalLink(content, location, cityWebsiteUrl, linkColor);
               }
               element.settings.editor = content;
             }
@@ -259,7 +261,7 @@ function replaceElementorContent(
                 // Add external link if this matches the external link section
                 const sectionKey = `why-${index + 1}`;
                 if (finalExternalLinkSection === sectionKey && location && cityWebsiteUrl) {
-                  content = insertExternalLink(content, location, cityWebsiteUrl);
+                  content = insertExternalLink(content, location, cityWebsiteUrl, linkColor);
                 }
                 item.text = content;
               }
@@ -301,7 +303,7 @@ function replaceElementorContent(
                 item.acc_title = generatedContent.faqs[index].question;
                 let content = generatedContent.faqs[index].answer;
                 if (internalLinkSection === 1 && index === 0 && parentPageUrl && service) {
-                  content = insertInternalLink(content, parentPageUrl, service);
+                  content = insertInternalLink(content, parentPageUrl, service, linkColor);
                 }
                 // ElementsKit stores content with <p> tags
                 item.acc_content = `<p>${content}</p>`;
@@ -317,7 +319,7 @@ function replaceElementorContent(
                 item.item_title = generatedContent.faqs[index].question;
                 let content = generatedContent.faqs[index].answer;
                 if (internalLinkSection === 1 && index === 0 && parentPageUrl && service) {
-                  content = insertInternalLink(content, parentPageUrl, service);
+                  content = insertInternalLink(content, parentPageUrl, service, linkColor);
                 }
                 item.item_desc = `<p>${content}</p>`;
                 console.log(`[DEBUG] Updated plumbit FAQ ${index + 1}: ${generatedContent.faqs[index].question.substring(0, 60)}...`);
@@ -336,7 +338,7 @@ function replaceElementorContent(
                 tab.tab_title = generatedContent.faqs[index].question;
                 let content = generatedContent.faqs[index].answer;
                 if (internalLinkSection === 1 && index === 0 && parentPageUrl && service) {
-                  content = insertInternalLink(content, parentPageUrl, service);
+                  content = insertInternalLink(content, parentPageUrl, service, linkColor);
                 }
                 tab.tab_content = content;
                 console.log(`[DEBUG] Updated FAQ ${index} in tabs`);
@@ -392,7 +394,7 @@ function replaceElementorContent(
                   if (nestedChild.widgetType === 'text-editor' && nestedChild.settings.editor) {
                     let content = generatedContent.faqs[faqIndex].answer;
                     if (internalLinkSection === 1 && faqIndex === 0 && parentPageUrl && service) {
-                      content = insertInternalLink(content, parentPageUrl, service);
+                      content = insertInternalLink(content, parentPageUrl, service, linkColor);
                     }
                     nestedChild.settings.editor = content;
                     console.log(`[DEBUG] Updated nested FAQ ${faqIndex + 1} answer`);
@@ -423,7 +425,7 @@ function replaceElementorContent(
             if (element.widgetType === 'text-editor' && cssId.includes('answer')) {
               let content = generatedContent.faqs[faqIndex].answer;
               if (internalLinkSection === 1 && faqIndex === 0 && parentPageUrl && service) {
-                content = insertInternalLink(content, parentPageUrl, service);
+                content = insertInternalLink(content, parentPageUrl, service, linkColor);
               }
               element.settings.editor = content;
               console.log(`[DEBUG] Updated individual FAQ ${faqIndex} answer`);
@@ -445,14 +447,14 @@ function replaceElementorContent(
         if (element.widgetType === 'text-editor') {
           let content = generatedContent.mapDescription || '';
           if (internalLinkSection === 2 && parentPageUrl && service) {
-            content = insertInternalLink(content, parentPageUrl, service);
+            content = insertInternalLink(content, parentPageUrl, service, linkColor);
           }
           element.settings.editor = content;
           console.log('[DEBUG] Updated map description in text-editor widget (created editor field)');
         } else if (element.widgetType === 'heading') {
           let content = generatedContent.mapDescription || '';
           if (internalLinkSection === 2 && parentPageUrl && service) {
-            content = insertInternalLink(content, parentPageUrl, service);
+            content = insertInternalLink(content, parentPageUrl, service, linkColor);
           }
           element.settings.title = content;
           console.log('[DEBUG] Updated map description in heading widget (created title field)');
@@ -596,6 +598,9 @@ export async function POST(request: NextRequest) {
     const wpApiUrl = `${client.wordpressUrl}/wp-json/wp/v2/pages`;
     const credentials = Buffer.from(`${client.wpUsername}:${client.wpAppPassword}`).toString('base64');
 
+    // Sample pages use the client's default link color (no per-batch override).
+    const sampleLinkColor = sanitizeLinkColor(client.linkColor);
+
     // Fetch template page with edit context to get meta fields.
     // _cb cache-buster: WordPress edge/page caches REST GETs by URL and can
     // serve a stale template (e.g. missing a recently-added map section).
@@ -689,7 +694,9 @@ export async function POST(request: NextRequest) {
         'Phoenix, AZ',
         undefined, // no parent page for sample
         undefined, // no service for sample
-        1 // use rotation 1 for sample (will add internal link to FAQ)
+        1, // use rotation 1 for sample (will add internal link to FAQ)
+        undefined, // externalLinkSection (default rotation)
+        sampleLinkColor
       );
 
       // Inject meta description directly into page (fallback if Yoast doesn't output it)
@@ -773,7 +780,9 @@ export async function POST(request: NextRequest) {
         undefined, // no service for sample
         undefined, // no internal link placement
         undefined, // no external link placement
-        []         // no omit sections
+        [],        // no omit sections
+        undefined, // no external link URL override
+        sampleLinkColor
       );
 
       // Add Schema.org JSON-LD for SEO (helps if Yoast doesn't load properly)
@@ -844,7 +853,9 @@ export async function POST(request: NextRequest) {
         undefined, // no service for sample
         undefined, // no internal link placement
         undefined, // no external link placement
-        []         // no omit sections
+        [],        // no omit sections
+        undefined, // no external link URL override
+        sampleLinkColor
       );
 
       // Add Schema.org JSON-LD for SEO
@@ -908,7 +919,9 @@ export async function POST(request: NextRequest) {
         undefined, // no service for sample
         undefined, // no internal link placement
         undefined, // no external link placement
-        []         // no omit sections
+        [],        // no omit sections
+        undefined, // no external link URL override
+        sampleLinkColor
       );
 
       // Add Schema.org JSON-LD for SEO
@@ -973,7 +986,9 @@ export async function POST(request: NextRequest) {
         'Professional Service', // service - sample only
         null, // internalLinkPlacement
         null, // externalLinkPlacement
-        [] // omitSections
+        [], // omitSections
+        undefined, // no external link URL override
+        sampleLinkColor
       );
 
       updatedContent = updatedHtmlContent;

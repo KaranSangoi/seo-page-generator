@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.3.0] - 2026-08-02
+
+### Added
+
+#### Configurable Link Color for Generated Links
+- Users can set a **color for the internal & external links** added to generated pages. Applied as an inline `style` on the `<a>` tags.
+- **Two levels (opt-in):** a **client default** (`Client.linkColor`) and an optional **per-batch override** (`GenerationBatch.linkColor`). Effective color resolves as `batch override ?? client default ?? none`; when none is set, link markup is byte-identical to before.
+- **Schema:** added nullable `linkColor` to `Client` and `GenerationBatch` (via `prisma db push`).
+- **Shared helper (`src/lib/link-style.ts`):** `sanitizeLinkColor` (strict `#rgb`/`#rrggbb` validation), `resolveLinkColor`, `linkStyleValue`, `linkColorAttr`. Colors are sanitized at **both storage and injection** time — an unvalidated color would allow breaking out of the inline `style` attribute (XSS), so anything not a hex color is dropped to null.
+- **Threaded through every publish path and builder:** all five shared replacers (Elementor, Divi, WPBakery, Fusion, Classic) plus the inline Elementor replacers in `simple-queue.ts` and `sample-page/route.ts`; and the four publish paths (`simple-queue` batch, `page-generation` publish/regenerate, `regenerate` route, `sample-page`). Sample pages use the client default (no batch).
+- **API:** `/api/generate` and `/api/generate-preview` accept a per-batch `linkColor` and persist the override on the batch; `queueBatchGeneration` resolves the effective color once and pins it for the batch.
+- **UI:** color picker (opt-in checkbox + native `<input type="color">`) on the new-client form and the client Metadata tab (client default), and a per-batch override on the Generate Pages screen showing the client default as fallback.
+- Bumps the What's New announcement to **v3.3**.
+
+---
+
 ## [3.2.0] - 2026-07-20
 
 ### Fixed

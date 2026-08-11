@@ -5,6 +5,8 @@
  * IMPORTANT: Does NOT touch Elementor code - this is Divi-only
  */
 
+import { linkStyleValue } from './link-style';
+
 export interface DiviReplacementLog {
   sectionsFound: string[];
   sectionsUpdated: string[];
@@ -26,7 +28,8 @@ export function replaceDiviContent(
   internalLinkPlacement?: string,
   externalLinkPlacement?: string,
   omitSections?: string[],
-  externalLinkUrlOverride?: string
+  externalLinkUrlOverride?: string,
+  linkColor?: string | null
 ): { data: string; log: DiviReplacementLog } {
   if (!postContent || typeof postContent !== 'string') {
     return {
@@ -94,7 +97,7 @@ export function replaceDiviContent(
   // Helper: Insert internal link
   const insertInternalLink = (text: string, linkUrl: string, companyName: string): string => {
     if (!text || !linkUrl || !companyName) return text;
-    const linkHtml = `<a href="${linkUrl}" style="text-decoration: underline; display: inline;">${companyName}</a>`;
+    const linkHtml = `<a href="${linkUrl}" style="${linkStyleValue(linkColor)}">${companyName}</a>`;
     const companyPattern = new RegExp(`\\b${companyName}\\b`, 'i');
     if (companyPattern.test(text)) {
       return text.replace(companyPattern, linkHtml);
@@ -105,7 +108,7 @@ export function replaceDiviContent(
   // Helper: Insert external link
   const insertExternalLink = (text: string, location: string, cityWebsiteUrl: string): string => {
     if (!text || !location || !cityWebsiteUrl) return text;
-    const linkHtml = `<a href="${cityWebsiteUrl}" target="_blank" style="text-decoration: underline; display: inline;">${location}</a>`;
+    const linkHtml = `<a href="${cityWebsiteUrl}" target="_blank" style="${linkStyleValue(linkColor)}">${location}</a>`;
     const locationPattern = new RegExp(`\\b${location}\\b`, 'i');
     if (locationPattern.test(text)) {
       return text.replace(locationPattern, linkHtml);

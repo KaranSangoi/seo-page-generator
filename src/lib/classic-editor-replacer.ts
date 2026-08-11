@@ -11,6 +11,8 @@
  * Supported sections: HERO, BENEFITS, WHY, FAQ, MAP
  */
 
+import { linkColorAttr } from './link-style';
+
 interface ReplacementLog {
   sectionsFound: string[];
   sectionsUpdated: string[];
@@ -43,7 +45,8 @@ export function replaceClassicEditorContent(
   internalLinkPlacement: string | null,
   externalLinkPlacement: string | null,
   omitSections: string[],
-  externalLinkUrlOverride?: string
+  externalLinkUrlOverride?: string,
+  linkColor?: string | null
 ): { data: string; log: ReplacementLog } {
 
   const log: ReplacementLog = {
@@ -98,7 +101,7 @@ export function replaceClassicEditorContent(
     const heroHtml = `
 <div class="hero-section">
   <h1>${generatedContent.h1}</h1>
-  <p>${addInternalLink(generatedContent.heroDescription, internalLinkUrl, companyName, internalLinkPlacement === 'hero')}</p>
+  <p>${addInternalLink(generatedContent.heroDescription, internalLinkUrl, companyName, internalLinkPlacement === 'hero', linkColor)}</p>
 </div>`;
     replaceSection('HERO', heroHtml.trim());
   }
@@ -108,7 +111,7 @@ export function replaceClassicEditorContent(
     const bulletsHtml = generatedContent.benefitsBullets.map((bullet, idx) => {
       const shouldAddExternalLink = externalLinkPlacement === `benefits-${idx + 1}`;
       const bulletText = shouldAddExternalLink
-        ? addExternalLink(bullet, location, externalLinkUrlOverride)
+        ? addExternalLink(bullet, location, externalLinkUrlOverride, linkColor)
         : bullet;
       return `<li>${bulletText}</li>`;
     }).join('\n');
@@ -129,7 +132,7 @@ ${bulletsHtml}
     const bulletsHtml = generatedContent.whyBullets.map((bullet, idx) => {
       const shouldAddExternalLink = externalLinkPlacement === `why-${idx + 1}`;
       const bulletText = shouldAddExternalLink
-        ? addExternalLink(bullet, location, externalLinkUrlOverride)
+        ? addExternalLink(bullet, location, externalLinkUrlOverride, linkColor)
         : bullet;
       return `<li>${bulletText}</li>`;
     }).join('\n');
@@ -150,7 +153,7 @@ ${bulletsHtml}
     const faqsHtml = generatedContent.faqs.map((faq, idx) => {
       const shouldAddInternalLink = internalLinkPlacement === `faq-${idx + 1}`;
       const answerText = shouldAddInternalLink
-        ? addInternalLink(faq.answer, internalLinkUrl, companyName, true)
+        ? addInternalLink(faq.answer, internalLinkUrl, companyName, true, linkColor)
         : faq.answer;
 
       return `
@@ -174,7 +177,7 @@ ${faqsHtml}
   if (!omitSections.includes('Map') && generatedContent.mapDescription) {
     const shouldAddInternalLink = internalLinkPlacement === 'map';
     const mapDescriptionText = shouldAddInternalLink
-      ? addInternalLink(generatedContent.mapDescription, internalLinkUrl, companyName, true)
+      ? addInternalLink(generatedContent.mapDescription, internalLinkUrl, companyName, true, linkColor)
       : generatedContent.mapDescription;
 
     const mapHtml = `
@@ -195,20 +198,20 @@ ${faqsHtml}
 /**
  * Add internal link to company name in text
  */
-function addInternalLink(text: string, linkUrl: string | null, companyName: string, shouldAdd: boolean): string {
+function addInternalLink(text: string, linkUrl: string | null, companyName: string, shouldAdd: boolean, linkColor?: string | null): string {
   if (!shouldAdd || !linkUrl) {
     return text;
   }
 
   // Find company name and wrap with link
   const regex = new RegExp(`\\b${escapeRegex(companyName)}\\b`, 'i');
-  return text.replace(regex, `<a href="${linkUrl}">${companyName}</a>`);
+  return text.replace(regex, `<a href="${linkUrl}"${linkColorAttr(linkColor)}>${companyName}</a>`);
 }
 
 /**
  * Add external link to location in text
  */
-function addExternalLink(text: string, location: string, urlOverride?: string): string {
+function addExternalLink(text: string, location: string, urlOverride?: string, linkColor?: string | null): string {
   if (!location) {
     return text;
   }
@@ -229,7 +232,7 @@ function addExternalLink(text: string, location: string, urlOverride?: string): 
 
   // Find location and wrap with link
   const regex = new RegExp(`\\b${escapeRegex(location)}\\b`, 'i');
-  return text.replace(regex, `<a href="${cityUrl}" target="_blank" rel="noopener">${location}</a>`);
+  return text.replace(regex, `<a href="${cityUrl}" target="_blank" rel="noopener"${linkColorAttr(linkColor)}>${location}</a>`);
 }
 
 /**

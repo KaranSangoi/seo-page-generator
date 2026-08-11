@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { publishToWordPress, type PublishParams } from '@/lib/page-generation';
+import { resolveLinkColor } from '@/lib/link-style';
 
 // Force dynamic rendering (uses cookies for authentication)
 export const dynamic = 'force-dynamic';
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
     // Fetch original batch size for proper link placement rotation
     // This ensures links follow the same pattern as during initial generation
     let batchSize = 1; // Default fallback
+    let batchLinkColor: string | null = null; // Per-batch link color override
     if (dbId) {
       try {
         const page = await prisma.generatedPage.findUnique({
@@ -63,6 +65,7 @@ export async function POST(request: NextRequest) {
         });
         if (page?.batch) {
           batchSize = page.batch.totalPages;
+          batchLinkColor = page.batch.linkColor;
         }
       } catch (error) {
         console.warn('Could not fetch batch size, using default:', error);
@@ -96,6 +99,8 @@ export async function POST(request: NextRequest) {
       primaryKeyword,
       batchSize, // Use original batch size for proper link rotation
       externalLinkUrlOverride: externalLinkUrl, // User-edited external link URL
+      // Per-batch override wins over client default; either may be null.
+      linkColor: resolveLinkColor(batchLinkColor, client.linkColor),
     };
 
     // Publish using shared function (same logic as v1)

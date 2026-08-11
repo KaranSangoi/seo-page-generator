@@ -3,6 +3,8 @@
  * Extracted from simple-queue.ts for reuse in publish-reviewed API
  */
 
+import { linkStyleValue } from './link-style';
+
 export interface ElementorReplacementLog {
   sectionsFound: string[];
   sectionsUpdated: string[];
@@ -24,7 +26,8 @@ export function replaceElementorContent(
   internalLinkPlacement?: string,
   externalLinkPlacement?: string,
   omitSections?: string[],
-  externalLinkUrlOverride?: string
+  externalLinkUrlOverride?: string,
+  linkColor?: string | null
 ): { data: any; log: ElementorReplacementLog } {
   if (!elementorData || !Array.isArray(elementorData)) {
     return {
@@ -67,7 +70,7 @@ export function replaceElementorContent(
   // Insert internal link helper
   const insertInternalLink = (text: string, linkUrl: string, companyName: string): string => {
     if (!text || !linkUrl || !companyName) return text;
-    const linkHtml = `<a href="${linkUrl}" style="text-decoration: underline; display: inline;">${companyName}</a>`;
+    const linkHtml = `<a href="${linkUrl}" style="${linkStyleValue(linkColor)}">${companyName}</a>`;
     const companyPattern = new RegExp(`\\b${companyName}\\b`, 'i');
     if (companyPattern.test(text)) {
       return text.replace(companyPattern, linkHtml);
@@ -78,7 +81,7 @@ export function replaceElementorContent(
   // Insert external link helper
   const insertExternalLink = (text: string, location: string, cityWebsiteUrl: string): string => {
     if (!text || !location || !cityWebsiteUrl) return text;
-    const linkHtml = `<a href="${cityWebsiteUrl}" target="_blank" style="text-decoration: underline; display: inline;">${location}</a>`;
+    const linkHtml = `<a href="${cityWebsiteUrl}" target="_blank" style="${linkStyleValue(linkColor)}">${location}</a>`;
     const locationPattern = new RegExp(`\\b${location}\\b`, 'i');
     if (locationPattern.test(text)) {
       return text.replace(locationPattern, linkHtml);

@@ -10,6 +10,7 @@ import { replaceDiviContent } from './divi-replacer';
 import { replaceFusionContent } from './fusion-replacer';
 import { replaceWPBakeryContent } from './wpbakery-replacer';
 import { replaceClassicEditorContent } from './classic-editor-replacer';
+import { linkStyleValue, resolveLinkColor, sanitizeLinkColor } from './link-style';
 
 interface PageJob {
   batchId: string;
@@ -39,6 +40,9 @@ interface PageJob {
     businessAddress?: string;
     businessType?: string;
     gbpUrl?: string;
+    // Effective link color for this batch (per-batch override already resolved
+    // against the client default). Null = keep theme default link styling.
+    linkColor?: string | null;
   };
   adjective: string;
   model?: string;
@@ -220,11 +224,11 @@ function findRelevantPage(sitemap: string[], service: string, location: string):
  * Insert internal link to company name
  * Links to homepage or contextual page based on rotation
  */
-function insertInternalLink(text: string, linkUrl: string, companyName: string): string {
+function insertInternalLink(text: string, linkUrl: string, companyName: string, linkColor?: string | null): string {
   if (!text || !linkUrl || !companyName) return text;
 
   // Create internal link with proper styling as per SOP
-  const linkHtml = `<a href="${linkUrl}" style="text-decoration: underline; display: inline;">${companyName}</a>`;
+  const linkHtml = `<a href="${linkUrl}" style="${linkStyleValue(linkColor)}">${companyName}</a>`;
 
   // Try to find and replace the company name with a link
   const companyPattern = new RegExp(`\\b${companyName}\\b`, 'i');
@@ -240,11 +244,11 @@ function insertInternalLink(text: string, linkUrl: string, companyName: string):
  * Insert external link to city website
  * Links to official city website, naturally embedded in location name
  */
-function insertExternalLink(text: string, location: string, cityWebsiteUrl: string): string {
+function insertExternalLink(text: string, location: string, cityWebsiteUrl: string, linkColor?: string | null): string {
   if (!text || !location || !cityWebsiteUrl) return text;
 
   // Create external link with proper styling as per SOP
-  const linkHtml = `<a href="${cityWebsiteUrl}" target="_blank" style="text-decoration: underline; display: inline;">${location}</a>`;
+  const linkHtml = `<a href="${cityWebsiteUrl}" target="_blank" style="${linkStyleValue(linkColor)}">${location}</a>`;
 
   // Try to find and replace the location with a link
   const locationPattern = new RegExp(`\\b${location}\\b`, 'i');
@@ -293,7 +297,8 @@ function replaceElementorContent(
   service?: string,
   internalLinkPlacement?: string,
   externalLinkPlacement?: string,
-  omitSections?: string[]
+  omitSections?: string[],
+  linkColor?: string | null
 ): any {
   if (!elementorData || !Array.isArray(elementorData)) return elementorData;
 
@@ -328,7 +333,7 @@ function replaceElementorContent(
             let content = generatedContent.heroDescription;
             // Add internal link if this section is designated for internal link
             if (internalLinkPlacement === 'hero' && internalLinkUrl && companyName) {
-              content = insertInternalLink(content, internalLinkUrl, companyName);
+              content = insertInternalLink(content, internalLinkUrl, companyName, linkColor);
             }
             element.settings.editor = content;
           }
@@ -355,7 +360,7 @@ function replaceElementorContent(
               // Add external link if this matches the external link placement
               const sectionKey = `benefits-${bulletIndex + 1}`;
               if (externalLinkPlacement === sectionKey && location && cityWebsiteUrl) {
-                content = insertExternalLink(content, location, cityWebsiteUrl);
+                content = insertExternalLink(content, location, cityWebsiteUrl, linkColor);
               }
               element.settings.editor = content;
             }
@@ -370,7 +375,7 @@ function replaceElementorContent(
                 // Add external link if this matches the external link placement
                 const sectionKey = `benefits-${index + 1}`;
                 if (externalLinkPlacement === sectionKey && location && cityWebsiteUrl) {
-                  content = insertExternalLink(content, location, cityWebsiteUrl);
+                  content = insertExternalLink(content, location, cityWebsiteUrl, linkColor);
                 }
                 item.text = content;
               }
@@ -397,7 +402,7 @@ function replaceElementorContent(
               // Add external link if this matches the external link placement
               const sectionKey = `why-${bulletIndex + 1}`;
               if (externalLinkPlacement === sectionKey && location && cityWebsiteUrl) {
-                content = insertExternalLink(content, location, cityWebsiteUrl);
+                content = insertExternalLink(content, location, cityWebsiteUrl, linkColor);
               }
               element.settings.editor = content;
             }
@@ -412,7 +417,7 @@ function replaceElementorContent(
                 // Add external link if this matches the external link placement
                 const sectionKey = `why-${index + 1}`;
                 if (externalLinkPlacement === sectionKey && location && cityWebsiteUrl) {
-                  content = insertExternalLink(content, location, cityWebsiteUrl);
+                  content = insertExternalLink(content, location, cityWebsiteUrl, linkColor);
                 }
                 item.text = content;
               }
@@ -444,7 +449,7 @@ function replaceElementorContent(
                 if (internalLinkUrl && companyName) {
                   const faqKey = `faq-${index + 1}`;
                   if (internalLinkPlacement === faqKey) {
-                    content = insertInternalLink(content, internalLinkUrl, companyName);
+                    content = insertInternalLink(content, internalLinkUrl, companyName, linkColor);
                   }
                 }
                 // ElementsKit stores content with <p> tags
@@ -463,7 +468,7 @@ function replaceElementorContent(
                 if (internalLinkUrl && companyName) {
                   const faqKey = `faq-${index + 1}`;
                   if (internalLinkPlacement === faqKey) {
-                    content = insertInternalLink(content, internalLinkUrl, companyName);
+                    content = insertInternalLink(content, internalLinkUrl, companyName, linkColor);
                   }
                 }
                 tab.tab_content = content;
@@ -484,7 +489,7 @@ function replaceElementorContent(
                   if (internalLinkUrl && companyName) {
                     const faqKey = `faq-${index + 1}`;
                     if (internalLinkPlacement === faqKey) {
-                      content = insertInternalLink(content, internalLinkUrl, companyName);
+                      content = insertInternalLink(content, internalLinkUrl, companyName, linkColor);
                     }
                   }
                   item.item_content = content;
@@ -495,7 +500,7 @@ function replaceElementorContent(
                   if (internalLinkUrl && companyName) {
                     const faqKey = `faq-${index + 1}`;
                     if (internalLinkPlacement === faqKey) {
-                      content = insertInternalLink(content, internalLinkUrl, companyName);
+                      content = insertInternalLink(content, internalLinkUrl, companyName, linkColor);
                     }
                   }
                   item.content = content;
@@ -540,7 +545,7 @@ function replaceElementorContent(
                     if (internalLinkUrl && companyName) {
                       const faqKey = `faq-${faqIndex + 1}`;
                       if (internalLinkPlacement === faqKey) {
-                        content = insertInternalLink(content, internalLinkUrl, companyName);
+                        content = insertInternalLink(content, internalLinkUrl, companyName, linkColor);
                       }
                     }
                     nestedChild.settings.editor = content;
@@ -574,7 +579,7 @@ function replaceElementorContent(
               if (internalLinkUrl && companyName) {
                 const faqKey = `faq-${faqIndex + 1}`;
                 if (internalLinkPlacement === faqKey) {
-                  content = insertInternalLink(content, internalLinkUrl, companyName);
+                  content = insertInternalLink(content, internalLinkUrl, companyName, linkColor);
                 }
               }
               element.settings.editor = content;
@@ -589,7 +594,7 @@ function replaceElementorContent(
         if (element.widgetType === 'text-editor') {
           let content = generatedContent.mapDescription || '';
           if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
-            content = insertInternalLink(content, internalLinkUrl, companyName);
+            content = insertInternalLink(content, internalLinkUrl, companyName, linkColor);
             console.log(`[BATCH DEBUG] Updated map description (text-editor) with internal link (created field)`);
           } else {
             console.log(`[BATCH DEBUG] Updated map description (text-editor) (created field)`);
@@ -600,7 +605,7 @@ function replaceElementorContent(
         else if (element.widgetType === 'heading') {
           let content = generatedContent.mapDescription || '';
           if (internalLinkPlacement === 'map' && internalLinkUrl && companyName) {
-            content = insertInternalLink(content, internalLinkUrl, companyName);
+            content = insertInternalLink(content, internalLinkUrl, companyName, linkColor);
             console.log(`[BATCH DEBUG] Updated map description (heading) with internal link (created field)`);
           } else {
             console.log(`[BATCH DEBUG] Updated map description (heading) (created field)`);
@@ -712,6 +717,9 @@ async function duplicateTemplateAndPublish(params: {
 }): Promise<string> {
   const { clientData, pageData, generatedContent, primaryKeyword, batchSize } = params;
 
+  // Effective link color for this batch (already resolved in queueBatchGeneration).
+  const linkColor = clientData.linkColor;
+
   const wpApiUrl = `${clientData.wordpressUrl}/wp-json/wp/v2/pages`;
   const credentials = Buffer.from(`${clientData.wpUsername}:${clientData.wpAppPassword}`).toString('base64');
 
@@ -805,7 +813,8 @@ async function duplicateTemplateAndPublish(params: {
         pageData.service,
         internalLinkPlacement,
         externalLinkPlacement,
-        pageData.omitSections
+        pageData.omitSections,
+        linkColor
       );
       updatedElementorData = result.data;
       replacementLog = result.log;
@@ -821,7 +830,9 @@ async function duplicateTemplateAndPublish(params: {
         pageData.service,
         internalLinkPlacement,
         externalLinkPlacement,
-        pageData.omitSections
+        pageData.omitSections,
+        undefined,
+        linkColor
       );
       updatedShortcodeContent = result.data;
       replacementLog = result.log;
@@ -837,7 +848,9 @@ async function duplicateTemplateAndPublish(params: {
         pageData.service,
         internalLinkPlacement,
         externalLinkPlacement,
-        pageData.omitSections
+        pageData.omitSections,
+        undefined,
+        linkColor
       );
       updatedShortcodeContent = result.data;
       replacementLog = result.log;
@@ -853,7 +866,9 @@ async function duplicateTemplateAndPublish(params: {
         pageData.service,
         internalLinkPlacement,
         externalLinkPlacement,
-        pageData.omitSections
+        pageData.omitSections,
+        undefined,
+        linkColor
       );
       updatedShortcodeContent = result.data;
       replacementLog = result.log;
@@ -869,7 +884,9 @@ async function duplicateTemplateAndPublish(params: {
         pageData.service,
         internalLinkPlacement,
         externalLinkPlacement,
-        pageData.omitSections
+        pageData.omitSections,
+        undefined,
+        linkColor
       );
       updatedShortcodeContent = result.data;
       replacementLog = result.log;
@@ -1523,10 +1540,20 @@ export async function queueBatchGeneration(params: {
     businessAddress?: string;
     businessType?: string;
     gbpUrl?: string;
+    // Client default link color (hex) — the caller reads it from the client.
+    linkColor?: string | null;
   };
+  // Per-batch link color override (hex). Wins over the client default; null =
+  // fall back to the client default.
+  batchLinkColor?: string | null;
   model?: string; // User-selected AI model
 }) {
   const { batchId, clientId, userId, pages, clientData, model } = params;
+
+  // Resolve the effective link color once (batch override wins over client
+  // default) and pin it onto clientData so the whole batch uses one value.
+  const effectiveLinkColor = resolveLinkColor(params.batchLinkColor, clientData.linkColor);
+  clientData.linkColor = effectiveLinkColor;
 
   try {
     // Get adjectives deterministically based on row numbers
@@ -1546,6 +1573,7 @@ export async function queueBatchGeneration(params: {
         successfulPages: 0,
         failedPages: 0,
         status: 'in_progress',
+        linkColor: sanitizeLinkColor(params.batchLinkColor),
       },
     });
 

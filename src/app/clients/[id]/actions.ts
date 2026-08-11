@@ -7,6 +7,7 @@
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { sanitizeLinkColor } from '@/lib/link-style';
 
 /**
  * Update Client Metadata
@@ -35,6 +36,8 @@ export async function updateClientAction(prevState: any, formData: FormData) {
     const businessAddress = (formData.get('businessAddress') as string) || null;
     const businessType = (formData.get('businessType') as string) || null;
     const gbpUrl = (formData.get('gbpUrl') as string) || null;
+    // Default link color (hex); sanitized, invalid/empty -> null.
+    const linkColor = sanitizeLinkColor(formData.get('linkColor') as string);
 
     // Validate required fields
     if (!clientId || !clientName || !clientWebsite || !wpSiteUrl || !wpUsername || !wpAppPassword || !seoPlugin || !templatePageId) {
@@ -96,6 +99,7 @@ export async function updateClientAction(prevState: any, formData: FormData) {
         businessAddress,
         businessType,
         gbpUrl,
+        linkColor,
       },
     });
 

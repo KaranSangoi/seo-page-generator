@@ -14,6 +14,7 @@ import ContentPreviewModal from './ContentPreviewModal';
 
 interface GeneratePagesTabProps {
   clientId: string;
+  clientLinkColor?: string | null;
 }
 
 interface CSVRow {
@@ -58,7 +59,7 @@ const VALID_PAGE_TYPES = ['Primary Service', 'Nested Broad Stroke', 'Broad Strok
 const VALID_LINK_SECTIONS = ['benefits-1', 'benefits-2', 'benefits-3', 'why-1', 'why-2', 'why-3'];
 const VALID_OMIT_SECTIONS = ['FAQ', 'Map', 'Why', 'Benefits'];
 
-export default function GeneratePagesTab({ clientId }: GeneratePagesTabProps) {
+export default function GeneratePagesTab({ clientId, clientLinkColor }: GeneratePagesTabProps) {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [parsedPages, setParsedPages] = useState<ParsedPage[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
@@ -99,6 +100,9 @@ export default function GeneratePagesTab({ clientId }: GeneratePagesTabProps) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [batchId, setBatchId] = useState<string | null>(null);
+  // Per-batch link color override. Off by default -> uses the client default.
+  const [batchLinkColorEnabled, setBatchLinkColorEnabled] = useState(false);
+  const [batchLinkColor, setBatchLinkColor] = useState(clientLinkColor || '#1a73e8');
 
   // Cleanup on unmount
   useEffect(() => {
@@ -364,6 +368,8 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
         body: JSON.stringify({
           clientId,
           model: selectedModel,
+          // Per-batch link color override (undefined -> server uses client default)
+          linkColor: batchLinkColorEnabled ? batchLinkColor : undefined,
           pages: parsedPages.map((page) => {
             const edits = editedData.get(page.rowNumber);
             return {
@@ -551,6 +557,8 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           clientId,
           model: selectedModel,
           csvFilename: csvFile?.name || `preview_${Date.now()}.csv`,
+          // Per-batch link color override (undefined -> server uses client default)
+          linkColor: batchLinkColorEnabled ? batchLinkColor : undefined,
           pages: parsedPages.map((page) => {
             const edits = editedData.get(page.rowNumber);
             return {
@@ -1202,6 +1210,43 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
                       Powered by OpenAI
                     </p>
                   </div>
+                </div>
+
+                {/* Per-batch link color override */}
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <label className="text-sm font-medium text-gray-900 dark:text-white mb-2 block">
+                    Link Color
+                  </label>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={batchLinkColorEnabled}
+                        onChange={(e) => setBatchLinkColorEnabled(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      Override link color for this batch
+                    </label>
+                    {batchLinkColorEnabled && (
+                      <>
+                        <input
+                          type="color"
+                          value={batchLinkColor}
+                          onChange={(e) => setBatchLinkColor(e.target.value)}
+                          className="h-9 w-14 cursor-pointer rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                          aria-label="Batch link color"
+                        />
+                        <span className="text-xs font-mono text-gray-500 dark:text-gray-400">{batchLinkColor}</span>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {batchLinkColorEnabled
+                      ? 'Internal & external links in this batch will use this color.'
+                      : clientLinkColor
+                        ? <>Using client default <span className="font-mono">{clientLinkColor}</span>. Check to override for this batch.</>
+                        : 'No link color set — links keep the theme default. Check to set one for this batch.'}
+                  </p>
                 </div>
               </div>
 

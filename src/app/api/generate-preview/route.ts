@@ -21,6 +21,7 @@ import {
   type ContentValidationParams
 } from '@/lib/page-generation';
 import { getAdjectiveForRow } from '@/lib/adjectives';
+import { sanitizeLinkColor } from '@/lib/link-style';
 
 // Force dynamic rendering (uses cookies for authentication)
 export const dynamic = 'force-dynamic';
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { pages, csvFilename, model } = body;
     clientId = body.clientId;
+    const batchLinkColor = body.linkColor; // Per-batch link color override (hex)
 
     if (!clientId || !pages || !Array.isArray(pages)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -70,6 +72,7 @@ export async function POST(request: NextRequest) {
         csvFilename: csvFilename || `preview_${Date.now()}.csv`,
         totalPages: pages.length,
         status: 'in_progress',
+        linkColor: sanitizeLinkColor(batchLinkColor),
       },
     });
 

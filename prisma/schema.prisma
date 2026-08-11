@@ -51,6 +51,11 @@ model Client {
   businessType     String?  // Schema.org business type: "Plumber", "RoofingContractor", etc.
   gbpUrl           String?  // Google Business Profile URL
 
+  // Default color (hex, e.g. "#1a73e8") applied to generated internal/external
+  // links as an inline style. Null = keep theme default styling. Can be
+  // overridden per batch via GenerationBatch.linkColor.
+  linkColor        String?
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -72,6 +77,8 @@ model GenerationBatch {
   failedPages      Int      @default(0)
   timeTakenSeconds Int      @default(0)
   status           String   @default("in_progress") // "in_progress", "completed", "failed"
+  // Per-batch link color override (hex). Null = fall back to Client.linkColor.
+  linkColor        String?
   createdAt        DateTime @default(now())
 
   client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)

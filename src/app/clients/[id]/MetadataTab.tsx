@@ -27,6 +27,7 @@ interface Client {
   businessAddress: string | null;
   businessType: string | null;
   gbpUrl: string | null;
+  linkColor: string | null;
 }
 
 interface MetadataTabProps {
@@ -88,6 +89,9 @@ export default function MetadataTab({ client }: MetadataTabProps) {
   const [businessTypeSearch, setBusinessTypeSearch] = useState('');
   const [businessTypeOpen, setBusinessTypeOpen] = useState(false);
   const [selectedBusinessType, setSelectedBusinessType] = useState('');
+  // Optional default link color (opt-in). Initialized from the saved value.
+  const [linkColorEnabled, setLinkColorEnabled] = useState(!!client.linkColor);
+  const [linkColor, setLinkColor] = useState(client.linkColor || '#1a73e8');
   const [state, formAction] = useFormState(updateClientAction, null);
 
   // Handle successful update
@@ -530,6 +534,52 @@ export default function MetadataTab({ client }: MetadataTabProps) {
                   <span className="text-sm text-gray-900 dark:text-white break-all">
                     {client.gbpUrl || 'Not set'}
                   </span>
+                </div>
+              )}
+            </div>
+
+            {/* Link Color (default for generated internal/external links) */}
+            <div>
+              <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Link Color
+                <InfoIcon content="Optional. Color applied to generated internal & external links as an inline style. Leave off to keep your theme's default link styling. Can be overridden per batch when generating." />
+              </label>
+              {isEditing ? (
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={linkColorEnabled}
+                      onChange={(e) => setLinkColorEnabled(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    Set a custom link color
+                  </label>
+                  {linkColorEnabled && (
+                    <>
+                      <input
+                        type="color"
+                        value={linkColor}
+                        onChange={(e) => setLinkColor(e.target.value)}
+                        className="h-9 w-14 cursor-pointer rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                        aria-label="Link color"
+                      />
+                      <span className="text-xs font-mono text-gray-500 dark:text-gray-400">{linkColor}</span>
+                    </>
+                  )}
+                  {/* Empty when disabled -> server stores null (keep theme default) */}
+                  <input type="hidden" name="linkColor" value={linkColorEnabled ? linkColor : ''} />
+                </div>
+              ) : (
+                <div className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center gap-2">
+                  {client.linkColor ? (
+                    <>
+                      <span className="inline-block h-4 w-4 rounded border border-gray-300 dark:border-gray-600" style={{ backgroundColor: client.linkColor }} />
+                      <span className="text-sm font-mono text-gray-900 dark:text-white">{client.linkColor}</span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-gray-900 dark:text-white">Not set (theme default)</span>
+                  )}
                 </div>
               )}
             </div>
