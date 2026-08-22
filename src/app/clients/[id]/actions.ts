@@ -235,22 +235,43 @@ export async function testConnectionAction(formData: FormData) {
 
     // Construct Basic Auth header
     const credentials = Buffer.from(`${wpUsername}:${wpAppPassword}`).toString('base64');
-    const wpApiUrl = `${cleanWpUrl}/wp-json/wp/v2/users/me`;
+    const authHeaders = {
+      Authorization: `Basic ${credentials}`,
+      'Content-Type': 'application/json',
+    };
+    // Probe an auth-gated endpoint the app actually uses (context=edit requires an
+    // authenticated user with edit capability) rather than /users/me, which many
+    // sites block via user-enumeration hardening — that produced false "Access
+    // Forbidden" failures even when credentials were valid.
+    const wpApiUrl = `${cleanWpUrl}/wp-json/wp/v2/pages?per_page=1&context=edit`;
 
     // Test connection
     const response = await fetch(wpApiUrl, {
       method: 'GET',
-      headers: {
-        Authorization: `Basic ${credentials}`,
-        'Content-Type': 'application/json',
-      },
+      headers: authHeaders,
       signal: AbortSignal.timeout(10000), // 10 second timeout
     });
 
     if (response.ok) {
-      const userData = await response.json();
+      // Credentials + edit permission confirmed. Best-effort: fetch display name
+      // and role for a friendlier message; skip silently if /users is blocked.
+      let displayName = wpUsername;
+      let role = '';
+      try {
+        const meRes = await fetch(`${cleanWpUrl}/wp-json/wp/v2/users/me`, {
+          headers: authHeaders,
+          signal: AbortSignal.timeout(5000),
+        });
+        if (meRes.ok) {
+          const me = await meRes.json();
+          displayName = me?.name || wpUsername;
+          role = me?.roles?.[0] || '';
+        }
+      } catch {
+        // /users endpoint blocked or slow — ignore, auth is already verified.
+      }
 
-      let successMessage = `✅ Connection successful!\n\nConnected as: ${userData.name || wpUsername}\nRole: ${userData.roles?.[0] || 'Unknown'}`;
+      let successMessage = `✅ Connection successful!\n\nConnected as: ${displayName}${role ? `\nRole: ${role}` : ''}`;
 
       // Try to detect page builder if template ID is provided
       let detectedBuilder: string | null = null;

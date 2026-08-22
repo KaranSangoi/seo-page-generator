@@ -63,17 +63,24 @@ export async function testConnectionAction(formData: FormData): Promise<{ succes
     // Test connection to WordPress REST API with auth
     console.log('Step 2: Testing authenticated endpoint...');
     const authString = Buffer.from(`${wpUsername}:${wpAppPassword}`).toString('base64');
+    const authHeaders = {
+      'Authorization': `Basic ${authString}`,
+      'Content-Type': 'application/json',
+      'User-Agent': 'SEO-Page-Generator/1.0',
+    };
 
-    const testUrl = `${baseUrl}/wp-json/wp/v2/users/me`;
+    // Probe an auth-gated endpoint the app actually uses instead of /users/me.
+    // context=edit on pages requires an authenticated user with edit capability,
+    // so it validates the credentials AND the permissions we need to publish.
+    // /users/me is avoided because many sites block the REST /users endpoints
+    // (user-enumeration hardening), which produced false "Access Forbidden"
+    // failures even when the credentials were valid.
+    const testUrl = `${baseUrl}/wp-json/wp/v2/pages?per_page=1&context=edit`;
     console.log('Full URL:', testUrl);
     console.log('Auth header:', `Basic ${authString.substring(0, 20)}...`);
 
     const response = await fetch(testUrl, {
-      headers: {
-        'Authorization': `Basic ${authString}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'SEO-Page-Generator/1.0',
-      },
+      headers: authHeaders,
       // Add timeout
       signal: AbortSignal.timeout(10000),
     });
@@ -145,9 +152,8 @@ export async function testConnectionAction(formData: FormData): Promise<{ succes
       };
     }
 
-    let userData;
     try {
-      userData = JSON.parse(responseText);
+      JSON.parse(responseText);
     } catch {
       return {
         success: false,
@@ -155,11 +161,27 @@ export async function testConnectionAction(formData: FormData): Promise<{ succes
       };
     }
 
-    console.log('Connection successful! User:', userData.name);
+    // Auth + edit permission confirmed. Best-effort: fetch the display name for a
+    // friendlier message, but don't fail if /users/me is blocked (common hardening).
+    let who = wpUsername;
+    try {
+      const meRes = await fetch(`${baseUrl}/wp-json/wp/v2/users/me`, {
+        headers: authHeaders,
+        signal: AbortSignal.timeout(5000),
+      });
+      if (meRes.ok) {
+        const me = await meRes.json();
+        if (me?.name) who = me.name;
+      }
+    } catch {
+      // /users endpoint blocked or slow — ignore, auth is already verified.
+    }
+
+    console.log('Connection successful! Authenticated as:', who);
 
     return {
       success: true,
-      message: `✓ Connection successful! Authenticated as: ${userData.name}`,
+      message: `✓ Connection successful! Authenticated as: ${who}`,
     };
   } catch (error) {
     console.error('Connection test error:', error);
