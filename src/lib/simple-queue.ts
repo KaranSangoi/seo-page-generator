@@ -818,6 +818,16 @@ async function duplicateTemplateAndPublish(params: {
       );
       updatedElementorData = result.data;
       replacementLog = result.log;
+
+      // Remove the location-cards section from generated pages. It only belongs
+      // on parent pages, where the post-batch location-cards step re-adds it (from
+      // the template) with real child cards. Keeps non-parent pages clean.
+      try {
+        const { stripLocationCardsSection } = await import('./location-cards');
+        if (Array.isArray(updatedElementorData)) stripLocationCardsSection(updatedElementorData);
+      } catch (e) {
+        console.warn('[BATCH] stripLocationCardsSection failed (non-fatal):', e);
+      }
     } else if (isDivi) {
       // DIVI: Use Divi replacer
       const diviContent = templatePage.content?.raw || templatePage.content?.rendered || '';
@@ -1698,6 +1708,24 @@ async function processBatchSequentially(
   batchFAQs.delete(batchId); // Clean up FAQ tracking
 
   console.log(`[BATCH] ✅ Batch ${batchId} completed!`);
+
+  // Post-batch: add location cards to parent pages for any NBS/BS child pages.
+  // Non-blocking + fully guarded — must never break the completed batch.
+  try {
+    const { addLocationCardsForBatch } = await import('./location-cards');
+    const cardResult = await addLocationCardsForBatch(batchId);
+    if (cardResult.ran) {
+      console.log(
+        `[BATCH] 🗺️ Location cards: ${cardResult.cardsAdded} added, ${cardResult.cardsSkipped} skipped, ` +
+          `${cardResult.parentsUpdated} parent(s) updated, ${cardResult.imagesGenerated} image(s) generated` +
+          (cardResult.errors.length ? ` | errors: ${cardResult.errors.join('; ')}` : ''),
+      );
+    } else {
+      console.log(`[BATCH] 🗺️ Location cards skipped: ${cardResult.reason}`);
+    }
+  } catch (err) {
+    console.error('[BATCH] Location cards step failed (non-fatal):', err);
+  }
 }
 
 /**

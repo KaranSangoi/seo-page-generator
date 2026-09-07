@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.4.0] - 2026-09-08
+
+### Added
+
+#### Automatic Location Cards on Parent Pages (Elementor, v1)
+- When **Nested Broad Stroke** (county) and **Broad Stroke** (town) pages are published, the app now edits each page's **parent** to add a "location card" that links back to the child — an AI-generated town image, the location name, and an "Explore Service Area" button.
+- **New engine (`src/lib/location-cards.ts`):** `addLocationCards(client, children)` (core) and `addLocationCardsForBatch(batchId)` (batch wrapper). Groups children by `parentSlug`, edits each parent page once. Behavior: **self-heals** the section from the client's template page if the parent lacks it (inserted at the section's template position, e.g. below the hero); **deep-clones** the `location-card-template` card with regenerated Elementor element IDs; **deletes** the leftover placeholder; **dedupes** by button URL so re-runs append only what's missing. Also exports `stripLocationCardsSection` used at generation time so non-parent pages carry no empty section.
+- **Image pipeline (`src/lib/town-image.ts`):** `gpt-image-1` aerial town/county image → `sharp` resize + WebP compression looped under **100KB** → uploaded to the client's WordPress media library with alt text `"[Service] in [Location]"`. Always uses `OPENAI_API_KEY` (independent of the content provider); fails soft — a card is still created without an image if generation is unavailable.
+- **CSS ID contract (set on the client's Elementor template page):** `location-cards` on the section, `location-cards-grid` on the grid wrapper, `location-card-template` on the single prototype card. The card uses Elementor's native `image-box` (`title_text` + `image`) and `button` (`text` + `link.url`); internal button links clear `is_external`/`nofollow`.
+- **Trigger:** runs automatically (guarded, non-fatal) at batch completion in `simple-queue.ts`; also exposed as `POST /api/location-cards { batchId }` (auth + ownership checked) for manual runs and backfilling older batches.
+- **Generation-time strip:** the Elementor path in `simple-queue.ts` removes the `location-cards` section from every generated page, keeping non-parent pages clean.
+- **Dependency:** added `sharp` for image optimization.
+- **Known limitation:** Elementor's per-page CSS is cached to an external file and isn't rebuilt by a REST data edit, so an edited parent may need a one-time Elementor re-save (Update) for the new card styles to appear. New pages are unaffected.
+- Bumps the What's New announcement to **v3.4** with an in-app setup guide (section + the three CSS IDs).
+
+---
+
 ## [3.3.0] - 2026-08-02
 
 ### Added
