@@ -24,11 +24,11 @@ interface Announcement {
 }
 
 // Current announcement - update this when you have new features to announce
-export const CURRENT_VERSION = 'v3.4';
+export const CURRENT_VERSION = 'v4.0';
 
 const CURRENT_ANNOUNCEMENT: Announcement = {
-  id: 'location-cards-v3.4',
-  version: 'v3.4',
+  id: 'location-cards-v4.0',
+  version: 'v4.0',
   title: 'Automatic Location Cards on Parent Pages',
   description: 'When you publish County (Nested Broad Stroke) and Town (Broad Stroke) pages, their parent page is automatically updated with a "location card" — an AI-generated town image, the location name, and an "Explore Service Area" button linking back to the new page.',
   features: [

@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [3.4.0] - 2026-09-08
+## [4.0.0] - 2026-09-08
 
 ### Added
 
@@ -19,7 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Generation-time strip:** the Elementor path in `simple-queue.ts` removes the `location-cards` section from every generated page, keeping non-parent pages clean.
 - **Dependency:** added `sharp` for image optimization.
 - **Known limitation:** Elementor's per-page CSS is cached to an external file and isn't rebuilt by a REST data edit, so an edited parent may need a one-time Elementor re-save (Update) for the new card styles to appear. New pages are unaffected.
-- Bumps the What's New announcement to **v3.4** with an in-app setup guide (section + the three CSS IDs).
+- Bumps the What's New announcement to **v4.0** (major — first feature that edits existing pages and generates images) with an in-app setup guide (section + the three CSS IDs).
 
 ---
 
