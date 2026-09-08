@@ -1693,12 +1693,31 @@ async function processBatchSequentially(
     }
   }
 
+  // Count eligible NBS/BS children so we can flag the location-cards phase in the
+  // SAME update that marks the batch completed — this closes the race where the UI
+  // polls between "completed" and the card step starting, and stops too early.
+  let eligibleCardCount = 0;
+  try {
+    eligibleCardCount = await prisma.generatedPage.count({
+      where: {
+        batchId,
+        status: 'success',
+        pageType: { in: ['Nested Broad Stroke', 'Broad Stroke'] },
+        publishedUrl: { not: null },
+        parentSlug: { not: null },
+      },
+    });
+  } catch { /* non-fatal */ }
+
   // Mark batch as completed
   await prisma.generationBatch.update({
     where: { id: batchId },
     data: {
       status: 'completed',
       timeTakenSeconds: Math.floor((Date.now() - parseInt(batchId.split('_')[1])) / 1000),
+      ...(eligibleCardCount > 0
+        ? { cardStatus: 'in_progress', cardsTotal: eligibleCardCount, cardsDone: 0 }
+        : {}),
     },
   });
 

@@ -56,6 +56,7 @@ interface ContentPreviewModalProps {
   onPublishAll: () => Promise<void>;
   onUpdateExternalLink?: (pageId: string, newUrl: string) => void;
   onUpdateContent?: (pageId: string, field: string, value: string) => void;
+  cardProgress?: { status: string; done: number; total: number } | null;
 }
 
 export default function ContentPreviewModal({
@@ -66,6 +67,7 @@ export default function ContentPreviewModal({
   onPublishAll,
   onUpdateExternalLink,
   onUpdateContent,
+  cardProgress,
 }: ContentPreviewModalProps) {
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['meta', 'hero']));
@@ -1153,6 +1155,30 @@ export default function ContentPreviewModal({
               </>
             )}
           </div>
+
+          {/* Location cards post-publish progress */}
+          {cardProgress && (
+            <div className="px-6 py-3 border-t border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-900/20">
+              {cardProgress.status === 'in_progress' ? (
+                <div className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                    🗺️ Adding location cards to parent pages…{cardProgress.total > 0 ? ` ${cardProgress.done}/${cardProgress.total}` : ''}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-accent-600 dark:text-accent-400">✅</span>
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                    Location cards added to parent pages{cardProgress.total > 0 ? ` (${cardProgress.total})` : ''}.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Footer Actions */}
           <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">

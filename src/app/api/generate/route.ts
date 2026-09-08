@@ -177,6 +177,10 @@ export async function GET(request: NextRequest) {
         totalPages: batch.totalPages,
         successfulPages: batch.successfulPages,
         failedPages: batch.failedPages,
+        // Location-cards post-step progress (null cardStatus = not applicable).
+        cardStatus: batch.cardStatus,
+        cardsTotal: batch.cardsTotal,
+        cardsDone: batch.cardsDone,
         pages: batch.generatedPages.map((page) => ({
           id: page.id,
           pageName: page.pageName,

@@ -438,7 +438,30 @@ async function runLocationCardsForBatch(batchId: string): Promise<LocationCardsR
     return { ran: false, reason: 'no eligible NBS/BS pages with parentSlug + publishedUrl', parentsUpdated: 0, cardsAdded: 0, cardsSkipped: 0, imagesGenerated: 0, errors: [] };
   }
 
-  return addLocationCards(batch.client, children);
+  // Publish progress to the batch so the UI can show a live X/Y indicator.
+  const builder = (batch.client.pageBuilder || 'elementor').toLowerCase();
+  if (builder === 'elementor') {
+    await prisma.generationBatch
+      .update({ where: { id: batchId }, data: { cardStatus: 'in_progress', cardsTotal: children.length, cardsDone: 0 } })
+      .catch(() => {});
+  }
+
+  let done = 0;
+  const result = await addLocationCards(batch.client, children, {
+    onProgress: async () => {
+      done++;
+      await prisma.generationBatch.update({ where: { id: batchId }, data: { cardsDone: done } }).catch(() => {});
+    },
+  });
+
+  await prisma.generationBatch
+    .update({
+      where: { id: batchId },
+      data: { cardStatus: result.ran ? 'completed' : (builder === 'elementor' ? 'completed' : null), cardsDone: done },
+    })
+    .catch(() => {});
+
+  return result;
 }
 
 /**
@@ -449,6 +472,7 @@ async function runLocationCardsForBatch(batchId: string): Promise<LocationCardsR
 export async function addLocationCards(
   client: CardClientData,
   children: ChildPage[],
+  opts?: { onProgress?: () => Promise<void> | void },
 ): Promise<LocationCardsResult> {
   const result: LocationCardsResult = {
     ran: false,
@@ -457,6 +481,13 @@ export async function addLocationCards(
     cardsSkipped: 0,
     imagesGenerated: 0,
     errors: [],
+  };
+  // Called once per child processed (added, skipped, or on parent failure) so
+  // callers can report live X/Y progress.
+  const tick = async () => {
+    if (opts?.onProgress) {
+      try { await opts.onProgress(); } catch { /* progress reporting is best-effort */ }
+    }
   };
 
   const builder = (client.pageBuilder || 'elementor').toLowerCase();
@@ -494,6 +525,7 @@ export async function addLocationCards(
       const parentId = await resolvePageIdBySlug(wordpressUrl, parentSlug, credentials);
       if (!parentId) {
         result.errors.push(`parent slug "${parentSlug}" not found in WordPress`);
+        for (const _ of group) await tick();
         continue;
       }
 
@@ -501,12 +533,14 @@ export async function addLocationCards(
       const parentElements = parentPage ? parseElementorData(parentPage) : null;
       if (!parentElements) {
         result.errors.push(`parent "${parentSlug}" has no Elementor data`);
+        for (const _ of group) await tick();
         continue;
       }
 
       const target = resolveCardTarget(parentElements, templateElements);
       if (!target) {
         result.errors.push(`no location-cards section on parent "${parentSlug}" or template page`);
+        for (const _ of group) await tick();
         continue;
       }
 
@@ -515,6 +549,7 @@ export async function addLocationCards(
         const url = child.publishedUrl as string;
         if (cardExists(target.grid, url)) {
           result.cardsSkipped++;
+          await tick();
           continue;
         }
 
@@ -552,6 +587,7 @@ export async function addLocationCards(
         target.grid.elements!.push(newCard);
         result.cardsAdded++;
         addedForThisParent++;
+        await tick();
       }
 
       if (addedForThisParent > 0) {

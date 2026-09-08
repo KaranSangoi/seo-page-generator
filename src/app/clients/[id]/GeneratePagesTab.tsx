@@ -100,6 +100,8 @@ export default function GeneratePagesTab({ clientId, clientLinkColor }: Generate
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [batchId, setBatchId] = useState<string | null>(null);
+  // Location-cards post-step progress (null = not applicable to this batch).
+  const [cardProgress, setCardProgress] = useState<{ status: string; done: number; total: number } | null>(null);
   // Per-batch link color override. Off by default -> uses the client default.
   const [batchLinkColorEnabled, setBatchLinkColorEnabled] = useState(false);
   const [batchLinkColor, setBatchLinkColor] = useState(clientLinkColor || '#1a73e8');
@@ -310,18 +312,30 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
 
         setPageProgress(updatedProgress);
 
+        // Location-cards post-step progress.
+        if (batch.cardStatus) {
+          setCardProgress({ status: batch.cardStatus, done: batch.cardsDone ?? 0, total: batch.cardsTotal ?? 0 });
+        } else {
+          setCardProgress(null);
+        }
+
         // Check if batch is complete
         const allComplete = batch.pages.every(
           (p: any) => p.status === 'success' || p.status === 'failed'
         );
+        const pagesDone = allComplete || batch.status === 'completed' || batch.status === 'failed';
+        const cardsRunning = batch.cardStatus === 'in_progress';
 
-        if (allComplete || batch.status === 'completed' || batch.status === 'failed') {
+        if (pagesDone) {
+          // Pages are done — stop the elapsed timer and the "generating" state.
           setIsGenerating(false);
           if (timerRef.current) {
             clearInterval(timerRef.current);
             timerRef.current = null;
           }
-          if (pollIntervalRef.current) {
+          // But keep polling while the location-cards step is still running so the
+          // X/Y indicator stays live; only stop once cards finish (or none ran).
+          if (!cardsRunning && pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
             pollIntervalRef.current = null;
           }
@@ -344,6 +358,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
 
     setIsGenerating(true);
     setStartTime(Date.now());
+    setCardProgress(null); // reset any prior batch's card indicator
 
     // Initialize progress for all pages
     const progress: PageProgress[] = parsedPages.map((page) => ({
@@ -702,10 +717,36 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
     }
   };
 
+  // Poll batch card-progress for the review flow (the modal), until the
+  // location-cards step finishes. The server runs it fire-and-forget after the
+  // last page publishes; here we just reflect the live X/Y in the modal.
+  const pollCardProgress = async (id: string) => {
+    for (let i = 0; i < 160; i++) { // ~8 min ceiling at 3s
+      try {
+        const res = await fetch(`/api/generate?batchId=${id}`);
+        if (res.ok) {
+          const d = await res.json();
+          const b = d.batch;
+          if (b?.cardStatus) {
+            setCardProgress({ status: b.cardStatus, done: b.cardsDone ?? 0, total: b.cardsTotal ?? 0 });
+            if (b.cardStatus !== 'in_progress') return;
+          }
+        }
+      } catch { /* keep polling */ }
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+  };
+
   const handlePublishAll = async () => {
     const readyPages = contentPreviewPages.filter(p => p.status === 'ready');
     for (const page of readyPages) {
       await handlePublishPage(page.pageId);
+    }
+    // After all pages publish, the server adds location cards to parents in the
+    // background — reflect that progress in the modal.
+    if (batchId) {
+      setCardProgress({ status: 'in_progress', done: 0, total: 0 });
+      pollCardProgress(batchId);
     }
   };
 
@@ -1319,6 +1360,41 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
             </div>
           </div>
 
+          {/* Location cards post-step progress */}
+          {cardProgress && (
+            <div className="mb-6 rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-900/20 p-4">
+              {cardProgress.status === 'in_progress' ? (
+                <>
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg className="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                      🗺️ Adding location cards to parent pages… {cardProgress.done}/{cardProgress.total}
+                    </span>
+                  </div>
+                  <div className="w-full bg-blue-100 dark:bg-blue-900/40 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${cardProgress.total > 0 ? Math.round((cardProgress.done / cardProgress.total) * 100) : 0}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Generating a town image and linking each new County/Town page back from its parent. This runs after publishing.
+                  </p>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-accent-600 dark:text-accent-400">✅</span>
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                    Location cards added to parent pages ({cardProgress.total}).
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Page List */}
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {pageProgress.map((progress, idx) => (
@@ -1407,6 +1483,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           onPublishAll={handlePublishAll}
           onUpdateExternalLink={handleUpdateExternalLink}
           onUpdateContent={handleUpdateContent}
+          cardProgress={cardProgress}
         />
       )}
 

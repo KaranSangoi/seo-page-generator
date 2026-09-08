@@ -79,6 +79,11 @@ model GenerationBatch {
   status           String   @default("in_progress") // "in_progress", "completed", "failed"
   // Per-batch link color override (hex). Null = fall back to Client.linkColor.
   linkColor        String?
+  // Location-cards post-step progress (null = not applicable / no NBS-BS pages).
+  // cardStatus: "in_progress" | "completed" | "failed"
+  cardStatus       String?
+  cardsTotal       Int      @default(0) // eligible NBS/BS children to process
+  cardsDone        Int      @default(0) // processed so far (added + skipped)
   createdAt        DateTime @default(now())
 
   client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)

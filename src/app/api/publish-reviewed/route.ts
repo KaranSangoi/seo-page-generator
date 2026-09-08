@@ -140,10 +140,16 @@ export async function POST(request: NextRequest) {
           });
           if (remaining === 0) {
             const { addLocationCardsForBatch } = await import('@/lib/location-cards');
-            const cardResult = await addLocationCardsForBatch(thisPage.batchId);
-            if (cardResult.ran) {
-              console.log(`[PUBLISH] 🗺️ Location cards: ${cardResult.cardsAdded} added, ${cardResult.cardsSkipped} skipped, ${cardResult.parentsUpdated} parent(s) updated` + (cardResult.errors.length ? ` | errors: ${cardResult.errors.join('; ')}` : ''));
-            }
+            // Fire-and-forget: don't block this publish response on image
+            // generation. The engine updates batch card progress in the DB, which
+            // the client polls for the X/Y indicator. Idempotent + guarded.
+            void addLocationCardsForBatch(thisPage.batchId)
+              .then((cardResult) => {
+                if (cardResult.ran) {
+                  console.log(`[PUBLISH] 🗺️ Location cards: ${cardResult.cardsAdded} added, ${cardResult.cardsSkipped} skipped, ${cardResult.parentsUpdated} parent(s) updated` + (cardResult.errors.length ? ` | errors: ${cardResult.errors.join('; ')}` : ''));
+                }
+              })
+              .catch((e) => console.error('[PUBLISH] Location cards step failed (non-fatal):', e));
           }
         }
       } catch (cardErr) {
