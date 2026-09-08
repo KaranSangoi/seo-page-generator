@@ -660,6 +660,32 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Ensure this NBS/BS page has its card on the parent. Idempotent + non-fatal:
+    // the engine skips if a card for this URL already exists.
+    if (
+      (page.pageType === 'Nested Broad Stroke' || page.pageType === 'Broad Stroke') &&
+      page.parentSlug &&
+      page.location
+    ) {
+      try {
+        const { addLocationCards } = await import('@/lib/location-cards');
+        const cardResult = await addLocationCards(client, [
+          {
+            parentSlug: page.parentSlug,
+            location: page.location,
+            publishedUrl,
+            pageType: page.pageType,
+            service: page.service,
+          },
+        ]);
+        if (cardResult.ran) {
+          console.log(`[REGENERATE] 🗺️ Location card: ${cardResult.cardsAdded} added, ${cardResult.cardsSkipped} skipped` + (cardResult.errors.length ? ` | errors: ${cardResult.errors.join('; ')}` : ''));
+        }
+      } catch (cardErr) {
+        console.error('[REGENERATE] Location card step failed (non-fatal):', cardErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       page: {

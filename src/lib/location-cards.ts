@@ -386,11 +386,28 @@ export interface CardClientData {
   pageBuilder?: string | null;
 }
 
+// Guards against concurrent runs for the same batch within a process — e.g. the
+// review flow publishing several pages in parallel, each detecting "batch done".
+const inFlightBatches = new Set<string>();
+
 /**
  * Add location cards for all NBS/BS pages in a completed batch.
  * Loads the batch + client from the DB, then delegates to addLocationCards.
+ * Safe to call from any publish path; no-ops if already running for this batch.
  */
 export async function addLocationCardsForBatch(batchId: string): Promise<LocationCardsResult> {
+  if (inFlightBatches.has(batchId)) {
+    return { ran: false, reason: 'already running for this batch', parentsUpdated: 0, cardsAdded: 0, cardsSkipped: 0, imagesGenerated: 0, errors: [] };
+  }
+  inFlightBatches.add(batchId);
+  try {
+    return await runLocationCardsForBatch(batchId);
+  } finally {
+    inFlightBatches.delete(batchId);
+  }
+}
+
+async function runLocationCardsForBatch(batchId: string): Promise<LocationCardsResult> {
   const batch = await prisma.generationBatch.findUnique({
     where: { id: batchId },
     include: { client: true, generatedPages: true },

@@ -125,6 +125,30 @@ export async function POST(request: NextRequest) {
         console.error('[PUBLISH] Failed to update page record:', dbError);
         // Don't fail the whole operation if DB update fails
       }
+
+      // Once every page in this batch is published (none left in review), add
+      // location cards to parent pages. Guarded + non-fatal; the engine is
+      // idempotent and skips itself if another page's request already ran it.
+      try {
+        const thisPage = await prisma.generatedPage.findUnique({
+          where: { id: dbId },
+          select: { batchId: true },
+        });
+        if (thisPage?.batchId) {
+          const remaining = await prisma.generatedPage.count({
+            where: { batchId: thisPage.batchId, status: { notIn: ['success', 'failed'] } },
+          });
+          if (remaining === 0) {
+            const { addLocationCardsForBatch } = await import('@/lib/location-cards');
+            const cardResult = await addLocationCardsForBatch(thisPage.batchId);
+            if (cardResult.ran) {
+              console.log(`[PUBLISH] 🗺️ Location cards: ${cardResult.cardsAdded} added, ${cardResult.cardsSkipped} skipped, ${cardResult.parentsUpdated} parent(s) updated` + (cardResult.errors.length ? ` | errors: ${cardResult.errors.join('; ')}` : ''));
+            }
+          }
+        }
+      } catch (cardErr) {
+        console.error('[PUBLISH] Location cards step failed (non-fatal):', cardErr);
+      }
     }
 
     return NextResponse.json({
