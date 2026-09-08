@@ -34,16 +34,18 @@ export function isImageGenerationAvailable(): boolean {
  */
 function buildPrompt(location: string, pageType: string): string {
   const isCounty = /county/i.test(location) || pageType === 'Nested Broad Stroke';
-  const subject = isCounty
-    ? `the ${location} area`
-    : `the town of ${location}`;
+  const subject = isCounty ? `the ${location} area` : `the town of ${location}`;
+  // Keep the prompt minimal and let the LOCATION NAME drive the scene — the model
+  // infers each place's real regional character (terrain, vegetation, density)
+  // far better this way. A prescriptive scene description ("small town with a
+  // river / green hills") overrides that and produces wrong-looking results
+  // (e.g. a green river town for arid SoCal suburbs). Only style/quality and
+  // no-text constraints are pinned.
   return [
     `Aerial drone photograph of ${subject}, USA.`,
-    `Wide establishing daytime shot, like a Google Earth / real-estate hero image:`,
-    isCounty
-      ? `rolling landscape with small residential neighborhoods, trees, roads winding through countryside, and distant hills.`
-      : `a small American town nestled in its natural landscape — residential homes, a main street, greenery, and distant hills or a river.`,
-    `Natural warm daylight, realistic, high detail, photographic, no text, no watermark, no logos, no captions, no close-up people.`,
+    `Wide establishing daytime shot, like a Google Earth / real-estate hero image.`,
+    `Natural daylight, realistic, high detail, photographic.`,
+    `No text, no watermark, no logos, no captions, no close-up people.`,
   ].join(' ');
 }
 
