@@ -56,7 +56,9 @@ interface ContentPreviewModalProps {
   onPublishAll: () => Promise<void>;
   onUpdateExternalLink?: (pageId: string, newUrl: string) => void;
   onUpdateContent?: (pageId: string, field: string, value: string) => void;
-  cardProgress?: { status: string; done: number; total: number } | null;
+  cardProgress?: { status: string; done: number; total: number; error?: string } | null;
+  onRetryCards?: () => void;
+  isRetryingCards?: boolean;
 }
 
 export default function ContentPreviewModal({
@@ -68,6 +70,8 @@ export default function ContentPreviewModal({
   onUpdateExternalLink,
   onUpdateContent,
   cardProgress,
+  onRetryCards,
+  isRetryingCards,
 }: ContentPreviewModalProps) {
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['meta', 'hero']));
@@ -1158,7 +1162,11 @@ export default function ContentPreviewModal({
 
           {/* Location cards post-publish progress */}
           {cardProgress && (
-            <div className="px-6 py-3 border-t border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-900/20">
+            <div className={`px-6 py-3 border-t ${
+              cardProgress.status === 'failed'
+                ? 'border-red-200 dark:border-red-900/60 bg-red-50/70 dark:bg-red-900/20'
+                : 'border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-900/20'
+            }`}>
               {cardProgress.status === 'in_progress' ? (
                 <div className="flex items-center gap-2">
                   <svg className="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none">
@@ -1168,6 +1176,24 @@ export default function ContentPreviewModal({
                   <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
                     🗺️ Adding location cards to parent pages…{cardProgress.total > 0 ? ` ${cardProgress.done}/${cardProgress.total}` : ''}
                   </span>
+                </div>
+              ) : cardProgress.status === 'failed' ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-red-600 dark:text-red-400">⚠️</span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                      Some location cards couldn&apos;t be added. Pages published fine — retry is safe.
+                    </span>
+                  </div>
+                  {onRetryCards && (
+                    <button
+                      onClick={onRetryCards}
+                      disabled={isRetryingCards}
+                      className="flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white transition-colors"
+                    >
+                      {isRetryingCards ? 'Retrying…' : 'Retry'}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">

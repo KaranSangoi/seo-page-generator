@@ -101,7 +101,8 @@ export default function GeneratePagesTab({ clientId, clientLinkColor }: Generate
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [batchId, setBatchId] = useState<string | null>(null);
   // Location-cards post-step progress (null = not applicable to this batch).
-  const [cardProgress, setCardProgress] = useState<{ status: string; done: number; total: number } | null>(null);
+  const [cardProgress, setCardProgress] = useState<{ status: string; done: number; total: number; error?: string } | null>(null);
+  const [isRetryingCards, setIsRetryingCards] = useState(false);
   // Per-batch link color override. Off by default -> uses the client default.
   const [batchLinkColorEnabled, setBatchLinkColorEnabled] = useState(false);
   const [batchLinkColor, setBatchLinkColor] = useState(clientLinkColor || '#1a73e8');
@@ -314,7 +315,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
 
         // Location-cards post-step progress.
         if (batch.cardStatus) {
-          setCardProgress({ status: batch.cardStatus, done: batch.cardsDone ?? 0, total: batch.cardsTotal ?? 0 });
+          setCardProgress({ status: batch.cardStatus, done: batch.cardsDone ?? 0, total: batch.cardsTotal ?? 0, error: batch.cardError || undefined });
         } else {
           setCardProgress(null);
         }
@@ -728,13 +729,30 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           const d = await res.json();
           const b = d.batch;
           if (b?.cardStatus) {
-            setCardProgress({ status: b.cardStatus, done: b.cardsDone ?? 0, total: b.cardsTotal ?? 0 });
+            setCardProgress({ status: b.cardStatus, done: b.cardsDone ?? 0, total: b.cardsTotal ?? 0, error: b.cardError || undefined });
             if (b.cardStatus !== 'in_progress') return;
           }
         }
       } catch { /* keep polling */ }
       await new Promise((r) => setTimeout(r, 3000));
     }
+  };
+
+  // Manual retry of the location-cards step (after the engine's own retries were
+  // exhausted). Idempotent server-side — only missing cards get added.
+  const retryCards = async () => {
+    if (!batchId || isRetryingCards) return;
+    setIsRetryingCards(true);
+    setCardProgress({ status: 'in_progress', done: 0, total: cardProgress?.total ?? 0 });
+    // Fire the trigger but don't block on it (it can run for minutes) — poll for
+    // live progress instead.
+    fetch('/api/location-cards', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ batchId }),
+    }).catch(() => { /* rely on polling for the outcome */ });
+    await pollCardProgress(batchId);
+    setIsRetryingCards(false);
   };
 
   const handlePublishAll = async () => {
@@ -1362,7 +1380,11 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
 
           {/* Location cards post-step progress */}
           {cardProgress && (
-            <div className="mb-6 rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-900/20 p-4">
+            <div className={`mb-6 rounded-lg border p-4 ${
+              cardProgress.status === 'failed'
+                ? 'border-red-200 dark:border-red-900/60 bg-red-50/70 dark:bg-red-900/20'
+                : 'border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-900/20'
+            }`}>
               {cardProgress.status === 'in_progress' ? (
                 <>
                   <div className="flex items-center gap-2 mb-2">
@@ -1384,6 +1406,30 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
                     Generating a town image and linking each new County/Town page back from its parent. This runs after publishing.
                   </p>
                 </>
+              ) : cardProgress.status === 'failed' ? (
+                <div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-red-600 dark:text-red-400">⚠️</span>
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                        Some location cards couldn&apos;t be added{cardProgress.total > 0 ? ` (${cardProgress.done}/${cardProgress.total} processed)` : ''}.
+                      </span>
+                    </div>
+                    <button
+                      onClick={retryCards}
+                      disabled={isRetryingCards}
+                      className="flex-shrink-0 px-4 py-2 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white transition-colors"
+                    >
+                      {isRetryingCards ? 'Retrying…' : 'Retry location cards'}
+                    </button>
+                  </div>
+                  {cardProgress.error && (
+                    <p className="mt-2 text-xs text-red-700 dark:text-red-300 break-words">{cardProgress.error}</p>
+                  )}
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    The pages published fine. Retry is safe — only the missing cards are added.
+                  </p>
+                </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-accent-600 dark:text-accent-400">✅</span>
@@ -1484,6 +1530,8 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           onUpdateExternalLink={handleUpdateExternalLink}
           onUpdateContent={handleUpdateContent}
           cardProgress={cardProgress}
+          onRetryCards={retryCards}
+          isRetryingCards={isRetryingCards}
         />
       )}
 

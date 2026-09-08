@@ -181,6 +181,7 @@ export async function GET(request: NextRequest) {
         cardStatus: batch.cardStatus,
         cardsTotal: batch.cardsTotal,
         cardsDone: batch.cardsDone,
+        cardError: batch.cardError,
         pages: batch.generatedPages.map((page) => ({
           id: page.id,
           pageName: page.pageName,

@@ -474,30 +474,47 @@ async function runLocationCardsForBatch(batchId: string): Promise<LocationCardsR
     return { ran: false, reason: 'no eligible NBS/BS pages with parentSlug + publishedUrl', parentsUpdated: 0, cardsAdded: 0, cardsSkipped: 0, imagesGenerated: 0, errors: [] };
   }
 
-  // Publish progress to the batch so the UI can show a live X/Y indicator.
   const builder = (batch.client.pageBuilder || 'elementor').toLowerCase();
-  if (builder === 'elementor') {
-    await prisma.generationBatch
-      .update({ where: { id: batchId }, data: { cardStatus: 'in_progress', cardsTotal: children.length, cardsDone: 0 } })
-      .catch(() => {});
+  if (builder !== 'elementor') {
+    return { ran: false, reason: `builder is ${builder} — location cards are Elementor-only in v1`, parentsUpdated: 0, cardsAdded: 0, cardsSkipped: 0, imagesGenerated: 0, errors: [] };
   }
 
-  let done = 0;
-  const result = await addLocationCards(batch.client, children, {
-    onProgress: async () => {
-      done++;
-      await prisma.generationBatch.update({ where: { id: batchId }, data: { cardsDone: done } }).catch(() => {});
-    },
-  });
-
+  // Publish progress to the batch so the UI can show a live X/Y indicator.
   await prisma.generationBatch
-    .update({
-      where: { id: batchId },
-      data: { cardStatus: result.ran ? 'completed' : (builder === 'elementor' ? 'completed' : null), cardsDone: done },
-    })
+    .update({ where: { id: batchId }, data: { cardStatus: 'in_progress', cardsTotal: children.length, cardsDone: 0, cardError: null } })
     .catch(() => {});
 
-  return result;
+  let done = 0;
+  try {
+    const result = await addLocationCards(batch.client, children, {
+      onProgress: async () => {
+        done++;
+        await prisma.generationBatch.update({ where: { id: batchId }, data: { cardsDone: done } }).catch(() => {});
+      },
+    });
+
+    // Any per-parent error (e.g. a save that failed after retries) marks the step
+    // failed so the UI can offer a manual retry. Retry is idempotent (dedupes).
+    const failed = result.errors.length > 0;
+    await prisma.generationBatch
+      .update({
+        where: { id: batchId },
+        data: {
+          cardStatus: failed ? 'failed' : 'completed',
+          cardsDone: done,
+          cardError: failed ? result.errors.join('; ').slice(0, 500) : null,
+        },
+      })
+      .catch(() => {});
+    return result;
+  } catch (err: any) {
+    // Total failure (should be rare — the engine degrades gracefully). Never leave
+    // the batch stuck on "in_progress".
+    await prisma.generationBatch
+      .update({ where: { id: batchId }, data: { cardStatus: 'failed', cardsDone: done, cardError: (err?.message || String(err)).slice(0, 500) } })
+      .catch(() => {});
+    return { ran: true, parentsUpdated: 0, cardsAdded: 0, cardsSkipped: 0, imagesGenerated: 0, errors: [err?.message || String(err)] };
+  }
 }
 
 /**

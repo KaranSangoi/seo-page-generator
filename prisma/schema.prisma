@@ -84,6 +84,7 @@ model GenerationBatch {
   cardStatus       String?
   cardsTotal       Int      @default(0) // eligible NBS/BS children to process
   cardsDone        Int      @default(0) // processed so far (added + skipped)
+  cardError        String?  // failure summary shown in the UI when cardStatus = "failed"
   createdAt        DateTime @default(now())
 
   client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
