@@ -172,14 +172,45 @@ function fillCard(
 // WordPress page read/write (mirrors simple-queue.ts fetchElementorTemplate)
 // ---------------------------------------------------------------------------
 
+/**
+ * fetch with retry/backoff. This client's WordPress host (Newfold/HostGator)
+ * intermittently drops connections (UND_ERR_SOCKET "other side closed") and
+ * returns transient 5xx/429. Retrying turns those flaky failures into success
+ * instead of aborting the card step. Retries network errors + 5xx/429.
+ */
+async function fetchWithRetry(url: string, opts: RequestInit, attempts = 4): Promise<Response> {
+  let lastErr: any;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, opts);
+      if (res.status >= 500 || res.status === 429) {
+        lastErr = new Error(`HTTP ${res.status}`);
+      } else {
+        return res;
+      }
+    } catch (e) {
+      lastErr = e;
+    }
+    if (i < attempts - 1) {
+      await new Promise((r) => setTimeout(r, 800 * (i + 1))); // 0.8s, 1.6s, 2.4s
+    }
+  }
+  throw lastErr;
+}
+
 async function fetchPage(wordpressUrl: string, pageId: number | string, credentials: string): Promise<any | null> {
   const url = `${wordpressUrl}/wp-json/wp/v2/pages/${pageId}?context=edit&_cb=${Date.now()}`;
-  const res = await fetch(url, { headers: { Authorization: `Basic ${credentials}` } });
-  if (!res.ok) {
-    console.error(`[location-cards] fetch page ${pageId} failed: ${res.status} ${res.statusText}`);
+  try {
+    const res = await fetchWithRetry(url, { headers: { Authorization: `Basic ${credentials}` } });
+    if (!res.ok) {
+      console.error(`[location-cards] fetch page ${pageId} failed: ${res.status} ${res.statusText}`);
+      return null;
+    }
+    return res.json();
+  } catch (e) {
+    console.error(`[location-cards] fetch page ${pageId} error after retries:`, e);
     return null;
   }
-  return res.json();
 }
 
 function parseElementorData(page: any): ElementorEl[] | null {
@@ -196,7 +227,7 @@ function parseElementorData(page: any): ElementorEl[] | null {
 async function resolvePageIdBySlug(wordpressUrl: string, slug: string, credentials: string): Promise<number | null> {
   try {
     const url = `${wordpressUrl}/wp-json/wp/v2/pages?slug=${encodeURIComponent(slug)}&context=edit&_cb=${Date.now()}`;
-    const res = await fetch(url, { headers: { Authorization: `Basic ${credentials}` } });
+    const res = await fetchWithRetry(url, { headers: { Authorization: `Basic ${credentials}` } });
     if (!res.ok) return null;
     const pages = await res.json();
     return Array.isArray(pages) && pages.length > 0 ? pages[0].id : null;
@@ -213,23 +244,28 @@ async function saveElementorData(
   existingMeta: Record<string, any>,
 ): Promise<boolean> {
   const url = `${wordpressUrl}/wp-json/wp/v2/pages/${pageId}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { Authorization: `Basic ${credentials}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      meta: {
-        _elementor_data: JSON.stringify(elements),
-        _elementor_edit_mode: 'builder',
-        _elementor_version: existingMeta?._elementor_version || '3.25.0',
-      },
-    }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    console.error(`[location-cards] save page ${pageId} failed: ${res.status} ${text.slice(0, 300)}`);
+  try {
+    const res = await fetchWithRetry(url, {
+      method: 'POST',
+      headers: { Authorization: `Basic ${credentials}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        meta: {
+          _elementor_data: JSON.stringify(elements),
+          _elementor_edit_mode: 'builder',
+          _elementor_version: existingMeta?._elementor_version || '3.25.0',
+        },
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`[location-cards] save page ${pageId} failed: ${res.status} ${text.slice(0, 300)}`);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error(`[location-cards] save page ${pageId} error after retries:`, e);
     return false;
   }
-  return true;
 }
 
 // ---------------------------------------------------------------------------
