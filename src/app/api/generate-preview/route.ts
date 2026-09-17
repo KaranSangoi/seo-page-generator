@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     const { pages, csvFilename, model } = body;
     clientId = body.clientId;
     const batchLinkColor = body.linkColor; // Per-batch link color override (hex)
+    const bodyLocationCardsEnabled: boolean | undefined = body.locationCardsEnabled;
 
     if (!clientId || !pages || !Array.isArray(pages)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
         totalPages: pages.length,
         status: 'in_progress',
         linkColor: sanitizeLinkColor(batchLinkColor),
+        locationCardsEnabled: bodyLocationCardsEnabled ?? client.locationCardsEnabled,
       },
     });
 

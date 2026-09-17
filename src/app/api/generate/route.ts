@@ -28,6 +28,9 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const body = await request.json();
     const { clientId, pages, model, linkColor: batchLinkColor } = body;
+    // Per-batch opt-out for location cards; when the UI doesn't send it, fall
+    // back to the client's default below.
+    const bodyLocationCardsEnabled: boolean | undefined = body.locationCardsEnabled;
 
     if (!clientId || !pages || !Array.isArray(pages) || pages.length === 0) {
       return NextResponse.json(
@@ -77,6 +80,8 @@ export async function POST(request: NextRequest) {
       // Per-batch link color override (hex); resolved against the client default
       // inside queueBatchGeneration.
       batchLinkColor,
+      // Effective location-cards opt-in: explicit body value wins, else client default.
+      locationCardsEnabled: bodyLocationCardsEnabled ?? client.locationCardsEnabled,
       clientData: {
         clientName: client.clientName,
         clientWebsite: client.clientWebsite,

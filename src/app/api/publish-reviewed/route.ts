@@ -138,7 +138,12 @@ export async function POST(request: NextRequest) {
           const remaining = await prisma.generatedPage.count({
             where: { batchId: thisPage.batchId, status: { notIn: ['success', 'failed'] } },
           });
-          if (remaining === 0) {
+          const failed = await prisma.generatedPage.count({ where: { batchId: thisPage.batchId, status: 'failed' } });
+          const b = await prisma.generationBatch.findUnique({ where: { id: thisPage.batchId }, select: { locationCardsEnabled: true } });
+          const cardsEnabled = b?.locationCardsEnabled !== false;
+          // Only when every page is settled, none failed, and not opted out — so
+          // cards never run alongside a publish failure or on an opted-out batch.
+          if (remaining === 0 && failed === 0 && cardsEnabled) {
             const { addLocationCardsForBatch } = await import('@/lib/location-cards');
             // Fire-and-forget: don't block this publish response on image
             // generation. The engine updates batch card progress in the DB, which

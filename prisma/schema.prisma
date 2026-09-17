@@ -55,6 +55,9 @@ model Client {
   // links as an inline style. Null = keep theme default styling. Can be
   // overridden per batch via GenerationBatch.linkColor.
   linkColor        String?
+  // Per-client default for the automatic location-cards step (Elementor). When
+  // false, batches for this client skip location cards unless overridden.
+  locationCardsEnabled Boolean @default(true)
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -85,6 +88,7 @@ model GenerationBatch {
   cardsTotal       Int      @default(0) // eligible NBS/BS children to process
   cardsDone        Int      @default(0) // processed so far (added + skipped)
   cardError        String?  // failure summary shown in the UI when cardStatus = "failed"
+  locationCardsEnabled Boolean @default(true) // per-batch opt-out of the location-cards step
   createdAt        DateTime @default(now())
 
   client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)

@@ -1557,6 +1557,8 @@ export async function queueBatchGeneration(params: {
   // fall back to the client default.
   batchLinkColor?: string | null;
   model?: string; // User-selected AI model
+  // Effective per-batch opt-in for the location-cards step (defaults true).
+  locationCardsEnabled?: boolean;
 }) {
   const { batchId, clientId, userId, pages, clientData, model } = params;
 
@@ -1584,6 +1586,7 @@ export async function queueBatchGeneration(params: {
         failedPages: 0,
         status: 'in_progress',
         linkColor: sanitizeLinkColor(params.batchLinkColor),
+        locationCardsEnabled: params.locationCardsEnabled !== false,
       },
     });
 
@@ -1697,6 +1700,8 @@ async function processBatchSequentially(
   // SAME update that marks the batch completed — this closes the race where the UI
   // polls between "completed" and the card step starting, and stops too early.
   let eligibleCardCount = 0;
+  let failedCount = 0;
+  let cardsEnabled = true;
   try {
     eligibleCardCount = await prisma.generatedPage.count({
       where: {
@@ -1707,7 +1712,16 @@ async function processBatchSequentially(
         parentSlug: { not: null },
       },
     });
+    failedCount = await prisma.generatedPage.count({ where: { batchId, status: 'failed' } });
+    const b = await prisma.generationBatch.findUnique({ where: { id: batchId }, select: { locationCardsEnabled: true } });
+    cardsEnabled = b?.locationCardsEnabled !== false;
   } catch { /* non-fatal */ }
+
+  // Only run the location-cards step for a CLEAN batch (no publish failures) that
+  // hasn't opted out. If any page failed to publish, skip cards — it avoids the
+  // confusing "adding cards" state next to a publish error, and avoids piling the
+  // card step's request load onto a host that's already returning errors.
+  const runCards = cardsEnabled && failedCount === 0 && eligibleCardCount > 0;
 
   // Mark batch as completed
   await prisma.generationBatch.update({
@@ -1715,9 +1729,7 @@ async function processBatchSequentially(
     data: {
       status: 'completed',
       timeTakenSeconds: Math.floor((Date.now() - parseInt(batchId.split('_')[1])) / 1000),
-      ...(eligibleCardCount > 0
-        ? { cardStatus: 'in_progress', cardsTotal: eligibleCardCount, cardsDone: 0 }
-        : {}),
+      ...(runCards ? { cardStatus: 'in_progress', cardsTotal: eligibleCardCount, cardsDone: 0 } : {}),
     },
   });
 
@@ -1730,7 +1742,9 @@ async function processBatchSequentially(
 
   // Post-batch: add location cards to parent pages for any NBS/BS child pages.
   // Non-blocking + fully guarded — must never break the completed batch.
-  try {
+  if (!runCards) {
+    console.log(`[BATCH] 🗺️ Location cards skipped (cardsEnabled=${cardsEnabled}, failedPages=${failedCount}, eligible=${eligibleCardCount}).`);
+  } else try {
     const { addLocationCardsForBatch } = await import('./location-cards');
     const cardResult = await addLocationCardsForBatch(batchId);
     if (cardResult.ran) {

@@ -452,6 +452,11 @@ async function runLocationCardsForBatch(batchId: string): Promise<LocationCardsR
     return { ran: false, reason: 'batch not found', parentsUpdated: 0, cardsAdded: 0, cardsSkipped: 0, imagesGenerated: 0, errors: [] };
   }
 
+  // Per-batch opt-out (defaults true). When off, skip the whole step.
+  if (batch.locationCardsEnabled === false) {
+    return { ran: false, reason: 'location cards disabled for this batch', parentsUpdated: 0, cardsAdded: 0, cardsSkipped: 0, imagesGenerated: 0, errors: [] };
+  }
+
   // Eligible children: successful NBS/BS pages with a published URL and a parent.
   const children: ChildPage[] = batch.generatedPages
     .filter(

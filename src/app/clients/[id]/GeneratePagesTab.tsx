@@ -15,6 +15,7 @@ import ContentPreviewModal from './ContentPreviewModal';
 interface GeneratePagesTabProps {
   clientId: string;
   clientLinkColor?: string | null;
+  clientLocationCardsEnabled?: boolean;
 }
 
 interface CSVRow {
@@ -59,7 +60,7 @@ const VALID_PAGE_TYPES = ['Primary Service', 'Nested Broad Stroke', 'Broad Strok
 const VALID_LINK_SECTIONS = ['benefits-1', 'benefits-2', 'benefits-3', 'why-1', 'why-2', 'why-3'];
 const VALID_OMIT_SECTIONS = ['FAQ', 'Map', 'Why', 'Benefits'];
 
-export default function GeneratePagesTab({ clientId, clientLinkColor }: GeneratePagesTabProps) {
+export default function GeneratePagesTab({ clientId, clientLinkColor, clientLocationCardsEnabled = true }: GeneratePagesTabProps) {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [parsedPages, setParsedPages] = useState<ParsedPage[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
@@ -103,6 +104,9 @@ export default function GeneratePagesTab({ clientId, clientLinkColor }: Generate
   // Location-cards post-step progress (null = not applicable to this batch).
   const [cardProgress, setCardProgress] = useState<{ status: string; done: number; total: number; error?: string } | null>(null);
   const [isRetryingCards, setIsRetryingCards] = useState(false);
+  // Per-batch opt-out for the automatic location-cards step (defaults to the
+  // client's setting). When off, the batch skips location cards entirely.
+  const [locationCardsEnabled, setLocationCardsEnabled] = useState(clientLocationCardsEnabled);
   // Per-batch link color override. Off by default -> uses the client default.
   const [batchLinkColorEnabled, setBatchLinkColorEnabled] = useState(false);
   const [batchLinkColor, setBatchLinkColor] = useState(clientLinkColor || '#1a73e8');
@@ -386,6 +390,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           model: selectedModel,
           // Per-batch link color override (undefined -> server uses client default)
           linkColor: batchLinkColorEnabled ? batchLinkColor : undefined,
+          locationCardsEnabled,
           pages: parsedPages.map((page) => {
             const edits = editedData.get(page.rowNumber);
             return {
@@ -575,6 +580,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           csvFilename: csvFile?.name || `preview_${Date.now()}.csv`,
           // Per-batch link color override (undefined -> server uses client default)
           linkColor: batchLinkColorEnabled ? batchLinkColor : undefined,
+          locationCardsEnabled,
           pages: parsedPages.map((page) => {
             const edits = editedData.get(page.rowNumber);
             return {
@@ -760,9 +766,11 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
     for (const page of readyPages) {
       await handlePublishPage(page.pageId);
     }
-    // After all pages publish, the server adds location cards to parents in the
-    // background — reflect that progress in the modal.
-    if (batchId) {
+    // Only reflect the location-cards step if the batch published cleanly and the
+    // step wasn't opted out. If any page failed, the server skips cards — so we
+    // don't show "adding cards" next to a publish error.
+    const anyFailed = contentPreviewPages.some(p => p.status === 'failed');
+    if (batchId && locationCardsEnabled && !anyFailed) {
       setCardProgress({ status: 'in_progress', done: 0, total: 0 });
       pollCardProgress(batchId);
     }
@@ -1305,6 +1313,24 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
                       : clientLinkColor
                         ? <>Using client default <span className="font-mono">{clientLinkColor}</span>. Check to override for this batch.</>
                         : 'No link color set — links keep the theme default. Check to set one for this batch.'}
+                  </p>
+                </div>
+
+                {/* Location cards opt-out */}
+                <div className="mt-3">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={locationCardsEnabled}
+                      onChange={(e) => setLocationCardsEnabled(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    Add location cards to parent pages (County/Town pages)
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {locationCardsEnabled
+                      ? 'After publishing, NBS/BS pages get a card (image + link) added to their parent. Requires the location-cards section on the template. Elementor only.'
+                      : 'Location cards are OFF for this batch — pages publish exactly as before, with no parent-page edits.'}
                   </p>
                 </div>
               </div>
