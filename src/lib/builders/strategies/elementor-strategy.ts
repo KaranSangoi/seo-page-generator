@@ -108,6 +108,13 @@ export class ElementorStrategy implements PageBuilderStrategy {
     // Process all elements
     const updatedElements = replaceInElements(elements);
 
+    // Strip editor-only cached bloat (Premium Addons premium_shapes_data, etc.)
+    // to keep the publish body under host WAF request-body size limits.
+    try {
+      const { stripElementorBloat } = require('../../elementor-optimize');
+      stripElementorBloat(updatedElements);
+    } catch { /* non-fatal */ }
+
     // Update template with modified data
     template.rawData.meta._elementor_data = JSON.stringify(updatedElements);
 

@@ -330,6 +330,10 @@ async function publishToWordPress(params: {
 
       // Set Elementor-specific fields
       pagePayload.content = fullTemplatePage.content?.rendered || '';
+      try {
+        const { stripElementorBloat } = await import('@/lib/elementor-optimize');
+        stripElementorBloat(updatedData);
+      } catch (e) { console.warn('[REGENERATE] stripElementorBloat failed (non-fatal):', e); }
       pagePayload.meta._elementor_data = JSON.stringify(updatedData);
       pagePayload.meta._elementor_edit_mode = 'builder';
       pagePayload.meta._elementor_template_type = 'wp-page';

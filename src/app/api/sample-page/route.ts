@@ -731,6 +731,10 @@ export async function POST(request: NextRequest) {
       }
 
       // Store Elementor-specific data
+      try {
+        const { stripElementorBloat } = await import('@/lib/elementor-optimize');
+        stripElementorBloat(updatedElementorData);
+      } catch (e) { console.warn('[SAMPLE] stripElementorBloat failed (non-fatal):', e); }
       updatedContent = updatedElementorData;
       updatedMeta = {
         _elementor_data: JSON.stringify(updatedElementorData),

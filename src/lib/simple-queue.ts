@@ -828,6 +828,16 @@ async function duplicateTemplateAndPublish(params: {
       } catch (e) {
         console.warn('[BATCH] stripLocationCardsSection failed (non-fatal):', e);
       }
+
+      // Strip editor-only cached bloat (e.g. Premium Addons premium_shapes_data,
+      // ~110KB/container) so the publish body stays under host WAF size limits.
+      try {
+        const { stripElementorBloat } = await import('./elementor-optimize');
+        const r = stripElementorBloat(updatedElementorData);
+        if (r.removed) console.log(`[BATCH] Stripped ${r.removed} bloat field(s), saved ${(r.bytesSaved / 1024).toFixed(0)}KB from payload`);
+      } catch (e) {
+        console.warn('[BATCH] stripElementorBloat failed (non-fatal):', e);
+      }
     } else if (isDivi) {
       // DIVI: Use Divi replacer
       const diviContent = templatePage.content?.raw || templatePage.content?.rendered || '';

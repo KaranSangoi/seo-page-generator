@@ -666,6 +666,12 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
   // Add builder-specific fields
   if (builderType === 'elementor') {
     pagePayload.content = schemaScript + (templatePage.content?.rendered || '');
+    // Strip editor-only cached bloat (Premium Addons premium_shapes_data, etc.)
+    // so the publish body stays under host WAF request-body size limits.
+    try {
+      const { stripElementorBloat } = await import('./elementor-optimize');
+      stripElementorBloat(updatedContent);
+    } catch (e) { console.warn('[PUBLISH] stripElementorBloat failed (non-fatal):', e); }
     pagePayload.meta._elementor_data = JSON.stringify(updatedContent);
     pagePayload.meta._elementor_edit_mode = 'builder';
     pagePayload.meta._elementor_template_type = 'wp-page';

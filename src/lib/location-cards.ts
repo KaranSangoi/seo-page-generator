@@ -244,6 +244,12 @@ async function saveElementorData(
   existingMeta: Record<string, any>,
 ): Promise<boolean> {
   const url = `${wordpressUrl}/wp-json/wp/v2/pages/${pageId}`;
+  // Strip editor-only bloat (Premium Addons premium_shapes_data, etc.) so the
+  // parent-page save stays under host WAF request-body size limits.
+  try {
+    const { stripElementorBloat } = await import('./elementor-optimize');
+    stripElementorBloat(elements);
+  } catch { /* non-fatal */ }
   try {
     const res = await fetchWithRetry(url, {
       method: 'POST',
