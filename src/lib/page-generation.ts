@@ -8,7 +8,6 @@
  */
 
 import { generatePageContent, validateAndFixContent, regenerateField } from './claude-api';
-import { wpFetch } from './wp-fetch';
 import { replaceElementorContent } from './elementor-replacer';
 import { replaceDiviContent } from './divi-replacer';
 import { replaceWPBakeryContent } from './wpbakery-replacer';
@@ -63,7 +62,7 @@ export async function getParentPageId(
 
   try {
     const searchUrl = `${wordpressUrl}/wp-json/wp/v2/pages?slug=${encodeURIComponent(parentSlug)}`;
-    const response = await wpFetch(searchUrl, {
+    const response = await fetch(searchUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,
       },
@@ -95,7 +94,7 @@ export async function fetchElementorTemplate(
   try {
     // _cb cache-buster: avoid stale cached template from WP edge/page cache.
     const templateUrl = `${wordpressUrl}/wp-json/wp/v2/pages/${templatePageId}?context=edit&_cb=${Date.now()}`;
-    const response = await wpFetch(templateUrl, {
+    const response = await fetch(templateUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,
       },
@@ -148,7 +147,7 @@ export async function fetchElementorTemplate(
 export async function fetchSitemap(websiteUrl: string): Promise<string[]> {
   try {
     const sitemapUrl = `${websiteUrl}/sitemap.xml`;
-    const response = await wpFetch(sitemapUrl);
+    const response = await fetch(sitemapUrl);
 
     if (!response.ok) {
       console.warn(`Failed to fetch sitemap from ${sitemapUrl}`);
@@ -716,16 +715,15 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     pagePayload.parent = parentId;
   }
 
-  // Create the new page. retries:1 — no transient retry on a create POST (would
-  // risk a duplicate page); still gets the browser-UA fallback on a 403 bot gate.
-  const response = await wpFetch(wpApiUrl, {
+  // Create the new page
+  const response = await fetch(wpApiUrl, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${credentials}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(pagePayload),
-  }, { retries: 1 });
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -751,7 +749,7 @@ export async function publishToWordPress(params: PublishParams): Promise<string>
     }
 
     if (Object.keys(updatePayload.meta).length > 0) {
-      await wpFetch(`${wpApiUrl}/${pageId}`, {
+      await fetch(`${wpApiUrl}/${pageId}`, {
         method: 'POST',
         headers: {
           Authorization: `Basic ${credentials}`,

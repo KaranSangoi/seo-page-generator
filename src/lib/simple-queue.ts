@@ -5,7 +5,6 @@
 
 import { generatePageContent, validateContent, validateAndFixContent, regenerateField, clearBatchContext } from './claude-api';
 import { prisma } from './prisma';
-import { wpFetch } from './wp-fetch';
 import { generateStructuredData } from './schema-generator';
 import { replaceDiviContent } from './divi-replacer';
 import { replaceFusionContent } from './fusion-replacer';
@@ -85,7 +84,7 @@ async function getParentPageId(wordpressUrl: string, parentSlug: string, credent
 
   try {
     const searchUrl = `${wordpressUrl}/wp-json/wp/v2/pages?slug=${encodeURIComponent(parentSlug)}`;
-    const response = await wpFetch(searchUrl, {
+    const response = await fetch(searchUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,
       },
@@ -129,7 +128,7 @@ async function fetchElementorTemplate(wordpressUrl: string, templatePageId: stri
   try {
     // _cb cache-buster: avoid stale cached template from WP edge/page cache.
     const templateUrl = `${wordpressUrl}/wp-json/wp/v2/pages/${templatePageId}?context=edit&_cb=${Date.now()}`;
-    const response = await wpFetch(templateUrl, {
+    const response = await fetch(templateUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,
       },
@@ -163,7 +162,7 @@ async function fetchElementorTemplate(wordpressUrl: string, templatePageId: stri
 async function fetchSitemap(websiteUrl: string): Promise<string[]> {
   try {
     const sitemapUrl = `${websiteUrl}/sitemap.xml`;
-    const response = await wpFetch(sitemapUrl);
+    const response = await fetch(sitemapUrl);
 
     if (!response.ok) {
       console.warn(`Failed to fetch sitemap from ${sitemapUrl}`);
@@ -741,7 +740,7 @@ async function duplicateTemplateAndPublish(params: {
   try {
     // _cb cache-buster: avoid stale cached template from WP edge/page cache.
     const templateUrl = `${clientData.wordpressUrl}/wp-json/wp/v2/pages/${clientData.templatePageId}?context=edit&_cb=${Date.now()}`;
-    const templateResponse = await wpFetch(templateUrl, {
+    const templateResponse = await fetch(templateUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,
       },
@@ -1034,16 +1033,15 @@ async function duplicateTemplateAndPublish(params: {
       pagePayload.parent = parentId;
     }
 
-    // Create the new page. retries:1 — no transient retry on a create POST (would
-    // risk a duplicate page); still gets the browser-UA fallback on a 403 bot gate.
-    const response = await wpFetch(wpApiUrl, {
+    // Create the new page
+    const response = await fetch(wpApiUrl, {
       method: 'POST',
       headers: {
         Authorization: `Basic ${credentials}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(pagePayload),
-    }, { retries: 1 });
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -1073,7 +1071,7 @@ async function duplicateTemplateAndPublish(params: {
 
       // Only update if we have SEO fields to set
       if (Object.keys(updatePayload.meta).length > 0) {
-        await wpFetch(`${wpApiUrl}/${pageId}`, {
+        await fetch(`${wpApiUrl}/${pageId}`, {
           method: 'POST',
           headers: {
             Authorization: `Basic ${credentials}`,

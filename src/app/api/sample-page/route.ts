@@ -6,7 +6,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { wpFetch } from '@/lib/wp-fetch';
 import { linkStyleValue, linkColorAttr, sanitizeLinkColor } from '@/lib/link-style';
 
 // Force dynamic rendering (uses cookies for authentication)
@@ -68,7 +67,7 @@ async function getParentPageId(wordpressUrl: string, parentSlug: string, credent
 
   try {
     const searchUrl = `${wordpressUrl}/wp-json/wp/v2/pages?slug=${encodeURIComponent(parentSlug)}`;
-    const response = await wpFetch(searchUrl, {
+    const response = await fetch(searchUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,
       },
@@ -606,7 +605,7 @@ export async function POST(request: NextRequest) {
     // _cb cache-buster: WordPress edge/page caches REST GETs by URL and can
     // serve a stale template (e.g. missing a recently-added map section).
     const templateUrl = `${client.wordpressUrl}/wp-json/wp/v2/pages/${client.templatePageId}?context=edit&_cb=${Date.now()}`;
-    const templateResponse = await wpFetch(templateUrl, {
+    const templateResponse = await fetch(templateUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,
       },
@@ -1085,15 +1084,14 @@ export async function POST(request: NextRequest) {
 
     // Create the sample page
     console.log('[REST API] Creating WordPress page...');
-    // retries:1 — create POST, no transient retry (duplicate risk); UA fallback on 403.
-    const response = await wpFetch(wpApiUrl, {
+    const response = await fetch(wpApiUrl, {
       method: 'POST',
       headers: {
         Authorization: `Basic ${credentials}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(pagePayload),
-    }, { retries: 1 });
+    });
 
     console.log('[REST API] Response status:', response.status, response.statusText);
 
@@ -1140,7 +1138,7 @@ export async function POST(request: NextRequest) {
       // Only update if we have SEO fields to set
       if (Object.keys(updatePayload.meta).length > 0) {
         console.log('[SEO UPDATE] Sending second update to refresh SEO fields:', updatePayload.meta);
-        const updateResponse = await wpFetch(`${wpApiUrl}/${pageId}`, {
+        const updateResponse = await fetch(`${wpApiUrl}/${pageId}`, {
           method: 'POST',
           headers: {
             Authorization: `Basic ${credentials}`,
@@ -1166,7 +1164,7 @@ export async function POST(request: NextRequest) {
                 ...updatePayload.meta,
               },
             };
-            const reindexResponse = await wpFetch(`${wpApiUrl}/${pageId}`, {
+            const reindexResponse = await fetch(`${wpApiUrl}/${pageId}`, {
               method: 'POST',
               headers: {
                 Authorization: `Basic ${credentials}`,

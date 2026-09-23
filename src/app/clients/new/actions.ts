@@ -13,7 +13,6 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sanitizeLinkColor } from '@/lib/link-style';
-import { wpFetch } from '@/lib/wp-fetch';
 
 interface FormState {
   error?: string;
@@ -80,13 +79,11 @@ export async function testConnectionAction(formData: FormData): Promise<{ succes
     console.log('Full URL:', testUrl);
     console.log('Auth header:', `Basic ${authString.substring(0, 20)}...`);
 
-    // retries:1 keeps the connection test snappy (normal attempt + browser-UA
-    // fallback for bot gates like Cloudflare, no transient-retry backoff loops).
-    const response = await wpFetch(testUrl, {
+    const response = await fetch(testUrl, {
       headers: authHeaders,
       // Add timeout
       signal: AbortSignal.timeout(10000),
-    }, { retries: 1 });
+    });
 
     console.log('Response status:', response.status);
     console.log('Response statusText:', response.statusText);

@@ -173,13 +173,29 @@ function fillCard(
 // ---------------------------------------------------------------------------
 
 /**
- * fetch with retry/backoff + browser-UA fallback (delegates to shared wpFetch).
- * Handles this client's flaky host (dropped connections, transient 5xx) and
- * bot-gate 403s (Cloudflare challenge) via the browser-UA fallback.
+ * fetch with retry/backoff. This client's WordPress host (Newfold/HostGator)
+ * intermittently drops connections (UND_ERR_SOCKET "other side closed") and
+ * returns transient 5xx/429. Retrying turns those flaky failures into success
+ * instead of aborting the card step. Retries network errors + 5xx/429.
  */
 async function fetchWithRetry(url: string, opts: RequestInit, attempts = 4): Promise<Response> {
-  const { wpFetch } = await import('./wp-fetch');
-  return wpFetch(url, opts, { retries: attempts });
+  let lastErr: any;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, opts);
+      if (res.status >= 500 || res.status === 429) {
+        lastErr = new Error(`HTTP ${res.status}`);
+      } else {
+        return res;
+      }
+    } catch (e) {
+      lastErr = e;
+    }
+    if (i < attempts - 1) {
+      await new Promise((r) => setTimeout(r, 800 * (i + 1))); // 0.8s, 1.6s, 2.4s
+    }
+  }
+  throw lastErr;
 }
 
 async function fetchPage(wordpressUrl: string, pageId: number | string, credentials: string): Promise<any | null> {
