@@ -124,30 +124,21 @@ export async function uploadToWordPressMedia(
 ): Promise<UploadedImage | null> {
   try {
     const mediaUrl = `${wordpressUrl}/wp-json/wp/v2/media`;
-    // Retry: this host intermittently drops connections / returns 5xx.
-    let res: Response | null = null;
-    let lastErr: any;
-    for (let i = 0; i < 4; i++) {
-      try {
-        res = await fetch(mediaUrl, {
-          method: 'POST',
-          headers: {
-            Authorization: `Basic ${credentials}`,
-            'Content-Type': 'image/webp',
-            'Content-Disposition': `attachment; filename="${filename}"`,
-          },
-          body: new Uint8Array(buffer),
-        });
-        if (res.status >= 500 || res.status === 429) { lastErr = new Error(`HTTP ${res.status}`); res = null; }
-        else break;
-      } catch (e) {
-        lastErr = e;
-        res = null;
-      }
-      if (i < 3) await new Promise((r) => setTimeout(r, 800 * (i + 1)));
-    }
-    if (!res) {
-      console.error('[town-image] Media upload failed after retries:', lastErr);
+    const { wpFetch } = await import('./wp-fetch');
+    // wpFetch handles transient retries + the browser-UA fallback for bot gates.
+    let res: Response;
+    try {
+      res = await wpFetch(mediaUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${credentials}`,
+          'Content-Type': 'image/webp',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+        },
+        body: new Uint8Array(buffer),
+      }, { retries: 4 });
+    } catch (e) {
+      console.error('[town-image] Media upload failed after retries:', e);
       return null;
     }
 

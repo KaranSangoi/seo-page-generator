@@ -8,6 +8,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { sanitizeLinkColor } from '@/lib/link-style';
+import { wpFetch } from '@/lib/wp-fetch';
 
 /**
  * Update Client Metadata
@@ -245,12 +246,13 @@ export async function testConnectionAction(formData: FormData) {
     // Forbidden" failures even when credentials were valid.
     const wpApiUrl = `${cleanWpUrl}/wp-json/wp/v2/pages?per_page=1&context=edit`;
 
-    // Test connection
-    const response = await fetch(wpApiUrl, {
+    // Test connection. retries:1 → normal attempt + browser-UA fallback for bot
+    // gates (Cloudflare), without transient-retry backoff (keeps the test snappy).
+    const response = await wpFetch(wpApiUrl, {
       method: 'GET',
       headers: authHeaders,
       signal: AbortSignal.timeout(10000), // 10 second timeout
-    });
+    }, { retries: 1 });
 
     if (response.ok) {
       // Credentials + edit permission confirmed. Best-effort: fetch display name

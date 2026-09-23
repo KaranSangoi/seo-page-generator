@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { wpFetch } from '@/lib/wp-fetch';
 import { generatePageContent } from '@/lib/claude-api';
 import { validateContent, type ContentValidationParams, determineLinkPlacements } from '@/lib/page-generation';
 import { replaceElementorContent } from '@/lib/elementor-replacer';
@@ -38,7 +39,7 @@ async function getParentPageId(wordpressUrl: string, parentSlug: string, credent
 
   try {
     const searchUrl = `${wordpressUrl}/wp-json/wp/v2/pages?slug=${encodeURIComponent(parentSlug)}`;
-    const response = await fetch(searchUrl, {
+    const response = await wpFetch(searchUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,
       },
@@ -69,7 +70,7 @@ async function fetchTemplatePage(
   try {
     // _cb cache-buster: avoid stale cached template from WP edge/page cache.
     const templateUrl = `${wordpressUrl}/wp-json/wp/v2/pages/${templatePageId}?context=edit&_cb=${Date.now()}`;
-    const response = await fetch(templateUrl, {
+    const response = await wpFetch(templateUrl, {
       headers: {
         Authorization: `Basic ${credentials}`,
       },
@@ -361,14 +362,15 @@ async function publishToWordPress(params: {
     pagePayload.parent = parentId;
   }
 
-  const response = await fetch(wpApiUrl, {
+  // retries:1 — create POST, no transient retry (duplicate risk); UA fallback on 403.
+  const response = await wpFetch(wpApiUrl, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${credentials}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(pagePayload),
-  });
+  }, { retries: 1 });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -380,7 +382,7 @@ async function publishToWordPress(params: {
   // ✅ Immediately update Yoast SEO fields (REST-only, no PHP needed)
 if (seoPlugin === 'yoast') {
   try {
-    await fetch(`${wordpressUrl}/wp-json/wp/v2/pages/${result.id}`, {
+    await wpFetch(`${wordpressUrl}/wp-json/wp/v2/pages/${result.id}`, {
       method: 'POST',
       headers: {
         Authorization: `Basic ${credentials}`,
