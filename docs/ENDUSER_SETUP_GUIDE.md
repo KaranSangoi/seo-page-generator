@@ -141,6 +141,44 @@ This is the master page that the generator will use as a blueprint for all your 
 - The FAQ widget supports: Accordion, Toggle, ElementsKit Accordion, Plumbit Accordion, and Nested Accordion
 - CSS IDs use partial matching - `my-hero-h1-section` will work because it contains `h1`
 
+#### Location Cards (Optional) — Elementor only
+
+When you publish **County (Nested Broad Stroke)** and **Town (Broad Stroke)** pages, the app can automatically add a "location card" to each page's **parent** — an AI-generated town image, the location name, and an "Explore Service Area" button linking back to the new page. This is opt-in and only runs for NBS/BS pages that have a **Parent Slug** set.
+
+To enable it, build one **"Our Locations" card section on your template page** and give three elements a CSS ID:
+
+**1. Build the section** (a grid with one card inside it):
+
+- An outer **Section/Container** for the whole "Our Locations" block (heading + card grid)
+- A **grid** container inside it
+- **One card** container inside the grid, containing an **Image**, a **Heading** (the location name), and a **Button** with the text "Explore Service Area"
+
+Leave the card's image, heading, and button as placeholders — the app clones this card and fills in the real image, location name, and link for each location.
+
+**2. Set these 3 CSS IDs** (Advanced → CSS ID):
+
+| CSS ID | Which element |
+|--------|---------------|
+| `location-cards` | The **outer section** container (holds the heading + the grid) |
+| `location-cards-grid` | The **grid** container that *directly holds the card* |
+| `location-card-template` | The **single card** container (holds the image + heading + button) |
+
+**3. Click Update.** That's it — the app handles the rest when you generate NBS/BS pages.
+
+#### How it works
+
+- **Counties** get a card added to their parent (e.g. a top-level "Service Areas" page — set that page's slug as the Parent Slug on your county rows).
+- **Towns** get a card added to their county page.
+- If a parent doesn't have the section yet, it's copied in from your template automatically.
+- Cards are never duplicated — re-running a batch only adds what's missing.
+
+#### Important Notes:
+
+- The card can use either an **Image Box** widget (image + title in one) or separate **Image + Heading** widgets — both work.
+- Location cards are **Elementor only** for now.
+- You can turn this off per batch (a checkbox on the Generate screen) or per client.
+- **Keep your template lean** — very heavy templates (large embedded images, or plugin shape-divider data) can exceed some hosts' limits. Re-upload embedded images to the Media Library rather than pasting them in.
+
 ---
 
 ## For Divi Users
