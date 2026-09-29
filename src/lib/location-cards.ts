@@ -138,6 +138,13 @@ function fillCard(
           };
         }
         el.settings.title_text = data.name;
+        // Make the whole image-box (image + title) link to the child page.
+        el.settings.link = {
+          ...(el.settings.link || {}),
+          url: data.url,
+          is_external: '',
+          nofollow: '',
+        };
         break;
       }
       case 'image': {
