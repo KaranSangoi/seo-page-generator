@@ -101,6 +101,10 @@ export default function GeneratePagesTab({ clientId, clientLinkColor, clientLoca
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [batchId, setBatchId] = useState<string | null>(null);
+  // Which batchId we've already client-triggered the location-cards step for.
+  // On serverless (Vercel) the server-side post-batch card step can be cut off,
+  // so the client kicks off /api/location-cards once the batch completes.
+  const cardsTriggeredRef = useRef<string | null>(null);
   // Location-cards post-step progress (null = not applicable to this batch).
   const [cardProgress, setCardProgress] = useState<{ status: string; done: number; total: number; error?: string } | null>(null);
   const [isRetryingCards, setIsRetryingCards] = useState(false);
@@ -329,7 +333,32 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
           (p: any) => p.status === 'success' || p.status === 'failed'
         );
         const pagesDone = allComplete || batch.status === 'completed' || batch.status === 'failed';
-        const cardsRunning = batch.cardStatus === 'in_progress';
+        const noFailures = !batch.pages.some((p: any) => p.status === 'failed');
+        const hasCardEligiblePages = batch.pages.some(
+          (p: any) => p.pageType === 'Nested Broad Stroke' || p.pageType === 'Broad Stroke'
+        );
+
+        // On serverless the server may not run the post-batch card step, so kick it
+        // off explicitly once the batch completes cleanly. Idempotent + fires once.
+        if (
+          pagesDone && noFailures && hasCardEligiblePages &&
+          !batch.cardStatus && cardsTriggeredRef.current !== currentBatchId
+        ) {
+          cardsTriggeredRef.current = currentBatchId;
+          setCardProgress({ status: 'in_progress', done: 0, total: 0 });
+          fetch('/api/location-cards', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ batchId: currentBatchId }),
+          }).catch(() => { /* rely on cardStatus polling for the outcome */ });
+        }
+
+        // Keep polling while the card step is running (or we just triggered it and
+        // its status hasn't appeared yet) so the X/Y indicator stays live.
+        const cardsPending =
+          batch.cardStatus === 'in_progress' ||
+          (cardsTriggeredRef.current === currentBatchId &&
+            batch.cardStatus !== 'completed' && batch.cardStatus !== 'failed');
 
         if (pagesDone) {
           // Pages are done — stop the elapsed timer and the "generating" state.
@@ -338,9 +367,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
             clearInterval(timerRef.current);
             timerRef.current = null;
           }
-          // But keep polling while the location-cards step is still running so the
-          // X/Y indicator stays live; only stop once cards finish (or none ran).
-          if (!cardsRunning && pollIntervalRef.current) {
+          if (!cardsPending && pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
             pollIntervalRef.current = null;
           }
@@ -364,6 +391,7 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
     setIsGenerating(true);
     setStartTime(Date.now());
     setCardProgress(null); // reset any prior batch's card indicator
+    cardsTriggeredRef.current = null; // allow the new batch to trigger cards
 
     // Initialize progress for all pages
     const progress: PageProgress[] = parsedPages.map((page) => ({
@@ -766,12 +794,21 @@ Nested Broad Stroke,Glass Services,Kerr County TX,glass,,`;
     for (const page of readyPages) {
       await handlePublishPage(page.pageId);
     }
-    // Only reflect the location-cards step if the batch published cleanly and the
-    // step wasn't opted out. If any page failed, the server skips cards — so we
-    // don't show "adding cards" next to a publish error.
+    // Only run location cards if the batch published cleanly and the step wasn't
+    // opted out. If any page failed, skip — don't show "adding cards" next to an error.
     const anyFailed = contentPreviewPages.some(p => p.status === 'failed');
-    if (batchId && locationCardsEnabled && !anyFailed) {
+    const hasCardEligible = contentPreviewPages.some(
+      p => p.rawData?.pageType === 'Nested Broad Stroke' || p.rawData?.pageType === 'Broad Stroke'
+    );
+    if (batchId && locationCardsEnabled && !anyFailed && hasCardEligible) {
+      // Trigger the card step explicitly (the server's post-publish fire-and-forget
+      // may not survive on serverless), then poll for the live X/Y result.
       setCardProgress({ status: 'in_progress', done: 0, total: 0 });
+      fetch('/api/location-cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batchId }),
+      }).catch(() => { /* rely on cardStatus polling */ });
       pollCardProgress(batchId);
     }
   };
