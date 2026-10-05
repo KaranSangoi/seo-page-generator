@@ -27,11 +27,25 @@ interface BatchContentModalProps {
   onClose: () => void;
 }
 
-/** Inline copy-to-clipboard button for a single field. Owns its own feedback state. */
-function CopyFieldButton({ value, label }: { value: string; label: string }) {
+/**
+ * Inline copy-to-clipboard button. Owns its own feedback state. Icon-only by
+ * default; pass `text` to render a labelled button (e.g. section "Copy All").
+ */
+function CopyFieldButton({
+  value,
+  label,
+  text,
+  onClick,
+}: {
+  value: string;
+  label: string;
+  text?: string;
+  onClick?: (e: React.MouseEvent) => void;
+}) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = async () => {
+  const handleCopy = async (e: React.MouseEvent) => {
+    onClick?.(e);
     try {
       // Strip HTML tags for clean copy (bullets are stored as HTML)
       await navigator.clipboard.writeText(value.replace(/<[^>]*>/g, ''));
@@ -42,21 +56,36 @@ function CopyFieldButton({ value, label }: { value: string; label: string }) {
     }
   };
 
+  const icon = copied ? (
+    <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+    </svg>
+  ) : (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+  );
+
+  if (text) {
+    return (
+      <button
+        onClick={handleCopy}
+        title={copied ? 'Copied!' : `Copy ${label}`}
+        className="flex-shrink-0 flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+      >
+        {icon}
+        {copied ? 'Copied!' : text}
+      </button>
+    );
+  }
+
   return (
     <button
       onClick={handleCopy}
       title={copied ? 'Copied!' : `Copy ${label}`}
       className="flex-shrink-0 p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
     >
-      {copied ? (
-        <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-        </svg>
-      ) : (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-        </svg>
-      )}
+      {icon}
     </button>
   );
 }
@@ -125,24 +154,32 @@ export default function BatchContentModal({ pages, initialPageId, onClose }: Bat
     }
   }
 
-  const renderSection = (title: string, sectionKey: string, body: React.ReactNode) => {
+  const renderSection = (
+    title: string,
+    sectionKey: string,
+    body: React.ReactNode,
+    copyAll?: string | null
+  ) => {
     const isExpanded = expandedSections.has(sectionKey);
     return (
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-        <button
-          onClick={() => toggleSection(sectionKey)}
-          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        >
-          <svg
-            className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 flex items-center justify-between gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <button
+            onClick={() => toggleSection(sectionKey)}
+            className="flex-1 flex items-center gap-2 text-left"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          <span className="font-medium text-gray-900 dark:text-white">{title}</span>
-        </button>
+            <svg
+              className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            <span className="font-medium text-gray-900 dark:text-white">{title}</span>
+          </button>
+          {copyAll && <CopyFieldButton value={copyAll} label={`all ${title.toLowerCase()}`} text="Copy All" />}
+        </div>
         {isExpanded && (
           <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">{body}</div>
         )}
@@ -258,7 +295,13 @@ export default function BatchContentModal({ pages, initialPageId, onClose }: Bat
                           <p className="text-sm text-gray-900 dark:text-white">{content.metaDescription}</p>
                         </Field>
                       )}
-                    </>
+                    </>,
+                    [
+                      content.metaTitle ? `Meta Title: ${content.metaTitle}` : null,
+                      content.metaDescription ? `Meta Description: ${content.metaDescription}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join('\n')
                   )}
 
                 {/* Hero */}
