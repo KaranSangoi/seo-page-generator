@@ -279,10 +279,12 @@ export default function ContentPreviewModal({
     title: string,
     sectionKey: string,
     content: React.ReactNode,
-    canRegenerate = true
+    canRegenerate = true,
+    copyAll?: string | null
   ) => {
     const isExpanded = expandedSections.has(sectionKey);
     const isRegenerating = regeneratingSections.has(sectionKey);
+    const copyAllField = `${sectionKey}-all`;
 
     return (
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -301,18 +303,46 @@ export default function ContentPreviewModal({
             </svg>
             <span className="font-medium text-gray-900 dark:text-white">{title}</span>
           </div>
-          {canRegenerate && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRegenerateSection(sectionKey);
-              }}
-              disabled={isRegenerating || selectedPage.status === 'publishing'}
-              className="px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:opacity-50"
-            >
-              {isRegenerating ? 'Regenerating...' : '🔄 Regenerate'}
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {copyAll && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyToClipboard(copyAllField, copyAll);
+                }}
+                className="px-2 py-1 text-xs font-medium text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors flex items-center gap-1"
+                title={copiedField === copyAllField ? 'Copied!' : `Copy all ${title.toLowerCase()}`}
+              >
+                {copiedField === copyAllField ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy All
+                  </>
+                )}
+              </button>
+            )}
+            {canRegenerate && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRegenerateSection(sectionKey);
+                }}
+                disabled={isRegenerating || selectedPage.status === 'publishing'}
+                className="px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:opacity-50"
+              >
+                {isRegenerating ? 'Regenerating...' : '🔄 Regenerate'}
+              </button>
+            )}
+          </div>
         </button>
         {isExpanded && (
           <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
@@ -588,7 +618,9 @@ export default function ContentPreviewModal({
                   selectedPage.content.metaDescription,
                   true
                 )}
-              </div>
+              </div>,
+              true,
+              `Meta Title: ${selectedPage.content.metaTitle}\nMeta Description: ${selectedPage.content.metaDescription}`
             )}
 
             {/* Hero Section */}
